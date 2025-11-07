@@ -10,7 +10,7 @@ interface Product {
   webOfferPrice: string;
   description: string;
   category: string;
-  imageUrl: string;
+  images: string[];
 }
 
 export async function syncProductsFromXml(url: string): Promise<Product[]> {
@@ -26,6 +26,7 @@ export async function syncProductsFromXml(url: string): Promise<Product[]> {
       attributeNamePrefix: '',
       isArray: (name, jpath, isLeafNode, isAttribute) => {
         if (jpath === 'megapap.products.product') return true;
+        if (jpath === 'megapap.products.product.images.image') return true;
         return false;
       },
       textNodeName: '_text',
@@ -61,15 +62,28 @@ export async function syncProductsFromXml(url: string): Promise<Product[]> {
         throw new Error('The XML feed does not have the expected structure. Could not find a product array at `megapap.products.product`.');
     }
 
-    const products: Product[] = productArray.map((p: any) => ({
-      id: p.id || `temp-id-${Math.random()}`,
-      name: p.name || 'No Name',
-      retailPrice: p.retail_price_with_vat || '0',
-      webOfferPrice: p.weboffer_price_with_vat || p.retail_price_with_vat || '0',
-      description: p.description || '',
-      category: p.category || 'Uncategorized',
-      imageUrl: p.main_image || '',
-    }));
+    const products: Product[] = productArray.map((p: any) => {
+        let images: string[] = [];
+        if (p.images && p.images.image) {
+            if (Array.isArray(p.images.image)) {
+                images = p.images.image;
+            } else {
+                images = [p.images.image];
+            }
+        } else if (p.main_image) {
+            images = [p.main_image];
+        }
+
+        return {
+            id: p.id || `temp-id-${Math.random()}`,
+            name: p.name || 'No Name',
+            retailPrice: p.retail_price_with_vat || '0',
+            webOfferPrice: p.weboffer_price_with_vat || p.retail_price_with_vat || '0',
+            description: p.description || '',
+            category: p.category || 'Uncategorized',
+            images: images,
+        };
+    });
 
     return products;
   } catch (error) {

@@ -12,31 +12,30 @@ import { useEffect, useState } from 'react';
 import type { Product } from '@/lib/data';
 
 export default function ProductDetailPage() {
-  const { products } = useProducts();
+  const { products, isLoaded } = useProducts();
   const params = useParams();
   const { slug } = params;
 
   const [product, setProduct] = useState<Product | undefined>(undefined);
-  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    if (products.length > 0 && slug) {
+    if (isLoaded && products.length > 0 && slug) {
       const foundProduct = products.find((p) => p.slug === slug);
       setProduct(foundProduct);
-      setIsLoading(false);
-    } else if (products.length > 0) {
-      // If there are products but no slug, or product not found yet
-      setIsLoading(false);
     }
-  }, [products, slug]);
+  }, [isLoaded, products, slug]);
 
-  if (isLoading) {
-    // You can return a loading state here
+  if (!isLoaded) {
     return <div>Loading...</div>;
   }
   
   if (!product) {
-    notFound();
+    // If loading is finished and product is still not found, show 404
+    if (isLoaded) {
+      notFound();
+    }
+    // If we are still waiting, show loading.
+    return <div>Loading...</div>;
   }
 
   const image = PlaceHolderImages.find((img) => img.id === product.imageId);
@@ -54,7 +53,7 @@ export default function ProductDetailPage() {
               alt={product.name}
               width={600}
               height={600}
-              className="h-full w-full rounded-lg object-cover"
+              className="h-full w-full rounded-lg object-contain"
               data-ai-hint={image.imageHint}
             />
           ): (

@@ -31,7 +31,7 @@ interface SyncedProduct {
   webOfferPrice: string;
   description: string;
   category: string;
-  imageUrl: string;
+  images: string[];
 }
 
 export default function XmlImporterPage() {
@@ -96,7 +96,7 @@ export default function XmlImporterPage() {
     
     const imagesToAdd = filteredProducts.map(p => ({
       id: `prod-img-${p.id}`,
-      url: p.imageUrl,
+      url: p.images[0] || 'https://placehold.co/600x400', // Use first image or a placeholder
       hint: p.name.substring(0, 20) // a short hint for AI
     }));
 

@@ -17,13 +17,13 @@ export function ProductCard({ product }: ProductCardProps) {
     <Card className="flex flex-col overflow-hidden rounded-lg shadow-sm transition-shadow hover:shadow-lg">
       <Link href={`/products/${product.slug}`} className="group">
         <CardHeader className="p-0">
-          <div className="relative h-64 w-full">
+          <div className="relative h-64 w-full bg-white">
             {image ? (
               <Image
                 src={image.imageUrl}
                 alt={product.name}
                 fill
-                className="object-cover transition-transform duration-300 group-hover:scale-105"
+                className="object-contain transition-transform duration-300 group-hover:scale-105"
                 sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
                 data-ai-hint={image.imageHint}
               />
