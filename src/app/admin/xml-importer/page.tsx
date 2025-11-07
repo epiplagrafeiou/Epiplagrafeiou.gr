@@ -125,7 +125,7 @@ export default function XmlImporterPage() {
     setSelectedCategories(prev => {
       const newSet = new Set(prev);
       if (category === 'all') {
-        if (newSet.has('all')) {
+        if (newSet.has('all') || newSet.size === allCategories.length) {
           newSet.clear();
         } else {
           allCategories.forEach(cat => newSet.add(cat));
@@ -147,14 +147,16 @@ export default function XmlImporterPage() {
   };
 
   const filteredProducts = useMemo(() => {
-    if (selectedCategories.has('all') || selectedCategories.size === 0) {
+    if (selectedCategories.has('all') || selectedCategories.size === 0 || (allCategories.length > 0 && selectedCategories.size === allCategories.length)) {
       return syncedProducts;
     }
     return syncedProducts.filter(p => {
         const leafCategory = p.category.split('>').pop()?.trim();
         return leafCategory && selectedCategories.has(leafCategory);
     });
-  }, [syncedProducts, selectedCategories]);
+  }, [syncedProducts, selectedCategories, allCategories]);
+
+  const activeSupplier = useMemo(() => suppliers.find(s => s.id === activeSupplierId), [suppliers, activeSupplierId]);
 
   return (
     <div className="p-8 pt-6">
@@ -246,20 +248,25 @@ export default function XmlImporterPage() {
                         <TableHead>Name</TableHead>
                         <TableHead>Category</TableHead>
                         <TableHead className="text-right">Retail Price</TableHead>
-                        <TableHead className="text-right">Web Offer</TableHead>
+                        <TableHead className="text-right">Your Price</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {filteredProducts.map((product, index) => (
-                        <TableRow key={index}>
-                            <TableCell className="font-medium">{product.name}</TableCell>
-                            <TableCell>
-                            <Badge variant="outline">{product.category}</Badge>
-                            </TableCell>
-                            <TableCell className="text-right">{formatCurrency(parseFloat(product.retailPrice) || 0)}</TableCell>
-                            <TableCell className="text-right">{formatCurrency(parseFloat(product.webOfferPrice) || 0)}</TableCell>
-                        </TableRow>
-                        ))}
+                        {filteredProducts.map((product) => {
+                          const retailPrice = parseFloat(product.retailPrice) || 0;
+                          const finalPrice = activeSupplier ? applyMarkup(retailPrice, activeSupplier.markupRules) : retailPrice;
+
+                          return (
+                            <TableRow key={product.id}>
+                                <TableCell className="font-medium">{product.name}</TableCell>
+                                <TableCell>
+                                <Badge variant="outline">{product.category.split('>').pop()?.trim()}</Badge>
+                                </TableCell>
+                                <TableCell className="text-right">{formatCurrency(retailPrice)}</TableCell>
+                                <TableCell className="text-right font-semibold">{formatCurrency(finalPrice)}</TableCell>
+                            </TableRow>
+                          );
+                        })}
                     </TableBody>
                     </Table>
                     <div className="flex justify-end mt-4">
