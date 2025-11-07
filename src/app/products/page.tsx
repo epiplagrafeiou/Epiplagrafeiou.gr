@@ -6,6 +6,7 @@ import { categories } from '@/lib/data';
 import {
   Card,
   CardContent,
+  CardFooter,
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
