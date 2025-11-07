@@ -21,14 +21,11 @@ interface ProductCardProps {
 }
 
 export function ProductCard({ product }: ProductCardProps) {
-  // Find the primary image from the placeholder data using imageId
   const primaryPlaceholder = PlaceHolderImages.find(p => p.id === product.imageId);
   const primaryImageSrc = primaryPlaceholder?.imageUrl;
 
-  // The product.images array holds all image URLs for the product
   const allImageUrls = product.images || [];
   
-  // The first image in the array is the default hover image if it's different from the primary one
   const secondaryImageSrc = allImageUrls.find(url => url !== primaryImageSrc) || primaryImageSrc;
 
   const [currentImage, setCurrentImage] = useState(primaryImageSrc);

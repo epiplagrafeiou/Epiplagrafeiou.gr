@@ -90,17 +90,14 @@ export const ProductsProvider = ({ children }: { children: ReactNode }) => {
         const productSlug = createSlug(p.name);
         
         let imageId: string | undefined;
-        // First, check if a main image placeholder was already created in this batch
         const mainImageInfo = newImagesData?.find(img => img.productId === p.id && img.url === p.mainImage);
 
         if (mainImageInfo) {
             imageId = mainImageInfo.id;
         } else if (p.images && p.images.length > 0) {
-            // Fallback: try to find any image placeholder for this product
             const anyImageInfo = newImagesData?.find(img => img.productId === p.id);
             imageId = anyImageInfo?.id;
         } else {
-            // Final fallback
             imageId = `prod-fallback-${p.id}`;
         }
         
@@ -130,11 +127,9 @@ export const ProductsProvider = ({ children }: { children: ReactNode }) => {
     setProducts(prev => {
         const productsToKeep = prev.filter(p => {
             if (idsToDeleteSet.has(p.id)) {
-                // Find all image placeholders associated with this product's original ID
                 const productNumId = p.id.replace('prod-', '');
                 const placeholdersForProduct = PlaceHolderImages.filter(img => img.id && img.id.startsWith(`prod-img-${productNumId}-`));
                 imageIdsToDelete.push(...placeholdersForProduct.map(img => img.id));
-                // Also add the primary imageId if it's not already in the list
                 if (p.imageId && !imageIdsToDelete.includes(p.imageId)) {
                     imageIdsToDelete.push(p.imageId);
                 }
@@ -156,7 +151,6 @@ export const ProductsProvider = ({ children }: { children: ReactNode }) => {
     if (!isLoaded) return [];
     return products.map(p => {
         const productNumId = p.id.replace('prod-', '');
-        // Precise filtering: find images whose ID starts with the unique product identifier prefix
         const imagePlaceholders = PlaceHolderImages.filter(img => img.id && img.id.startsWith(`prod-img-${productNumId}-`));
 
         let allImageUrls = imagePlaceholders.map(img => img.imageUrl);
@@ -168,7 +162,7 @@ export const ProductsProvider = ({ children }: { children: ReactNode }) => {
 
         return {
             ...p,
-            stock: p.stock ?? 0, // Ensure stock is always a number
+            stock: p.stock ?? 0,
             images: Array.from(new Set(allImageUrls))
         }
     });
