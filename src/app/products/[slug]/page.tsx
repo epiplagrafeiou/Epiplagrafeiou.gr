@@ -70,7 +70,10 @@ export default function ProductDetailPage() {
             {formatCurrency(product.price)}
           </p>
           <Separator className="my-6" />
-          <p className="text-muted-foreground">{product.description}</p>
+          <div
+            className="text-muted-foreground prose prose-sm max-w-none"
+            dangerouslySetInnerHTML={{ __html: product.description }}
+          />
           <div className="mt-8">
             <AddToCartButton product={product} size="lg" />
           </div>
