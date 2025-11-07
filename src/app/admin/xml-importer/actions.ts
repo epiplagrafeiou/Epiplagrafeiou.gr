@@ -19,21 +19,26 @@ export async function syncProductsFromXml(url: string): Promise<Product[]> {
 
     const parser = new XMLParser({
       ignoreAttributes: false,
-      attributeNamePrefix: "@_",
+      attributeNamePrefix: '', // Remove @ prefix for easier access
+      isArray: (name, jpath, isLeafNode, isAttribute) => {
+        // Force product to always be an array
+        if (jpath === 'mywebstore.products.product') return true;
+        return false;
+      }
     });
     const parsed = parser.parse(xmlText);
     
-    // This assumes a structure like <products><product>...</product></products>
-    // You might need to adjust the path `parsed.products.product` based on the actual XML structure.
-    const productArray = parsed.mywebstore?.products?.product || parsed.products?.product || [];
+    // Adjusted path for cs-cart feed structure.
+    const productArray = parsed.mywebstore?.products?.product;
 
-    if (!Array.isArray(productArray)) {
-        console.error("Parsed product data is not an array:", productArray);
-        throw new Error('The XML feed does not have the expected structure. Could not find a product array.');
+    if (!productArray || !Array.isArray(productArray)) {
+        console.error("Parsed product data is not an array or is missing:", productArray);
+        throw new Error('The XML feed does not have the expected structure. Could not find a product array at `mywebstore.products.product`.');
     }
 
     const products: Product[] = productArray.map((p: any) => ({
       name: p.name || 'No Name',
+      // Prioritize price_with_vat for cs-cart feeds
       price: p.price_with_vat || p.price || '0',
       description: p.description || '',
       category: p.category || 'Uncategorized',
