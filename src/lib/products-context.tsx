@@ -84,10 +84,6 @@ export const ProductsProvider = ({ children }: { children: ReactNode }) => {
         let imageId: string | undefined;
 
         if (mainImageUrl) {
-          const mainImagePlaceholder = PlaceHolderImages.find(img => img.imageUrl === mainImageUrl);
-          if(mainImagePlaceholder) {
-            imageId = mainImagePlaceholder.id;
-          } else {
             const newImageId = `prod-img-${p.id}-main`;
             addDynamicPlaceholder({
                  id: newImageId,
@@ -96,7 +92,6 @@ export const ProductsProvider = ({ children }: { children: ReactNode }) => {
                  imageHint: p.name.substring(0, 20),
             });
             imageId = newImageId;
-          }
         }
         
         if (!imageId && p.images && p.images.length > 0) {
@@ -115,7 +110,6 @@ export const ProductsProvider = ({ children }: { children: ReactNode }) => {
           id: productId,
           slug: productSlug,
           imageId: imageId,
-          // images: allImageUrls, // This is intentionally left out to reduce localStorage size
           price: p.price,
           category: p.category,
           description: p.description,
@@ -139,7 +133,7 @@ export const ProductsProvider = ({ children }: { children: ReactNode }) => {
             if (idsToDeleteSet.has(p.id)) {
                 // Heuristically find associated images in placeholder list
                 const productNumId = p.id.replace('prod-', '');
-                const placeholdersForProduct = PlaceHolderImages.filter(img => img.id.includes(productNumId));
+                const placeholdersForProduct = PlaceHolderImages.filter(img => img.id.startsWith(`prod-img-${productNumId}-`));
                 imageIdsToDelete.push(...placeholdersForProduct.map(img => img.id));
                 if (p.imageId) {
                     imageIdsToDelete.push(p.imageId);
@@ -161,12 +155,19 @@ export const ProductsProvider = ({ children }: { children: ReactNode }) => {
   const enrichedProducts = useMemo(() => {
     if (!isLoaded) return [];
     return products.map(p => {
-        // Since `images` is not stored, we reconstruct it from placeholders
         const productNumId = p.id.replace('prod-', '');
-        const productImages = PlaceHolderImages.filter(img => img.id.includes(productNumId));
+        const productImages = PlaceHolderImages.filter(img => img.id.startsWith(`prod-img-${productNumId}-`));
+        
+        let allImageUrls = productImages.map(img => img.imageUrl);
+        
+        const mainImage = PlaceHolderImages.find(img => img.id === p.imageId);
+        if (mainImage) {
+           allImageUrls = [mainImage.imageUrl, ...allImageUrls.filter(url => url !== mainImage.imageUrl)];
+        }
+
         return {
             ...p,
-            images: productImages.map(img => img.imageUrl)
+            images: Array.from(new Set(allImageUrls))
         }
     });
   }, [products, isLoaded]);
