@@ -48,56 +48,49 @@ export const ProductsProvider = ({ children }: { children: ReactNode }) => {
     return Array.from(new Set(products.map(p => p.category).filter(Boolean))).sort();
   }, [products, isLoaded]);
 
-  const addProducts = (newProducts: Omit<Product, 'slug' | 'imageId' | 'images' | 'mainImage'>[], newImages?: { id: string; url: string; hint: string, productId: string }[]) => {
-
-    if (newImages) {
-        addDynamicPlaceholder(newImages.map(img => ({
-            id: img.id,
-            imageUrl: img.url,
-            description: img.hint,
-            imageHint: img.hint,
-        })));
+  const addProducts = (newProducts: Omit<Product, 'slug' | 'imageId'>[], newImagesData?: { id: string; url: string; hint: string, productId: string }[]) => {
+    
+    // Process all images provided and add them to the dynamic placeholder system.
+    if (newImagesData) {
+      const allPlaceholdersToAdd = newImagesData.map(img => ({
+          id: img.id,
+          imageUrl: img.url,
+          description: img.hint,
+          imageHint: img.hint,
+      }));
+      addDynamicPlaceholder(allPlaceholdersToAdd);
     }
 
     setProducts((prevProducts) => {
-      const productsToAdd = (newProducts as any[]).map((p, index) => {
-        const productId = p.id ? `prod-${p.id}` : `prod-${Date.now()}-${index}`;
+      // Map over the new products from the XML to create the final Product objects for the store
+      const productsToAdd = (newProducts as any[]).map((p) => {
+        const productId = `prod-${p.id}`;
         const productSlug = createSlug(p.name);
         
-        // Use the mainImage from the parsed data as the primary source.
+        // The main image URL comes from the 'mainImage' property parsed from XML
         const mainImageUrl = p.mainImage;
         const allImageUrls = p.images || [];
 
-        // Create a unique placeholder ID for the main image.
-        const mainImageId = `prod-img-${p.id}-main`;
-        
-        // Find the placeholder object that corresponds to the main image URL.
-        const mainImagePlaceholder = newImages?.find(img => img.url === mainImageUrl);
-        
+        // Find the full placeholder object for the main image using its URL.
+        const mainImagePlaceholder = newImagesData?.find(img => img.url === mainImageUrl && img.productId === p.id);
+
         return {
           ...p,
           id: productId,
           slug: productSlug,
-          // Use the specifically created ID for the main image, or a fallback.
-          imageId: mainImagePlaceholder?.id || mainImageId,
+          // Assign the ID from the found placeholder. Fallback if not found.
+          imageId: mainImagePlaceholder?.id || `prod-img-${p.id}-main`,
           images: allImageUrls,
+          price: p.price,
+          category: p.category,
+          description: p.description
         };
       });
-
-      const uniqueNewProducts = productsToAdd.filter(
-        newProd => !prevProducts.some(existingProd => existingProd.id === newProd.id)
-      );
       
-      const updatedProducts = prevProducts.map(p => {
-          const updated = uniqueNewProducts.find(up => up.id === p.id);
-          return updated ? updated : p;
-      });
-      
-      const newProductsToAdd = uniqueNewProducts.filter(
-          up => !prevProducts.some(p => p.id === up.id)
-      );
+      const productMap = new Map(prevProducts.map(p => [p.id, p]));
+      productsToAdd.forEach(p => productMap.set(p.id, p));
 
-      return [...updatedProducts, ...newProductsToAdd];
+      return Array.from(productMap.values());
     });
   };
 
