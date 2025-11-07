@@ -227,7 +227,7 @@ export default function SuppliersPage() {
                       )) || <Badge variant="secondary">{supplier.markup}%</Badge>}
                     </div>
                   </TableCell>
-                  <TableCell className="text-center">{supplier.conversionRate * 100}%</TableCell>
+                  <TableCell className="text-center">{`${(supplier.conversionRate * 100).toFixed(0)}%`}</TableCell>
                   <TableCell className="text-right">
                     {formatCurrency(supplier.profitability)}
                   </TableCell>
