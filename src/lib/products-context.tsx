@@ -3,7 +3,7 @@
 
 import { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import { products as initialProducts, type Product } from './data';
-import { addDynamicPlaceholder, initializePlaceholders } from './placeholder-images';
+import { addDynamicPlaceholder } from './placeholder-images';
 
 interface ProductsContextType {
   products: Product[];
@@ -40,9 +40,6 @@ export const ProductsProvider = ({ children }: { children: ReactNode }) => {
   const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
-    // Initialize placeholder images from local storage
-    initializePlaceholders();
-
     const storedProducts = localStorage.getItem('products');
     if (storedProducts) {
       setProducts(JSON.parse(storedProducts));

@@ -7,51 +7,83 @@ export type ImagePlaceholder = {
   imageHint: string;
 };
 
-// Initialize with static images and load from local storage if available.
-let dynamicPlaceholders: ImagePlaceholder[] = [...data.placeholderImages];
+// Initialize with static images. This will be merged with local storage data.
+const initialPlaceholders: ImagePlaceholder[] = [...data.placeholderImages];
+let combinedPlaceholders: ImagePlaceholder[] | null = null;
 
-// A function to be called on the client side to initialize/load data.
-export function initializePlaceholders() {
+// Function to get all placeholders, loading from localStorage on first call.
+function getPlaceholders(): ImagePlaceholder[] {
+  if (combinedPlaceholders === null && typeof window !== 'undefined') {
     const storedImages = localStorage.getItem('placeholderImages');
+    let storedParsed: ImagePlaceholder[] = [];
     if (storedImages) {
-        try {
-            const parsedImages: ImagePlaceholder[] = JSON.parse(storedImages);
-            // Combine initial data with stored data, avoiding duplicates
-            const allImages = [...data.placeholderImages];
-            const existingIds = new Set(allImages.map(img => img.id));
-            parsedImages.forEach(img => {
-                if (!existingIds.has(img.id)) {
-                    allImages.push(img);
-                    existingIds.add(img.id);
-                }
-            });
-            dynamicPlaceholders = allImages;
-        } catch (e) {
-            console.error("Failed to parse placeholder images from localStorage", e);
-            dynamicPlaceholders = [...data.placeholderImages];
-        }
+      try {
+        storedParsed = JSON.parse(storedImages);
+      } catch (e) {
+        console.error("Failed to parse placeholder images from localStorage", e);
+      }
     }
+    
+    // Combine and de-duplicate, giving localStorage precedence.
+    const allImagesMap = new Map<string, ImagePlaceholder>();
+    initialPlaceholders.forEach(img => allImagesMap.set(img.id, img));
+    storedParsed.forEach(img => allImagesMap.set(img.id, img));
+    
+    combinedPlaceholders = Array.from(allImagesMap.values());
+  }
+  return combinedPlaceholders || initialPlaceholders;
 }
 
 
 // Function to add a new placeholder image at runtime if it doesn't exist
 export function addDynamicPlaceholder(newImage: ImagePlaceholder | ImagePlaceholder[]) {
+    const currentPlaceholders = getPlaceholders();
     const imagesToAdd = Array.isArray(newImage) ? newImage : [newImage];
     let updated = false;
 
+    const placeholderMap = new Map(currentPlaceholders.map(p => [p.id, p]));
+
     imagesToAdd.forEach(img => {
-        const exists = dynamicPlaceholders.some(p => p.id === img.id);
-        if (!exists) {
-            dynamicPlaceholders.push(img);
+        if (!placeholderMap.has(img.id)) {
+            placeholderMap.set(img.id, img);
             updated = true;
         }
     });
 
     if (updated) {
+        const updatedPlaceholders = Array.from(placeholderMap.values());
+        combinedPlaceholders = updatedPlaceholders;
         // Save the updated list to local storage
-        localStorage.setItem('placeholderImages', JSON.stringify(dynamicPlaceholders));
+        localStorage.setItem('placeholderImages', JSON.stringify(updatedPlaceholders));
     }
 }
 
-// Export the array, which will now include any dynamically added images
-export const PlaceHolderImages: ImagePlaceholder[] = dynamicPlaceholders;
+// A wrapper class to act as a live reference to the placeholders.
+class PlaceholderManager {
+  get images(): ImagePlaceholder[] {
+    return getPlaceholders();
+  }
+
+  find(predicate: (img: ImagePlaceholder) => boolean): ImagePlaceholder | undefined {
+    return this.images.find(predicate);
+  }
+}
+
+const manager = new PlaceholderManager();
+
+// Export a proxy that will always access the latest placeholder list.
+export const PlaceHolderImages = new Proxy(manager, {
+    get(target, prop) {
+        if (prop === 'find') {
+            return target.find.bind(target);
+        }
+        // Redirect all array-like access to the dynamic images array
+        const images = target.images;
+        // @ts-ignore
+        const value = images[prop];
+        if (typeof value === 'function') {
+            return value.bind(images);
+        }
+        return value;
+    }
+}) as unknown as ImagePlaceholder[];
