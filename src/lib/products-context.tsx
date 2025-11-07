@@ -32,18 +32,13 @@ export const ProductsProvider = ({ children }: { children: ReactNode }) => {
       console.error("Failed to parse products from localStorage", e);
     }
     
-    // Create a map from initial data to preserve properties like images if they aren't in storage
     const initialProductMap = new Map<string, Product>(initialProductsData.map(p => [p.id, p]));
-
     const productMap = new Map<string, Product>();
 
-    // First, load initial products
     initialProductsData.forEach(p => productMap.set(p.id, p));
 
-    // Then, overwrite and add products from storage
     storedProducts.forEach(p_stored => {
         const initial = initialProductMap.get(p_stored.id);
-        // Combine stored data with initial data to keep things like image arrays
         const combined = { ...initial, ...p_stored };
         productMap.set(p_stored.id, combined);
     });
@@ -54,7 +49,11 @@ export const ProductsProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     if (isLoaded) {
-      const productsForStorage = products.map(({ images, ...rest }) => rest);
+      // Exclude the 'images' array before saving to localStorage to save space
+      const productsForStorage = products.map(({ images, ...rest }) => ({
+        ...rest,
+        stock: rest.stock ?? 0 // Ensure stock is always a number
+      }));
       try {
         localStorage.setItem('products', JSON.stringify(productsForStorage));
       } catch (e) {
@@ -91,29 +90,17 @@ export const ProductsProvider = ({ children }: { children: ReactNode }) => {
         const productSlug = createSlug(p.name);
         
         let imageId: string | undefined;
-        const mainImageUrl = p.mainImage;
+        // First, check if a main image placeholder was already created in this batch
+        const mainImageInfo = newImagesData?.find(img => img.productId === p.id && img.url === p.mainImage);
 
-        if (mainImageUrl) {
-            const newImageId = `prod-img-${p.id}-main`;
-            addDynamicPlaceholder({
-                 id: newImageId,
-                 imageUrl: mainImageUrl,
-                 description: p.name,
-                 imageHint: p.name.substring(0, 20),
-            });
-            imageId = newImageId;
+        if (mainImageInfo) {
+            imageId = mainImageInfo.id;
         } else if (p.images && p.images.length > 0) {
-            const firstImagePlaceholder = PlaceHolderImages.find(img => img.imageUrl === p.images[0]);
-            imageId = firstImagePlaceholder?.id;
-        }
-        
-        if (!imageId) {
-          // Try to find a placeholder that might have been created from a previous sync
-          const existingPlaceholder = PlaceHolderImages.find(img => img.id.startsWith(`prod-img-${p.id}-`));
-          imageId = existingPlaceholder?.id;
-        }
-
-        if (!imageId) {
+            // Fallback: try to find any image placeholder for this product
+            const anyImageInfo = newImagesData?.find(img => img.productId === p.id);
+            imageId = anyImageInfo?.id;
+        } else {
+            // Final fallback
             imageId = `prod-fallback-${p.id}`;
         }
         
@@ -125,7 +112,7 @@ export const ProductsProvider = ({ children }: { children: ReactNode }) => {
           price: p.price,
           category: p.category,
           description: p.description,
-          stock: p.stock,
+          stock: p.stock ?? 0,
         };
       });
       
@@ -143,11 +130,12 @@ export const ProductsProvider = ({ children }: { children: ReactNode }) => {
     setProducts(prev => {
         const productsToKeep = prev.filter(p => {
             if (idsToDeleteSet.has(p.id)) {
-                // Heuristically find associated images in placeholder list
+                // Find all image placeholders associated with this product's original ID
                 const productNumId = p.id.replace('prod-', '');
-                const placeholdersForProduct = PlaceHolderImages.filter(img => img.id.startsWith(`prod-img-${productNumId}-`));
+                const placeholdersForProduct = PlaceHolderImages.filter(img => img.id && img.id.startsWith(`prod-img-${productNumId}-`));
                 imageIdsToDelete.push(...placeholdersForProduct.map(img => img.id));
-                if (p.imageId) {
+                // Also add the primary imageId if it's not already in the list
+                if (p.imageId && !imageIdsToDelete.includes(p.imageId)) {
                     imageIdsToDelete.push(p.imageId);
                 }
                 return false;
@@ -168,9 +156,10 @@ export const ProductsProvider = ({ children }: { children: ReactNode }) => {
     if (!isLoaded) return [];
     return products.map(p => {
         const productNumId = p.id.replace('prod-', '');
-        const productImages = PlaceHolderImages.filter(img => img.id.startsWith(`prod-img-${productNumId}-`));
-        
-        let allImageUrls = productImages.map(img => img.imageUrl);
+        // Precise filtering: find images whose ID starts with the unique product identifier prefix
+        const imagePlaceholders = PlaceHolderImages.filter(img => img.id && img.id.startsWith(`prod-img-${productNumId}-`));
+
+        let allImageUrls = imagePlaceholders.map(img => img.imageUrl);
         
         const mainImage = PlaceHolderImages.find(img => img.id === p.imageId);
         if (mainImage) {
@@ -198,5 +187,3 @@ export const useProducts = () => {
   }
   return context;
 };
-
-    
