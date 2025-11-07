@@ -18,25 +18,14 @@ interface ProductsContextType {
 const ProductsContext = createContext<ProductsContextType | undefined>(undefined);
 
 export const ProductsProvider = ({ children }: { children: ReactNode }) => {
-  const [products, setProducts] = useState<Product[]>([]);
+  const [products, setProducts] = useState<Product[]>(initialProducts);
   const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
-    const storedProducts = localStorage.getItem('products');
-    if (storedProducts) {
-      const parsedProducts: Product[] = JSON.parse(storedProducts);
-      setProducts(parsedProducts);
-    } else {
-        setProducts(initialProducts);
-    }
+    // We are no longer loading from localStorage, just set loaded to true.
+    // The initial state is set from the static data file.
     setIsLoaded(true);
   }, []);
-
-  useEffect(() => {
-    if (isLoaded) {
-      localStorage.setItem('products', JSON.stringify(products));
-    }
-  }, [products, isLoaded]);
 
   const categories = useMemo(() => {
     if (!isLoaded) return [];
@@ -52,13 +41,13 @@ export const ProductsProvider = ({ children }: { children: ReactNode }) => {
     
     // Process all images provided and add them to the dynamic placeholder system.
     if (newImagesData) {
-      const allPlaceholdersToAdd = newImagesData.map(img => ({
-          id: img.id,
-          imageUrl: img.url,
-          description: img.hint,
-          imageHint: img.hint,
-      }));
-      addDynamicPlaceholder(allPlaceholdersToAdd);
+        const allPlaceholdersToAdd = newImagesData.map(img => ({
+            id: img.id,
+            imageUrl: img.url,
+            description: img.hint,
+            imageHint: img.hint,
+        }));
+        addDynamicPlaceholder(allPlaceholdersToAdd);
     }
 
     setProducts((prevProducts) => {
@@ -67,7 +56,6 @@ export const ProductsProvider = ({ children }: { children: ReactNode }) => {
         const productId = `prod-${p.id}`;
         const productSlug = createSlug(p.name);
         
-        // The main image URL comes from the 'mainImage' property parsed from XML
         const mainImageUrl = p.mainImage;
         const allImageUrls = p.images || [];
 
