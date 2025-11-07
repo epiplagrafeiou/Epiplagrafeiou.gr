@@ -39,14 +39,15 @@ export const SuppliersProvider = ({ children }: { children: ReactNode }) => {
     if (storedSuppliers) {
       setSuppliers(JSON.parse(storedSuppliers));
     } else {
-      // Initialize with default data if nothing is in local storage
+      // Initialize with default data only if nothing is in local storage
       const initializedSuppliers = initialSuppliers.map((s) => ({ ...s, markupRules: [{ from: 0, to: 99999, markup: s.markup }] }));
       setSuppliers(initializedSuppliers);
     }
   }, []);
 
   useEffect(() => {
-    if (isClient) {
+    // Only save to localStorage if it's the client and the initial load is complete
+    if (isClient && suppliers.length > 0) {
       localStorage.setItem('suppliers', JSON.stringify(suppliers));
     }
   }, [suppliers, isClient]);
