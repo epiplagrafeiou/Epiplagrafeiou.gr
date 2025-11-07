@@ -3,7 +3,7 @@
 
 import { createContext, useContext, useState, ReactNode, useEffect, useMemo } from 'react';
 import { products as initialProducts, type Product } from './data';
-import { addDynamicPlaceholder } from './placeholder-images';
+import { addDynamicPlaceholder, removeDynamicPlaceholders, PlaceHolderImages } from './placeholder-images';
 import { createSlug } from './utils';
 
 interface ProductsContextType {
@@ -18,14 +18,34 @@ interface ProductsContextType {
 const ProductsContext = createContext<ProductsContextType | undefined>(undefined);
 
 export const ProductsProvider = ({ children }: { children: ReactNode }) => {
-  const [products, setProducts] = useState<Product[]>(initialProducts);
+  const [products, setProducts] = useState<Product[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
-    // We are no longer loading from localStorage, just set loaded to true.
-    // The initial state is set from the static data file.
+    const storedProducts = localStorage.getItem('products');
+    if (storedProducts) {
+      try {
+        setProducts(JSON.parse(storedProducts));
+      } catch (e) {
+        console.error("Failed to parse products from localStorage, initializing with default.", e);
+        setProducts(initialProducts);
+      }
+    } else {
+      setProducts(initialProducts);
+    }
     setIsLoaded(true);
   }, []);
+
+  useEffect(() => {
+    if (isLoaded) {
+      try {
+        localStorage.setItem('products', JSON.stringify(products));
+      } catch (e) {
+         console.error("Failed to save products to localStorage. Quota may be exceeded.", e);
+         // Here you might want to inform the user or try to clean up older data
+      }
+    }
+  }, [products, isLoaded]);
 
   const categories = useMemo(() => {
     if (!isLoaded) return [];
@@ -39,7 +59,6 @@ export const ProductsProvider = ({ children }: { children: ReactNode }) => {
 
   const addProducts = (newProducts: Omit<Product, 'slug' | 'imageId'>[], newImagesData?: { id: string; url: string; hint: string, productId: string }[]) => {
     
-    // Process all images provided and add them to the dynamic placeholder system.
     if (newImagesData) {
         const allPlaceholdersToAdd = newImagesData.map(img => ({
             id: img.id,
@@ -51,7 +70,6 @@ export const ProductsProvider = ({ children }: { children: ReactNode }) => {
     }
 
     setProducts((prevProducts) => {
-      // Map over the new products from the XML to create the final Product objects for the store
       const productsToAdd = (newProducts as any[]).map((p) => {
         const productId = `prod-${p.id}`;
         const productSlug = createSlug(p.name);
@@ -59,15 +77,24 @@ export const ProductsProvider = ({ children }: { children: ReactNode }) => {
         const mainImageUrl = p.mainImage;
         const allImageUrls = p.images || [];
 
-        // Find the full placeholder object for the main image using its URL.
         const mainImagePlaceholder = newImagesData?.find(img => img.url === mainImageUrl && img.productId === p.id);
+        
+        const imageId = mainImagePlaceholder?.id || `prod-img-${p.id}-main`;
+
+        if (!mainImagePlaceholder && mainImageUrl) {
+           addDynamicPlaceholder({
+               id: imageId,
+               imageUrl: mainImageUrl,
+               description: p.name,
+               imageHint: p.name.substring(0, 20),
+           });
+        }
 
         return {
           ...p,
           id: productId,
           slug: productSlug,
-          // Assign the ID from the found placeholder. Fallback if not found.
-          imageId: mainImagePlaceholder?.id || `prod-img-${p.id}-main`,
+          imageId: imageId,
           images: allImageUrls,
           price: p.price,
           category: p.category,
@@ -83,8 +110,37 @@ export const ProductsProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const deleteProducts = (productIds: string[]) => {
-    setProducts(prev => prev.filter(p => !productIds.includes(p.id)));
+    let imageIdsToDelete: string[] = [];
+
+    setProducts(prev => {
+        const productsToKeep = prev.filter(p => {
+            if (productIds.includes(p.id)) {
+                // Collect image IDs for associated placeholders to delete
+                if (p.imageId) {
+                    imageIdsToDelete.push(p.imageId);
+                }
+                if (p.images) {
+                    // This assumes images are identified by URL in some way or we need a better mapping.
+                    // For now, let's assume we need to find placeholders by URL.
+                    // This part is tricky if IDs are not stored directly with product.
+                    // Let's find placeholder IDs associated with this product's image URLs.
+                     const allProductImages = PlaceHolderImages.filter(img => (p.images || []).includes(img.imageUrl));
+                     imageIdsToDelete.push(...allProductImages.map(img => img.id));
+                }
+                return false;
+            }
+            return true;
+        });
+        return productsToKeep;
+    });
+
+    if (imageIdsToDelete.length > 0) {
+      // Remove duplicates
+      const uniqueImageIds = Array.from(new Set(imageIdsToDelete));
+      removeDynamicPlaceholders(uniqueImageIds);
+    }
   };
+
 
   return (
     <ProductsContext.Provider value={{ products, addProducts, deleteProducts, isLoaded, categories, allCategories }}>

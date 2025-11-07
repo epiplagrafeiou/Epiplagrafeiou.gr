@@ -58,6 +58,29 @@ export function addDynamicPlaceholder(newImage: ImagePlaceholder | ImagePlacehol
     }
 }
 
+// Function to remove placeholder images by their IDs
+export function removeDynamicPlaceholders(imageIds: string[]) {
+    if (typeof window === 'undefined') return;
+    
+    const currentPlaceholders = getPlaceholders();
+    const idsToRemove = new Set(imageIds);
+    let updated = false;
+
+    const newPlaceholders = currentPlaceholders.filter(p => {
+        if (idsToRemove.has(p.id)) {
+            updated = true;
+            return false;
+        }
+        return true;
+    });
+
+    if (updated) {
+        combinedPlaceholders = newPlaceholders;
+        localStorage.setItem('placeholderImages', JSON.stringify(newPlaceholders));
+    }
+}
+
+
 // A wrapper class to act as a live reference to the placeholders.
 class PlaceholderManager {
   get images(): ImagePlaceholder[] {
