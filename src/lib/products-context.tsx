@@ -47,11 +47,11 @@ export const ProductsProvider = ({ children }: { children: ReactNode }) => {
       const parsedProducts: Product[] = JSON.parse(storedProducts);
       setProducts(parsedProducts);
 
-      const uniqueCategories = Array.from(new Set(parsedProducts.map(p => p.category)));
+      const uniqueCategories = Array.from(new Set(parsedProducts.map(p => p.category.split(' > ').pop()!).filter(Boolean)));
       setCategories(uniqueCategories);
     } else {
         setProducts(initialProducts);
-        const uniqueCategories = Array.from(new Set(initialProducts.map(p => p.category)));
+        const uniqueCategories = Array.from(new Set(initialProducts.map(p => p.category.split(' > ').pop()!).filter(Boolean)));
         setCategories(uniqueCategories);
     }
     setIsLoaded(true);
@@ -60,7 +60,7 @@ export const ProductsProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     if (isLoaded) {
       localStorage.setItem('products', JSON.stringify(products));
-      const uniqueCategories = Array.from(new Set(products.map(p => p.category)));
+      const uniqueCategories = Array.from(new Set(products.map(p => p.category.split(' > ').pop()!).filter(Boolean)));
       setCategories(uniqueCategories);
     }
   }, [products, isLoaded]);
@@ -81,6 +81,7 @@ export const ProductsProvider = ({ children }: { children: ReactNode }) => {
         ...p,
         id: `prod-${Date.now()}-${index}`,
         slug: createSlug(p.name),
+        imageId: p.images?.[0] ? `prod-img-${p.images[0].split('/').pop()}` : `temp-id-${Math.random()}`
       }));
 
       // A simple way to avoid duplicates by checking the name

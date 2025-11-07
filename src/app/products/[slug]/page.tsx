@@ -3,7 +3,7 @@
 import Image from 'next/image';
 import { notFound, useParams } from 'next/navigation';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
-import { formatCurrency } from '@/lib/utils';
+import { formatCurrency, cn } from '@/lib/utils';
 import AddToCartButton from '@/components/products/AddToCartButton';
 import { Separator } from '@/components/ui/separator';
 import { ProductCard } from '@/components/products/ProductCard';
@@ -17,28 +17,46 @@ export default function ProductDetailPage() {
   const { slug } = params;
 
   const [product, setProduct] = useState<Product | undefined>(undefined);
+  const [activeImage, setActiveImage] = useState<string | null>(null);
 
   useEffect(() => {
     if (isLoaded && products.length > 0 && slug) {
       const foundProduct = products.find((p) => p.slug === slug);
       setProduct(foundProduct);
+      if (foundProduct?.images?.[0]) {
+        setActiveImage(foundProduct.images[0]);
+      }
     }
   }, [isLoaded, products, slug]);
+
+  const allImages = product?.images?.map(imageUrl => {
+    // Try to find a matching placeholder by URL
+    const placeholder = PlaceHolderImages.find(p => p.imageUrl === imageUrl);
+    return {
+      url: imageUrl,
+      hint: placeholder?.imageHint || product.name.substring(0,20)
+    }
+  });
+
+
+  useEffect(() => {
+    if (product && allImages && allImages.length > 0) {
+      setActiveImage(allImages[0].url);
+    }
+  }, [product, allImages]);
+
 
   if (!isLoaded) {
     return <div>Loading...</div>;
   }
   
   if (!product) {
-    // If loading is finished and product is still not found, show 404
     if (isLoaded) {
       notFound();
     }
-    // If we are still waiting, show loading.
     return <div>Loading...</div>;
   }
 
-  const image = PlaceHolderImages.find((img) => img.id === product.imageId);
   const relatedProducts = products
     .filter((p) => p.category === product.category && p.id !== product.id)
     .slice(0, 4);
@@ -46,19 +64,43 @@ export default function ProductDetailPage() {
   return (
     <div className="container mx-auto px-4 py-12">
       <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:gap-16">
-        <div className="rounded-lg bg-secondary">
-          {image ? (
-            <Image
-              src={image.imageUrl}
-              alt={product.name}
-              width={600}
-              height={600}
-              className="h-full w-full rounded-lg object-contain"
-              data-ai-hint={image.imageHint}
-            />
-          ): (
-            <div className="flex h-full w-full items-center justify-center bg-secondary aspect-square">
-                <span className="text-sm text-muted-foreground">No Image</span>
+        <div>
+          <div className="rounded-lg bg-secondary aspect-square flex items-center justify-center">
+            {activeImage ? (
+              <Image
+                src={activeImage}
+                alt={product.name}
+                width={600}
+                height={600}
+                className="h-full w-full rounded-lg object-contain"
+                data-ai-hint={allImages?.find(i => i.url === activeImage)?.hint}
+              />
+            ): (
+              <div className="flex h-full w-full items-center justify-center bg-secondary aspect-square">
+                  <span className="text-sm text-muted-foreground">No Image</span>
+              </div>
+            )}
+          </div>
+          {allImages && allImages.length > 1 && (
+            <div className="mt-4 grid grid-cols-5 gap-4">
+              {allImages.map((image, index) => (
+                 <button
+                  key={index}
+                  onClick={() => setActiveImage(image.url)}
+                  className={cn(
+                    "rounded-md aspect-square bg-secondary flex items-center justify-center overflow-hidden border-2",
+                    activeImage === image.url ? 'border-primary' : 'border-transparent'
+                  )}
+                 >
+                  <Image
+                    src={image.url}
+                    alt={`${product.name} thumbnail ${index + 1}`}
+                    width={100}
+                    height={100}
+                    className="h-full w-full object-contain"
+                  />
+                 </button>
+              ))}
             </div>
           )}
         </div>
@@ -71,7 +113,7 @@ export default function ProductDetailPage() {
           </p>
           <Separator className="my-6" />
           <div
-            className="text-muted-foreground prose prose-sm max-w-none"
+            className="prose prose-sm max-w-none text-muted-foreground"
             dangerouslySetInnerHTML={{ __html: product.description }}
           />
           <div className="mt-8">

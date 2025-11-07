@@ -1,6 +1,6 @@
 'use client';
 import Link from 'next/link';
-import { ShoppingBag, Search, Menu, X } from 'lucide-react';
+import { ShoppingBag, Search, Menu, X, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Logo } from '@/components/icons/Logo';
@@ -12,14 +12,21 @@ import {
   SheetClose,
 } from '@/components/ui/sheet';
 import { useState } from 'react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { useProducts } from '@/lib/products-context';
 
 const navLinks = [
-  { href: '/products', label: 'Products' },
   { href: '/admin', label: 'Admin Panel' },
 ];
 
 export default function Header() {
   const { itemCount } = useCart();
+  const { categories } = useProducts();
   const [isSheetOpen, setIsSheetOpen] = useState(false);
 
   return (
@@ -30,6 +37,29 @@ export default function Header() {
             <Logo className="h-6 w-auto text-foreground" />
           </Link>
           <nav className="hidden items-center gap-4 md:flex">
+             <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Link
+                  href="/products"
+                  className="group flex items-center gap-1 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+                >
+                  Shop by Category
+                  <ChevronDown className="h-4 w-4 transition-transform duration-200 group-data-[state=open]:rotate-180" />
+                </Link>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start">
+                <DropdownMenuItem asChild>
+                   <Link href="/products">All Products</Link>
+                </DropdownMenuItem>
+                {categories.map((category) => (
+                  <DropdownMenuItem key={category} asChild>
+                    <Link href={`/products?category=${encodeURIComponent(category)}`}>
+                      {category}
+                    </Link>
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
             {navLinks.map((link) => (
               <Link
                 key={link.href}
@@ -80,6 +110,11 @@ export default function Header() {
                     </SheetClose>
                   </div>
                   <nav className="flex flex-col gap-4 p-4">
+                    <SheetClose asChild>
+                      <Link href="/products" className="text-lg font-medium text-foreground">
+                        Products
+                      </Link>
+                    </SheetClose>
                     {navLinks.map((link) => (
                       <SheetClose asChild key={link.href}>
                         <Link
