@@ -1,3 +1,4 @@
+
 'use client';
 
 import { createContext, useContext, useState, ReactNode, useEffect } from 'react';
@@ -22,6 +23,8 @@ export type Supplier = {
 interface SuppliersContextType {
   suppliers: Supplier[];
   addSupplier: (supplier: Omit<Supplier, 'id' | 'conversionRate' | 'profitability'>) => void;
+  updateSupplier: (supplier: Supplier) => void;
+  deleteSupplier: (supplierId: string) => void;
 }
 
 const SuppliersContext = createContext<SuppliersContextType | undefined>(undefined);
@@ -52,7 +55,7 @@ export const SuppliersProvider = ({ children }: { children: ReactNode }) => {
     setSuppliers((prevSuppliers) => {
       const newSupplier: Supplier = {
         ...supplierData,
-        id: `sup${prevSuppliers.length + 1}`,
+        id: `sup${Date.now()}`,
         conversionRate: Math.random() * 0.2, // Mock data
         profitability: Math.random() * 10000, // Mock data
       };
@@ -60,8 +63,17 @@ export const SuppliersProvider = ({ children }: { children: ReactNode }) => {
     });
   };
 
+  const updateSupplier = (updatedSupplier: Supplier) => {
+    setSuppliers(prev => prev.map(s => s.id === updatedSupplier.id ? updatedSupplier : s));
+  };
+
+  const deleteSupplier = (supplierId: string) => {
+    setSuppliers(prev => prev.filter(s => s.id !== supplierId));
+  };
+
+
   return (
-    <SuppliersContext.Provider value={{ suppliers, addSupplier }}>
+    <SuppliersContext.Provider value={{ suppliers, addSupplier, updateSupplier, deleteSupplier }}>
       {children}
     </SuppliersContext.Provider>
   );
