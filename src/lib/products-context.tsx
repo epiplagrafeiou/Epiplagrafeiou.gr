@@ -168,6 +168,7 @@ export const ProductsProvider = ({ children }: { children: ReactNode }) => {
 
         return {
             ...p,
+            stock: p.stock ?? 0, // Ensure stock is always a number
             images: Array.from(new Set(allImageUrls))
         }
     });
