@@ -3,7 +3,7 @@
 
 import { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import { products as initialProducts, type Product } from './data';
-import { PlaceHolderImages, addDynamicPlaceholder } from './placeholder-images';
+import { addDynamicPlaceholder } from './placeholder-images';
 
 interface ProductsContextType {
   products: Product[];
@@ -34,7 +34,7 @@ const createSlug = (name: string) => {
 
 
 export const ProductsProvider = ({ children }: { children: ReactNode }) => {
-  const [products, setProducts] = useState<Product[]>([]);
+  const [products, setProducts] = useState<Product[]>(initialProducts);
   const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
@@ -42,8 +42,6 @@ export const ProductsProvider = ({ children }: { children: ReactNode }) => {
     const storedProducts = localStorage.getItem('products');
     if (storedProducts) {
       setProducts(JSON.parse(storedProducts));
-    } else {
-      setProducts(initialProducts);
     }
   }, []);
 
