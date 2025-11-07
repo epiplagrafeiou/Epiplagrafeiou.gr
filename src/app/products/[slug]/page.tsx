@@ -1,27 +1,37 @@
+
+'use client';
 import Image from 'next/image';
-import { notFound } from 'next/navigation';
-import { products } from '@/lib/data';
+import { notFound, useParams } from 'next/navigation';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { formatCurrency } from '@/lib/utils';
 import AddToCartButton from '@/components/products/AddToCartButton';
 import { Separator } from '@/components/ui/separator';
 import { ProductCard } from '@/components/products/ProductCard';
+import { useProducts } from '@/lib/products-context';
+import { useEffect, useState } from 'react';
+import type { Product } from '@/lib/data';
 
-export async function generateStaticParams() {
-  return products.map((product) => ({
-    slug: product.slug,
-  }));
-}
+export default function ProductDetailPage() {
+  const { products } = useProducts();
+  const params = useParams();
+  const { slug } = params;
 
-export default function ProductDetailPage({
-  params,
-}: {
-  params: { slug: string };
-}) {
-  const product = products.find((p) => p.slug === params.slug);
+  const [product, setProduct] = useState<Product | undefined>(undefined);
+
+  useEffect(() => {
+    if (products.length > 0 && slug) {
+      const foundProduct = products.find((p) => p.slug === slug);
+      setProduct(foundProduct);
+    }
+  }, [products, slug]);
+
+  if (products.length > 0 && !product) {
+    notFound();
+  }
 
   if (!product) {
-    notFound();
+    // You can return a loading state here
+    return <div>Loading...</div>;
   }
 
   const image = PlaceHolderImages.find((img) => img.id === product.imageId);
@@ -33,7 +43,7 @@ export default function ProductDetailPage({
     <div className="container mx-auto px-4 py-12">
       <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:gap-16">
         <div className="rounded-lg bg-secondary">
-          {image && (
+          {image ? (
             <Image
               src={image.imageUrl}
               alt={product.name}
@@ -42,6 +52,10 @@ export default function ProductDetailPage({
               className="h-full w-full rounded-lg object-cover"
               data-ai-hint={image.imageHint}
             />
+          ): (
+            <div className="flex h-full w-full items-center justify-center bg-secondary aspect-square">
+                <span className="text-sm text-muted-foreground">No Image</span>
+            </div>
           )}
         </div>
         <div className="flex flex-col justify-center">

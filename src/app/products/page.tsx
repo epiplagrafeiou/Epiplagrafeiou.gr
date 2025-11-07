@@ -1,5 +1,8 @@
+
+'use client';
+
 import { ProductCard } from '@/components/products/ProductCard';
-import { products, categories } from '@/lib/data';
+import { categories } from '@/lib/data';
 import {
   Card,
   CardContent,
@@ -11,8 +14,11 @@ import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
 import { formatCurrency } from '@/lib/utils';
 import { Separator } from '@/components/ui/separator';
+import { useProducts } from '@/lib/products-context';
 
 export default function ProductsPage() {
+  const { products } = useProducts();
+
   return (
     <div className="container mx-auto grid grid-cols-1 gap-8 px-4 py-8 md:grid-cols-4">
       <aside className="md:col-span-1">

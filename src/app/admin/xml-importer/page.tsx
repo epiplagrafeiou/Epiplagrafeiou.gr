@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -16,8 +17,11 @@ import { Badge } from '@/components/ui/badge';
 import { formatCurrency } from '@/lib/utils';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Terminal } from 'lucide-react';
+import { useProducts } from '@/lib/products-context';
+import { useToast } from '@/hooks/use-toast';
 
-interface Product {
+
+interface SyncedProduct {
   name: string;
   price: string;
   description: string;
@@ -26,8 +30,10 @@ interface Product {
 
 export default function XmlImporterPage() {
   const { suppliers } = useSuppliers();
+  const { addProducts } = useProducts();
+  const { toast } = useToast();
   const [loadingSupplier, setLoadingSupplier] = useState<string | null>(null);
-  const [syncedProducts, setSyncedProducts] = useState<Product[]>([]);
+  const [syncedProducts, setSyncedProducts] = useState<SyncedProduct[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   const handleSync = async (supplierId: string, url: string) => {
@@ -43,6 +49,25 @@ export default function XmlImporterPage() {
       setLoadingSupplier(null);
     }
   };
+
+  const handleAddToStore = () => {
+    const productsToadd = syncedProducts.map(p => ({
+        name: p.name,
+        price: parseFloat(p.price) || 0,
+        description: p.description,
+        category: p.category,
+        imageId: '' // We don't have images from XML yet
+    }));
+
+    addProducts(productsToadd);
+    
+    toast({
+        title: "Products Added!",
+        description: `${productsToadd.length} products have been added to your store.`
+    });
+
+    setSyncedProducts([]);
+  }
 
   return (
     <div className="p-8 pt-6">
@@ -90,7 +115,7 @@ export default function XmlImporterPage() {
           <CardHeader>
             <CardTitle>Synced Products</CardTitle>
             <CardDescription>
-              Review the products below. You can add them to your store from here. (Note: Add to store functionality is not yet implemented).
+              Review the products below. You can add them to your store from here.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -115,7 +140,7 @@ export default function XmlImporterPage() {
               </TableBody>
             </Table>
              <div className="flex justify-end mt-4">
-                <Button>Add All Products to Store</Button>
+                <Button onClick={handleAddToStore}>Add All Products to Store</Button>
             </div>
           </CardContent>
         </Card>

@@ -1,3 +1,5 @@
+
+'use client';
 import {
   Table,
   TableBody,
@@ -16,12 +18,13 @@ import {
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { PlusCircle } from 'lucide-react';
-import { products } from '@/lib/data';
 import { formatCurrency } from '@/lib/utils';
 import Image from 'next/image';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
+import { useProducts } from '@/lib/products-context';
 
 export default function AdminProductsPage() {
+  const { products } = useProducts();
   return (
     <div className="p-8 pt-6">
       <div className="flex items-center justify-between">
@@ -57,7 +60,7 @@ export default function AdminProductsPage() {
                   <TableRow key={product.id}>
                     <TableCell>
                       <div className="relative h-12 w-12 rounded-md bg-secondary">
-                        {image && <Image src={image.imageUrl} alt={product.name} fill className="rounded-md object-cover" data-ai-hint={image.imageHint} />}
+                        {image ? <Image src={image.imageUrl} alt={product.name} fill className="rounded-md object-cover" data-ai-hint={image.imageHint} /> : <div className="flex h-full w-full items-center justify-center text-xs text-muted-foreground">No Image</div>}
                       </div>
                     </TableCell>
                     <TableCell className="font-medium">{product.name}</TableCell>

@@ -1,11 +1,14 @@
+
+'use client';
 import Image from 'next/image';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { ProductCard } from '@/components/products/ProductCard';
-import { products } from '@/lib/data';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
+import { useProducts } from '@/lib/products-context';
 
 export default function Home() {
+  const { products } = useProducts();
   const featuredProducts = products.slice(0, 4);
   const heroImage = PlaceHolderImages.find((img) => img.id === 'hero-background');
 
