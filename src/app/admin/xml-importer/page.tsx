@@ -114,7 +114,10 @@ export default function XmlImporterPage() {
 
   const allCategories = useMemo(() => {
     const categories = new Set<string>();
-    syncedProducts.forEach(p => categories.add(p.category));
+    syncedProducts.forEach(p => {
+        const leafCategory = p.category.split('>').pop()?.trim();
+        if(leafCategory) categories.add(leafCategory);
+    });
     return Array.from(categories).sort();
   }, [syncedProducts]);
 
@@ -144,11 +147,14 @@ export default function XmlImporterPage() {
   };
 
   const filteredProducts = useMemo(() => {
-    if (selectedCategories.has('all') || selectedCategories.size === 0 || selectedCategories.size === allCategories.length) {
+    if (selectedCategories.has('all') || selectedCategories.size === 0) {
       return syncedProducts;
     }
-    return syncedProducts.filter(p => selectedCategories.has(p.category));
-  }, [syncedProducts, selectedCategories, allCategories.length]);
+    return syncedProducts.filter(p => {
+        const leafCategory = p.category.split('>').pop()?.trim();
+        return leafCategory && selectedCategories.has(leafCategory);
+    });
+  }, [syncedProducts, selectedCategories, allCategories]);
 
   return (
     <div className="p-8 pt-6">

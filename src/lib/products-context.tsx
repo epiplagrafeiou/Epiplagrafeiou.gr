@@ -3,11 +3,12 @@
 
 import { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import { products as initialProducts, type Product } from './data';
-import { addDynamicPlaceholder } from './placeholder-images';
+import { addDynamicPlaceholder, PlaceHolderImages } from './placeholder-images';
 
 interface ProductsContextType {
   products: Product[];
   addProducts: (newProducts: Omit<Product, 'id' | 'slug'>[], newImages?: { id: string; url: string; hint: string }[]) => void;
+  deleteProducts: (productIds: string[]) => void;
 }
 
 const ProductsContext = createContext<ProductsContextType | undefined>(undefined);
@@ -48,6 +49,26 @@ export const ProductsProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     if (isClient) {
       localStorage.setItem('products', JSON.stringify(products));
+      
+      // Also update placeholder images from loaded products
+      const storedImages = localStorage.getItem('placeholderImages');
+      let currentPlaceholders = storedImages ? JSON.parse(storedImages) : [];
+
+      products.forEach(p => {
+        // Find if the image for the product exists in placeholders
+        const imageExists = currentPlaceholders.some((img: any) => img.id === p.imageId);
+        // Find if the image for the product exists in the original static data
+        const staticImage = PlaceHolderImages.find(img => img.id === p.imageId);
+
+        if (!imageExists && staticImage) {
+           addDynamicPlaceholder({
+              id: staticImage.id,
+              imageUrl: staticImage.imageUrl,
+              description: staticImage.description,
+              imageHint: staticImage.imageHint,
+           });
+        }
+      });
     }
   }, [products, isClient]);
 
@@ -78,8 +99,12 @@ export const ProductsProvider = ({ children }: { children: ReactNode }) => {
     });
   };
 
+  const deleteProducts = (productIds: string[]) => {
+    setProducts(prev => prev.filter(p => !productIds.includes(p.id)));
+  };
+
   return (
-    <ProductsContext.Provider value={{ products, addProducts }}>
+    <ProductsContext.Provider value={{ products, addProducts, deleteProducts }}>
       {children}
     </ProductsContext.Provider>
   );
