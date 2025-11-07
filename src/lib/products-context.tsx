@@ -9,6 +9,7 @@ interface ProductsContextType {
   products: Product[];
   addProducts: (newProducts: Omit<Product, 'id' | 'slug'>[], newImages?: { id: string; url: string; hint: string }[]) => void;
   deleteProducts: (productIds: string[]) => void;
+  isLoaded: boolean;
 }
 
 const ProductsContext = createContext<ProductsContextType | undefined>(undefined);
@@ -36,10 +37,9 @@ const createSlug = (name: string) => {
 
 export const ProductsProvider = ({ children }: { children: ReactNode }) => {
   const [products, setProducts] = useState<Product[]>(initialProducts);
-  const [isClient, setIsClient] = useState(false);
+  const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
-    setIsClient(true);
     // Initialize placeholder images from local storage
     initializePlaceholders();
 
@@ -47,13 +47,14 @@ export const ProductsProvider = ({ children }: { children: ReactNode }) => {
     if (storedProducts) {
       setProducts(JSON.parse(storedProducts));
     }
+    setIsLoaded(true);
   }, []);
 
   useEffect(() => {
-    if (isClient) {
+    if (isLoaded) {
       localStorage.setItem('products', JSON.stringify(products));
     }
-  }, [products, isClient]);
+  }, [products, isLoaded]);
 
   const addProducts = (newProducts: Omit<Product, 'id' | 'slug'>[], newImages?: { id: string; url: string; hint: string }[]) => {
 
@@ -87,7 +88,7 @@ export const ProductsProvider = ({ children }: { children: ReactNode }) => {
   };
 
   return (
-    <ProductsContext.Provider value={{ products, addProducts, deleteProducts }}>
+    <ProductsContext.Provider value={{ products, addProducts, deleteProducts, isLoaded }}>
       {children}
     </ProductsContext.Provider>
   );

@@ -15,9 +15,10 @@ import { Slider } from '@/components/ui/slider';
 import { formatCurrency } from '@/lib/utils';
 import { Separator } from '@/components/ui/separator';
 import { useProducts } from '@/lib/products-context';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export default function ProductsPage() {
-  const { products } = useProducts();
+  const { products, isLoaded } = useProducts();
 
   return (
     <div className="container mx-auto grid grid-cols-1 gap-8 px-4 py-8 md:grid-cols-4">
@@ -57,9 +58,24 @@ export default function ProductsPage() {
       </aside>
       <main className="md:col-span-3">
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {products.map((product) => (
-            <ProductCard key={product.id} product={product} />
-          ))}
+          {!isLoaded ? (
+            Array.from({ length: 6 }).map((_, index) => (
+              <Card key={index}>
+                <Skeleton className="h-64 w-full" />
+                <CardContent className="p-4">
+                  <Skeleton className="h-5 w-4/5" />
+                </CardContent>
+                <CardFooter className="flex items-center justify-between p-4 pt-0">
+                  <Skeleton className="h-6 w-1/4" />
+                  <Skeleton className="h-10 w-28" />
+                </CardFooter>
+              </Card>
+            ))
+          ) : (
+            products.map((product) => (
+              <ProductCard key={product.id} product={product} />
+            ))
+          )}
         </div>
       </main>
     </div>
