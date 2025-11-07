@@ -11,21 +11,15 @@ import { useProducts } from '@/lib/products-context';
 import { useEffect, useState } from 'react';
 import type { Product } from '@/lib/data';
 import Link from 'next/link';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export default function ProductDetailPage() {
   const { products, isLoaded } = useProducts();
   const params = useParams();
   const { slug } = params;
 
-  const [product, setProduct] = useState<Product | undefined>(undefined);
+  const product = products.find((p) => p.slug === slug);
   const [activeImage, setActiveImage] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (isLoaded && products.length > 0 && slug) {
-      const foundProduct = products.find((p) => p.slug === slug);
-      setProduct(foundProduct);
-    }
-  }, [isLoaded, products, slug]);
   
   const allImages = product?.images?.map(imageUrl => {
     const placeholder = PlaceHolderImages.find(p => p.imageUrl === imageUrl);
@@ -48,14 +42,37 @@ export default function ProductDetailPage() {
 
 
   if (!isLoaded) {
-    return <div>Loading...</div>;
+    return (
+      <div className="container mx-auto px-4 py-12">
+        <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:gap-16">
+            <div>
+                <Skeleton className="aspect-square w-full rounded-lg" />
+                <div className="mt-4 grid grid-cols-5 gap-4">
+                    <Skeleton className="aspect-square w-full rounded-md" />
+                    <Skeleton className="aspect-square w-full rounded-md" />
+                    <Skeleton className="aspect-square w-full rounded-md" />
+                    <Skeleton className="aspect-square w-full rounded-md" />
+                    <Skeleton className="aspect-square w-full rounded-md" />
+                </div>
+            </div>
+            <div className="flex flex-col justify-center">
+                <Skeleton className="h-10 w-3/4" />
+                <Skeleton className="mt-4 h-8 w-1/4" />
+                <Separator className="my-6" />
+                <Skeleton className="h-4 w-full mb-2" />
+                <Skeleton className="h-4 w-full mb-2" />
+                <Skeleton className="h-4 w-5/6" />
+                <div className="mt-8">
+                    <Skeleton className="h-12 w-40" />
+                </div>
+            </div>
+        </div>
+      </div>
+    );
   }
   
   if (!product) {
-    if (isLoaded) {
-      notFound();
-    }
-    return <div>Loading...</div>;
+    notFound();
   }
 
   const relatedProducts = products
