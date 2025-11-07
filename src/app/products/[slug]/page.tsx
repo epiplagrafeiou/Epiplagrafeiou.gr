@@ -8,7 +8,7 @@ import AddToCartButton from '@/components/products/AddToCartButton';
 import { Separator } from '@/components/ui/separator';
 import { ProductCard } from '@/components/products/ProductCard';
 import { useProducts } from '@/lib/products-context';
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import Link from 'next/link';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
@@ -27,19 +27,42 @@ export default function ProductDetailPage() {
   const params = useParams();
   const { slug } = params;
 
-  const product = products.find((p) => createSlug(p.name) === slug);
+  const product = useMemo(() => {
+    if (!isLoaded) return undefined;
+    return products.find((p) => createSlug(p.name) === slug);
+  }, [products, slug, isLoaded]);
+
   const [api, setApi] = useState<CarouselApi>()
   const [current, setCurrent] = useState(0)
  
-  const allImages = product?.images?.map(imageUrl => {
-    const placeholder = PlaceHolderImages.find(p => p.imageUrl === imageUrl);
-    return {
-      url: imageUrl,
-      hint: placeholder?.imageHint || product.name.substring(0,20)
-    }
-  }) || [];
+  const allImages = useMemo(() => {
+    if (!product) return [];
+    
+    // Find all placeholder images that seem to belong to this product
+    const productID = product.id.replace('prod-', '');
+    const imagePlaceholders = PlaceHolderImages.filter(p => p.id.includes(productID));
+    
+    let imageUrls = imagePlaceholders.map(p => p.imageUrl);
+    
+    // De-duplicate URLs
+    imageUrls = Array.from(new Set(imageUrls));
 
-  const mainImageIndex = allImages.findIndex(img => img.url === product?.imageId);
+    // Ensure main image is first if it exists
+    const mainImagePlaceholder = PlaceHolderImages.find(p => p.id === product.imageId);
+    if (mainImagePlaceholder) {
+      const mainUrl = mainImagePlaceholder.imageUrl;
+      imageUrls = imageUrls.filter(url => url !== mainUrl);
+      imageUrls.unshift(mainUrl);
+    }
+    
+    return imageUrls.map(url => {
+      const placeholder = PlaceHolderImages.find(p => p.imageUrl === url);
+      return {
+        url: url,
+        hint: placeholder?.imageHint || product.name.substring(0, 20)
+      }
+    });
+  }, [product]);
 
   useEffect(() => {
     if (!api) {
@@ -124,7 +147,7 @@ export default function ProductDetailPage() {
             setApi={setApi} 
             className="w-full"
             opts={{
-              startIndex: mainImageIndex > 0 ? mainImageIndex : 0,
+                loop: allImages.length > 1,
             }}
           >
             <CarouselContent>
@@ -217,5 +240,3 @@ export default function ProductDetailPage() {
     </div>
   );
 }
-
-    
