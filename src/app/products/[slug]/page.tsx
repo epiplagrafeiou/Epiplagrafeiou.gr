@@ -8,19 +8,29 @@ import AddToCartButton from '@/components/products/AddToCartButton';
 import { Separator } from '@/components/ui/separator';
 import { ProductCard } from '@/components/products/ProductCard';
 import { useProducts } from '@/lib/products-context';
-import { useEffect, useState } from 'react';
-import type { Product } from '@/lib/data';
+import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 import { Skeleton } from '@/components/ui/skeleton';
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  CarouselNext,
+  CarouselPrevious,
+  type CarouselApi,
+} from "@/components/ui/carousel"
+import { Card, CardContent } from "@/components/ui/card"
+
 
 export default function ProductDetailPage() {
   const { products, isLoaded } = useProducts();
   const params = useParams();
   const { slug } = params;
 
-  const product = products.find((p) => p.slug === slug);
-  const [activeImage, setActiveImage] = useState<string | null>(null);
-  
+  const product = products.find((p) => createSlug(p.name) === slug);
+  const [api, setApi] = useState<CarouselApi>()
+  const [current, setCurrent] = useState(0)
+ 
   const allImages = product?.images?.map(imageUrl => {
     const placeholder = PlaceHolderImages.find(p => p.imageUrl === imageUrl);
     return {
@@ -29,17 +39,23 @@ export default function ProductDetailPage() {
     }
   }) || [];
 
-  useEffect(() => {
-    if (product) {
-      const firstImage = allImages.find(img => img.url === product.imageId);
-      if (firstImage) {
-        setActiveImage(firstImage.url);
-      } else if (allImages.length > 0) {
-        setActiveImage(allImages[0].url);
-      }
-    }
-  }, [product, allImages]);
+  const mainImageIndex = allImages.findIndex(img => img.url === product?.imageId);
 
+  useEffect(() => {
+    if (!api) {
+      return
+    }
+ 
+    setCurrent(api.selectedScrollSnap())
+ 
+    api.on("select", () => {
+      setCurrent(api.selectedScrollSnap())
+    })
+  }, [api])
+
+  const onThumbClick = useCallback((index: number) => {
+    api?.scrollTo(index)
+  }, [api])
 
   if (!isLoaded) {
     return (
@@ -104,31 +120,55 @@ export default function ProductDetailPage() {
       </div>
       <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:gap-16">
         <div>
-          <div className="relative aspect-square rounded-lg bg-secondary flex items-center justify-center">
-            {activeImage ? (
-              <Image
-                src={activeImage}
-                alt={product.name}
-                width={600}
-                height={600}
-                className="h-full w-full rounded-lg object-contain"
-                data-ai-hint={allImages?.find(i => i.url === activeImage)?.hint}
-              />
-            ): (
-              <div className="flex h-full w-full items-center justify-center bg-secondary aspect-square">
-                  <span className="text-sm text-muted-foreground">No Image</span>
-              </div>
+          <Carousel 
+            setApi={setApi} 
+            className="w-full"
+            opts={{
+              startIndex: mainImageIndex > 0 ? mainImageIndex : 0,
+            }}
+          >
+            <CarouselContent>
+              {allImages.length > 0 ? allImages.map((image, index) => (
+                <CarouselItem key={index}>
+                  <Card>
+                    <CardContent className="relative flex aspect-square items-center justify-center p-0">
+                      <Image
+                        src={image.url}
+                        alt={`${product.name} image ${index + 1}`}
+                        fill
+                        className="rounded-lg object-contain"
+                        data-ai-hint={image.hint}
+                      />
+                    </CardContent>
+                  </Card>
+                </CarouselItem>
+              )) : (
+                <CarouselItem>
+                   <Card>
+                    <CardContent className="relative flex aspect-square items-center justify-center p-6 bg-secondary">
+                        <span className="text-sm text-muted-foreground">No Image</span>
+                    </CardContent>
+                  </Card>
+                </CarouselItem>
+              )}
+            </CarouselContent>
+            {allImages.length > 1 && (
+              <>
+                <CarouselPrevious />
+                <CarouselNext />
+              </>
             )}
-          </div>
-          {allImages && allImages.length > 1 && (
+          </Carousel>
+          
+          {allImages.length > 1 && (
             <div className="mt-4 grid grid-cols-5 gap-4">
               {allImages.map((image, index) => (
                  <button
                   key={index}
-                  onClick={() => setActiveImage(image.url)}
+                  onClick={() => onThumbClick(index)}
                   className={cn(
-                    "rounded-md aspect-square bg-secondary flex items-center justify-center overflow-hidden border-2",
-                    activeImage === image.url ? 'border-primary' : 'border-transparent'
+                    "overflow-hidden rounded-md aspect-square bg-secondary flex items-center justify-center border-2",
+                    current === index ? 'border-primary' : 'border-transparent'
                   )}
                  >
                   <Image
@@ -143,6 +183,7 @@ export default function ProductDetailPage() {
             </div>
           )}
         </div>
+
         <div className="flex flex-col justify-center">
           <h1 className="font-headline text-3xl font-bold lg:text-4xl">
             {product.name}
@@ -176,3 +217,5 @@ export default function ProductDetailPage() {
     </div>
   );
 }
+
+    
