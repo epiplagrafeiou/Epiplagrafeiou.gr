@@ -10,6 +10,7 @@ interface Product {
   webOfferPrice: string;
   description: string;
   category: string;
+  mainImage: string | null;
   images: string[];
 }
 
@@ -61,22 +62,26 @@ export async function syncProductsFromXml(url: string): Promise<Product[]> {
     }
 
     const products: Product[] = productArray.map((p: any) => {
-        let images: string[] = [];
+        let allImages: string[] = [];
         if (p.images && p.images.image) {
              if (Array.isArray(p.images.image)) {
                 // It can be an array of strings or an array of objects with an 'id' and '_text'
-                images = p.images.image.map((img: any) => (typeof img === 'object' && img._text) ? img._text : img).filter(Boolean);
+                allImages = p.images.image.map((img: any) => (typeof img === 'object' && img._text) ? img._text : img).filter(Boolean);
             } else if (typeof p.images.image === 'object' && p.images.image._text) {
-                images = [p.images.image._text];
+                allImages = [p.images.image._text];
             } else if (typeof p.images.image === 'string') {
-                images = [p.images.image];
+                allImages = [p.images.image];
             }
         }
         
-        if (images.length === 0 && p.main_image) {
-            images = [p.main_image];
-        }
+        const mainImage = p.main_image || null;
 
+        // If main_image exists and is not already in allImages, add it.
+        // This ensures it's part of the full image set for the gallery.
+        if (mainImage && !allImages.includes(mainImage)) {
+            allImages.unshift(mainImage); // Put it at the front
+        }
+        
         return {
             id: p.id || `temp-id-${Math.random()}`,
             name: p.name || 'No Name',
@@ -84,7 +89,8 @@ export async function syncProductsFromXml(url: string): Promise<Product[]> {
             webOfferPrice: p.weboffer_price_with_vat || p.retail_price_with_vat || '0',
             description: p.description || '',
             category: p.category || 'Uncategorized',
-            images: images,
+            mainImage: mainImage,
+            images: allImages,
         };
     });
 

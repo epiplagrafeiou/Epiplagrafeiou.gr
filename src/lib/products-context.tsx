@@ -8,7 +8,7 @@ import { createSlug } from './utils';
 
 interface ProductsContextType {
   products: Product[];
-  addProducts: (newProducts: Omit<Product, 'id' | 'slug' | 'imageId'>[], newImages?: { id: string; url: string; hint: string, productId: string }[]) => void;
+  addProducts: (newProducts: Omit<Product, 'slug' | 'imageId'>[], newImages?: { id: string; url: string; hint: string, productId: string }[]) => void;
   deleteProducts: (productIds: string[]) => void;
   isLoaded: boolean;
   categories: string[];
@@ -48,7 +48,7 @@ export const ProductsProvider = ({ children }: { children: ReactNode }) => {
     return Array.from(new Set(products.map(p => p.category).filter(Boolean))).sort();
   }, [products, isLoaded]);
 
-  const addProducts = (newProducts: Omit<Product, 'slug' | 'imageId'>[], newImages?: { id: string; url: string; hint: string, productId: string }[]) => {
+  const addProducts = (newProducts: Omit<Product, 'slug' | 'imageId' | 'images' | 'mainImage'>[], newImages?: { id: string; url: string; hint: string, productId: string }[]) => {
 
     if (newImages) {
         addDynamicPlaceholder(newImages.map(img => ({
@@ -60,32 +60,44 @@ export const ProductsProvider = ({ children }: { children: ReactNode }) => {
     }
 
     setProducts((prevProducts) => {
-      const productsToAdd = newProducts.map((p, index) => {
+      const productsToAdd = (newProducts as any[]).map((p, index) => {
         const productId = p.id ? `prod-${p.id}` : `prod-${Date.now()}-${index}`;
         const productSlug = createSlug(p.name);
         
-        // Find all images for this product using its original ID from the feed
-        const productImages = newImages?.filter(img => img.productId === p.id).map(img => img.url) || p.images || [];
+        // Use the mainImage from the parsed data as the primary source.
+        const mainImageUrl = p.mainImage;
+        const allImageUrls = p.images || [];
 
-        // Find the specific placeholder object for the primary image
-        const mainImagePlaceholder = newImages?.find(img => img.productId === p.id);
+        // Create a unique placeholder ID for the main image.
+        const mainImageId = `prod-img-${p.id}-main`;
+        
+        // Find the placeholder object that corresponds to the main image URL.
+        const mainImagePlaceholder = newImages?.find(img => img.url === mainImageUrl);
         
         return {
           ...p,
           id: productId,
           slug: productSlug,
-          // Use the placeholder's ID for the main image
-          imageId: mainImagePlaceholder?.id || `img-${productSlug}`,
-          // Assign all found image URLs
-          images: productImages,
+          // Use the specifically created ID for the main image, or a fallback.
+          imageId: mainImagePlaceholder?.id || mainImageId,
+          images: allImageUrls,
         };
       });
 
       const uniqueNewProducts = productsToAdd.filter(
-        newProd => !prevProducts.some(existingProd => existingProd.name === newProd.name)
+        newProd => !prevProducts.some(existingProd => existingProd.id === newProd.id)
+      );
+      
+      const updatedProducts = prevProducts.map(p => {
+          const updated = uniqueNewProducts.find(up => up.id === p.id);
+          return updated ? updated : p;
+      });
+      
+      const newProductsToAdd = uniqueNewProducts.filter(
+          up => !prevProducts.some(p => p.id === up.id)
       );
 
-      return [...prevProducts, ...uniqueNewProducts];
+      return [...updatedProducts, ...newProductsToAdd];
     });
   };
 
