@@ -2,7 +2,7 @@
 'use client';
 
 import { createContext, useContext, useState, ReactNode, useEffect, useMemo } from 'react';
-import { products as initialProducts, type Product } from './data';
+import { products as initialProductsData, type Product } from './data';
 import { addDynamicPlaceholder, removeDynamicPlaceholders, PlaceHolderImages } from './placeholder-images';
 import { createSlug } from './utils';
 
@@ -32,9 +32,21 @@ export const ProductsProvider = ({ children }: { children: ReactNode }) => {
       console.error("Failed to parse products from localStorage", e);
     }
     
+    // Create a map from initial data to preserve properties like images if they aren't in storage
+    const initialProductMap = new Map<string, Product>(initialProductsData.map(p => [p.id, p]));
+
     const productMap = new Map<string, Product>();
-    initialProducts.forEach(p => productMap.set(p.id, p));
-    storedProducts.forEach(p => productMap.set(p.id, p));
+
+    // First, load initial products
+    initialProductsData.forEach(p => productMap.set(p.id, p));
+
+    // Then, overwrite and add products from storage
+    storedProducts.forEach(p_stored => {
+        const initial = initialProductMap.get(p_stored.id);
+        // Combine stored data with initial data to keep things like image arrays
+        const combined = { ...initial, ...p_stored };
+        productMap.set(p_stored.id, combined);
+    });
 
     setProducts(Array.from(productMap.values()));
     setIsLoaded(true);
@@ -42,7 +54,6 @@ export const ProductsProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     if (isLoaded) {
-      // Create a version of products for storage that omits the large `images` array.
       const productsForStorage = products.map(({ images, ...rest }) => rest);
       try {
         localStorage.setItem('products', JSON.stringify(productsForStorage));
@@ -79,9 +90,8 @@ export const ProductsProvider = ({ children }: { children: ReactNode }) => {
         const productId = `prod-${p.id}`;
         const productSlug = createSlug(p.name);
         
-        const mainImageUrl = p.mainImage;
-        
         let imageId: string | undefined;
+        const mainImageUrl = p.mainImage;
 
         if (mainImageUrl) {
             const newImageId = `prod-img-${p.id}-main`;
@@ -92,19 +102,21 @@ export const ProductsProvider = ({ children }: { children: ReactNode }) => {
                  imageHint: p.name.substring(0, 20),
             });
             imageId = newImageId;
-        }
-        
-        if (!imageId && p.images && p.images.length > 0) {
+        } else if (p.images && p.images.length > 0) {
             const firstImagePlaceholder = PlaceHolderImages.find(img => img.imageUrl === p.images[0]);
             imageId = firstImagePlaceholder?.id;
+        }
+        
+        if (!imageId) {
+          // Try to find a placeholder that might have been created from a previous sync
+          const existingPlaceholder = PlaceHolderImages.find(img => img.id.startsWith(`prod-img-${p.id}-`));
+          imageId = existingPlaceholder?.id;
         }
 
         if (!imageId) {
             imageId = `prod-fallback-${p.id}`;
         }
         
-        const allImageUrls = p.images || [];
-
         return {
           ...p,
           id: productId,
@@ -186,3 +198,5 @@ export const useProducts = () => {
   }
   return context;
 };
+
+    
