@@ -9,7 +9,7 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { suppliers } from '@/lib/data';
+import { useSuppliers } from '@/lib/suppliers-context';
 import { syncProductsFromXml } from './actions';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
@@ -25,6 +25,7 @@ interface Product {
 }
 
 export default function XmlImporterPage() {
+  const { suppliers } = useSuppliers();
   const [loadingSupplier, setLoadingSupplier] = useState<string | null>(null);
   const [syncedProducts, setSyncedProducts] = useState<Product[]>([]);
   const [error, setError] = useState<string | null>(null);

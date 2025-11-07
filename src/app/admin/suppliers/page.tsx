@@ -19,7 +19,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { PlusCircle, Trash2 } from 'lucide-react';
-import { suppliers as initialSuppliers } from '@/lib/data';
+import { useSuppliers, type MarkupRule, type Supplier } from '@/lib/suppliers-context';
 import { formatCurrency } from '@/lib/utils';
 import {
   Dialog,
@@ -33,18 +33,9 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 
-type MarkupRule = {
-  from: number;
-  to: number;
-  markup: number;
-};
-
-type Supplier = typeof initialSuppliers[0] & { markupRules?: MarkupRule[] };
 
 export default function SuppliersPage() {
-  const [suppliers, setSuppliers] = useState<Supplier[]>(
-    initialSuppliers.map((s) => ({ ...s, markupRules: [{ from: 0, to: 99999, markup: s.markup }] }))
-  );
+  const { suppliers, addSupplier: contextAddSupplier } = useSuppliers();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [newSupplierName, setNewSupplierName] = useState('');
   const [newSupplierUrl, setNewSupplierUrl] = useState('');
@@ -71,16 +62,12 @@ export default function SuppliersPage() {
 
   const handleAddSupplier = () => {
     if (newSupplierName && newSupplierUrl) {
-      const newSupplier: Supplier = {
-        id: `sup${suppliers.length + 1}`,
+      contextAddSupplier({
         name: newSupplierName,
         url: newSupplierUrl,
         markup: 0, // No longer the primary source
-        conversionRate: Math.random() * 0.2,
-        profitability: Math.random() * 10000,
         markupRules,
-      };
-      setSuppliers([...suppliers, newSupplier]);
+      });
       setDialogOpen(false);
       // Reset form
       setNewSupplierName('');
