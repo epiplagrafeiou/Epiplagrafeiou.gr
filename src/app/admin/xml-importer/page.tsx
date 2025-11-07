@@ -87,7 +87,7 @@ export default function XmlImporterPage() {
     }
 
     const productsToAdd = filteredProducts.map(p => {
-        const retailPrice = parseFloat(p.retailPrice) || 0;
+        const retailPrice = parseFloat(p.webOfferPrice) || 0;
         const finalPrice = applyMarkup(retailPrice, activeSupplier.markupRules);
         const categoryPath = p.category.split('>').map(c => c.trim()).join(' > ');
 
@@ -259,14 +259,14 @@ export default function XmlImporterPage() {
                         <TableRow>
                         <TableHead>Name</TableHead>
                         <TableHead>Category</TableHead>
-                        <TableHead className="text-right">Retail Price</TableHead>
+                        <TableHead className="text-right">Supplier Price</TableHead>
                         <TableHead className="text-right">Your Price</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
                         {filteredProducts.map((product) => {
-                          const retailPrice = parseFloat(product.retailPrice) || 0;
-                          const finalPrice = activeSupplier ? applyMarkup(retailPrice, activeSupplier.markupRules) : retailPrice;
+                          const supplierPrice = parseFloat(product.webOfferPrice) || 0;
+                          const finalPrice = activeSupplier ? applyMarkup(supplierPrice, activeSupplier.markupRules) : supplierPrice;
 
                           return (
                             <TableRow key={product.id}>
@@ -274,7 +274,7 @@ export default function XmlImporterPage() {
                                 <TableCell>
                                 <Badge variant="outline">{product.category}</Badge>
                                 </TableCell>
-                                <TableCell className="text-right">{formatCurrency(retailPrice)}</TableCell>
+                                <TableCell className="text-right">{formatCurrency(supplierPrice)}</TableCell>
                                 <TableCell className="text-right font-semibold">{formatCurrency(finalPrice)}</TableCell>
                             </TableRow>
                           );

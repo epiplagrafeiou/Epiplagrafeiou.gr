@@ -48,7 +48,7 @@ export const ProductsProvider = ({ children }: { children: ReactNode }) => {
     return Array.from(new Set(products.map(p => p.category).filter(Boolean))).sort();
   }, [products, isLoaded]);
 
-  const addProducts = (newProducts: Omit<Product, 'id' | 'slug' | 'imageId'>[], newImages?: { id: string; url: string; hint: string, productId: string }[]) => {
+  const addProducts = (newProducts: Omit<Product, 'slug' | 'imageId'>[], newImages?: { id: string; url: string; hint: string, productId: string }[]) => {
 
     if (newImages) {
         addDynamicPlaceholder(newImages.map(img => ({
@@ -61,10 +61,10 @@ export const ProductsProvider = ({ children }: { children: ReactNode }) => {
 
     setProducts((prevProducts) => {
       const productsToAdd = newProducts.map((p, index) => {
-        const productId = `prod-${Date.now()}-${index}`;
+        const productId = p.id ? `prod-${p.id}` : `prod-${Date.now()}-${index}`;
         const productSlug = createSlug(p.name);
         
-        // Find all images for this product
+        // Find all images for this product using its original ID from the feed
         const productImages = newImages?.filter(img => img.productId === p.id).map(img => img.url) || p.images || [];
 
         // Find the specific placeholder object for the primary image
