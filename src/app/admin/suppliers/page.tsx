@@ -42,9 +42,9 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
-
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 
 const SupplierForm = ({
@@ -101,18 +101,20 @@ const SupplierForm = ({
           <div>
             <Label className="font-semibold">Markup Rules</Label>
             <p className="text-sm text-muted-foreground mb-4">Set markup percentages based on product retail price ranges.</p>
-            <div className="space-y-4">
-              {rules.map((rule, index) => (
-                <div key={index} className="grid grid-cols-12 items-center gap-2">
-                  <div className="col-span-1 text-sm text-muted-foreground">From:</div>
-                  <div className="col-span-3"><Input type="number" value={rule.from} onChange={(e) => handleRuleChange(index, 'from', e.target.value)} placeholder="€0" /></div>
-                  <div className="col-span-1 text-sm text-muted-foreground">To:</div>
-                  <div className="col-span-3"><Input type="number" value={rule.to} onChange={(e) => handleRuleChange(index, 'to', e.target.value)} placeholder="€100" /></div>
-                  <div className="col-span-3"><Input type="number" value={rule.markup} onChange={(e) => handleRuleChange(index, 'markup', e.target.value)} placeholder="Markup %" /></div>
-                  <div className="col-span-1"><Button variant="ghost" size="icon" onClick={() => removeRule(index)}><Trash2 className="h-4 w-4 text-destructive" /></Button></div>
-                </div>
-              ))}
-            </div>
+            <ScrollArea className="h-[300px] pr-6">
+              <div className="space-y-4">
+                {rules.map((rule, index) => (
+                  <div key={index} className="grid grid-cols-12 items-center gap-2">
+                    <div className="col-span-1 text-sm text-muted-foreground">From:</div>
+                    <div className="col-span-3"><Input type="number" value={rule.from} onChange={(e) => handleRuleChange(index, 'from', e.target.value)} placeholder="€0" /></div>
+                    <div className="col-span-1 text-sm text-muted-foreground">To:</div>
+                    <div className="col-span-3"><Input type="number" value={rule.to} onChange={(e) => handleRuleChange(index, 'to', e.target.value)} placeholder="€100" /></div>
+                    <div className="col-span-3"><Input type="number" value={rule.markup} onChange={(e) => handleRuleChange(index, 'markup', e.target.value)} placeholder="Markup %" /></div>
+                    <div className="col-span-1"><Button variant="ghost" size="icon" onClick={() => removeRule(index)}><Trash2 className="h-4 w-4 text-destructive" /></Button></div>
+                  </div>
+                ))}
+              </div>
+            </ScrollArea>
             <Button onClick={addRule} variant="outline" size="sm" className="mt-4"><PlusCircle className="mr-2 h-4 w-4" /> Add Rule</Button>
           </div>
         </div>
