@@ -20,9 +20,7 @@ export async function syncProductsFromXml(url: string): Promise<Product[]> {
     const parser = new XMLParser({
       ignoreAttributes: false,
       attributeNamePrefix: '', // Remove @ prefix for easier access
-      // Stop parsing when the value is a string or number.
-      // This is to avoid parsing the content of the CDATA tags.
-      cdataPropName: '__cdata',
+      cdataPropName: '__cdata', // Keep track of cdata, but we will process it
       isArray: (name, jpath, isLeafNode, isAttribute) => {
         // Force product to always be an array
         if (jpath === 'megapap.products.product') return true;
@@ -33,10 +31,29 @@ export async function syncProductsFromXml(url: string): Promise<Product[]> {
       textNodeName: '_text',
       // Trim whitespace from text nodes.
       trimValues: true,
+      // This is the crucial part to process CDATA
+      processEntities: true,
+      htmlEntities: true,
+      cdataPositionChar: '\\c',
     });
-    const parsed = parser.parse(xmlText);
+    let parsed = parser.parse(xmlText);
     
-    const productArray = parsed.megapap?.products?.product;
+    // The fast-xml-parser with the cdataPropName option wraps CDATA content
+    // in an object like { __cdata: "value" }. We need to unwrap it.
+    // A simple way is to just convert the parsed object back to a string and parse it again
+    // without the cdataPropName which will treat CDATA as regular text content.
+    const simplifiedParser = new XMLParser({
+      ignoreAttributes: false,
+      attributeNamePrefix: '',
+      isArray: (name, jpath, isLeafNode, isAttribute) => {
+        if (jpath === 'megapap.products.product') return true;
+        return false;
+      },
+      textNodeName: '_text',
+      trimValues: true,
+    });
+
+    const productArray = simplifiedParser.parse(xmlText).megapap?.products?.product;
 
     if (!productArray || !Array.isArray(productArray)) {
         console.error("Parsed product data is not an array or is missing:", productArray);
