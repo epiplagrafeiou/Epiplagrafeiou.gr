@@ -16,7 +16,7 @@ import { formatCurrency } from '@/lib/utils';
 import { Separator } from '@/components/ui/separator';
 import { useProducts } from '@/lib/products-context';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 
 const PRODUCTS_PER_PAGE = 24;
 
@@ -25,23 +25,54 @@ export default function ProductsPage() {
   const [visibleCount, setVisibleCount] = useState(PRODUCTS_PER_PAGE);
   const observer = useRef<IntersectionObserver | null>(null);
 
+  const [selectedCategories, setSelectedCategories] = useState<Set<string>>(
+    new Set()
+  );
+
+  const handleCategoryChange = (category: string, checked: boolean) => {
+    setSelectedCategories((prev) => {
+      const newSet = new Set(prev);
+      if (checked) {
+        newSet.add(category);
+      } else {
+        newSet.delete(category);
+      }
+      return newSet;
+    });
+  };
+
+  const filteredProducts = useMemo(() => {
+    if (selectedCategories.size === 0) {
+      return products;
+    }
+    return products.filter((product) => {
+      const productCategory = product.category.split(' > ').pop()?.trim();
+      return productCategory && selectedCategories.has(productCategory);
+    });
+  }, [products, selectedCategories]);
+
+
   const lastProductElementRef = useCallback(
     (node: HTMLDivElement | null) => {
       if (!isLoaded) return;
       if (observer.current) observer.current.disconnect();
 
       observer.current = new IntersectionObserver((entries) => {
-        if (entries[0].isIntersecting && visibleCount < products.length) {
+        if (entries[0].isIntersecting && visibleCount < filteredProducts.length) {
           setVisibleCount((prev) => prev + PRODUCTS_PER_PAGE);
         }
       });
 
       if (node) observer.current.observe(node);
     },
-    [isLoaded, visibleCount, products.length]
+    [isLoaded, visibleCount, filteredProducts.length]
   );
   
-  const displayedProducts = products.slice(0, visibleCount);
+  const displayedProducts = filteredProducts.slice(0, visibleCount);
+
+  useEffect(() => {
+    setVisibleCount(PRODUCTS_PER_PAGE);
+  }, [filteredProducts]);
 
   return (
     <div className="container mx-auto grid grid-cols-1 gap-8 px-4 py-8 md:grid-cols-4">
@@ -56,7 +87,11 @@ export default function ProductsPage() {
               <div className="space-y-2">
                 {categories.map((category) => (
                   <div key={category} className="flex items-center space-x-2">
-                    <Checkbox id={category} />
+                    <Checkbox
+                      id={category}
+                      onCheckedChange={(checked) => handleCategoryChange(category, Boolean(checked))}
+                      checked={selectedCategories.has(category)}
+                    />
                     <Label htmlFor={category}>{category}</Label>
                   </div>
                 ))}
