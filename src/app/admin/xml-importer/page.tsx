@@ -81,7 +81,7 @@ export default function XmlImporterPage() {
         return;
     }
 
-    const productsToadd = filteredProducts.map(p => {
+    const productsToAdd = filteredProducts.map(p => {
         const retailPrice = parseFloat(p.retailPrice) || 0;
         const finalPrice = applyMarkup(retailPrice, activeSupplier.markupRules);
 
@@ -94,17 +94,17 @@ export default function XmlImporterPage() {
         }
     });
     
-    const imagesToadd = filteredProducts.map(p => ({
+    const imagesToAdd = filteredProducts.map(p => ({
       id: `prod-img-${p.id}`,
       url: p.imageUrl,
       hint: p.name.substring(0, 20) // a short hint for AI
     }));
 
-    addProducts(productsToadd, imagesToadd);
+    addProducts(productsToAdd, imagesToAdd);
     
     toast({
         title: "Products Added!",
-        description: `${productsToadd.length} products have been added to your store.`
+        description: `${productsToAdd.length} products have been added to your store.`
     });
 
     setSyncedProducts([]);
@@ -240,6 +240,7 @@ export default function XmlImporterPage() {
                         <TableHead>Name</TableHead>
                         <TableHead>Category</TableHead>
                         <TableHead className="text-right">Retail Price</TableHead>
+                        <TableHead className="text-right">Web Offer</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -250,6 +251,7 @@ export default function XmlImporterPage() {
                             <Badge variant="outline">{product.category}</Badge>
                             </TableCell>
                             <TableCell className="text-right">{formatCurrency(parseFloat(product.retailPrice) || 0)}</TableCell>
+                            <TableCell className="text-right">{formatCurrency(parseFloat(product.webOfferPrice) || 0)}</TableCell>
                         </TableRow>
                         ))}
                     </TableBody>

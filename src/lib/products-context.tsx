@@ -7,7 +7,7 @@ import { addDynamicPlaceholder } from './placeholder-images';
 
 interface ProductsContextType {
   products: Product[];
-  addProducts: (newProducts: Omit<Product, 'id' | 'slug' | 'imageId'>[], newImages?: { id: string; url: string; hint: string }[]) => void;
+  addProducts: (newProducts: Omit<Product, 'id' | 'slug'>[], newImages?: { id: string; url: string; hint: string }[]) => void;
 }
 
 const ProductsContext = createContext<ProductsContextType | undefined>(undefined);
@@ -67,7 +67,6 @@ export const ProductsProvider = ({ children }: { children: ReactNode }) => {
         ...p,
         id: `prod-${Date.now()}-${index}`,
         slug: createSlug(p.name),
-        // The imageId is now expected to be passed in from the import process
       }));
 
       // A simple way to avoid duplicates by checking the name
