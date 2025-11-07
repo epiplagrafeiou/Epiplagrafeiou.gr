@@ -25,9 +25,7 @@ export async function syncProductsFromXml(url: string): Promise<Product[]> {
       ignoreAttributes: false,
       attributeNamePrefix: '',
       isArray: (name, jpath, isLeafNode, isAttribute) => {
-        if (jpath === 'megapap.products.product') return true;
-        if (jpath === 'megapap.products.product.images.image') return true;
-        return false;
+        return jpath === 'megapap.products.product' || jpath.endsWith('.images.image');
       },
       textNodeName: '_text',
       trimValues: true,
@@ -65,12 +63,17 @@ export async function syncProductsFromXml(url: string): Promise<Product[]> {
     const products: Product[] = productArray.map((p: any) => {
         let images: string[] = [];
         if (p.images && p.images.image) {
-            if (Array.isArray(p.images.image)) {
-                images = p.images.image;
-            } else {
+             if (Array.isArray(p.images.image)) {
+                // It can be an array of strings or an array of objects with an 'id' and '_text'
+                images = p.images.image.map((img: any) => (typeof img === 'object' && img._text) ? img._text : img).filter(Boolean);
+            } else if (typeof p.images.image === 'object' && p.images.image._text) {
+                images = [p.images.image._text];
+            } else if (typeof p.images.image === 'string') {
                 images = [p.images.image];
             }
-        } else if (p.main_image) {
+        }
+        
+        if (images.length === 0 && p.main_image) {
             images = [p.main_image];
         }
 
