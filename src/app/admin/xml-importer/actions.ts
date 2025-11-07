@@ -1,12 +1,15 @@
+
 'use server';
 
 import { XMLParser } from 'fast-xml-parser';
 
 interface Product {
+  id: string;
   name: string;
   price: string;
   description: string;
   category: string;
+  imageUrl: string;
 }
 
 export async function syncProductsFromXml(url: string): Promise<Product[]> {
@@ -17,27 +20,6 @@ export async function syncProductsFromXml(url: string): Promise<Product[]> {
     }
     const xmlText = await response.text();
 
-    const parser = new XMLParser({
-      ignoreAttributes: false,
-      attributeNamePrefix: '', // Remove @ prefix for easier access
-      cdataPropName: '__cdata', // Keep track of cdata, but we will process it
-      isArray: (name, jpath, isLeafNode, isAttribute) => {
-        // Force product to always be an array
-        if (jpath === 'megapap.products.product') return true;
-        return false;
-      },
-      // The text content of a tag with attributes is parsed as a property.
-      // Set this to a specific name.
-      textNodeName: '_text',
-      // Trim whitespace from text nodes.
-      trimValues: true,
-      // This is the crucial part to process CDATA
-      processEntities: true,
-      htmlEntities: true,
-      cdataPositionChar: '\\c',
-    });
-    let parsed = parser.parse(xmlText);
-    
     // The fast-xml-parser with the cdataPropName option wraps CDATA content
     // in an object like { __cdata: "value" }. We need to unwrap it.
     // A simple way is to just convert the parsed object back to a string and parse it again
@@ -61,11 +43,13 @@ export async function syncProductsFromXml(url: string): Promise<Product[]> {
     }
 
     const products: Product[] = productArray.map((p: any) => ({
+      id: p.id || `temp-id-${Math.random()}`,
       name: p.name || 'No Name',
       // Use web offer price if available, otherwise fall back.
       price: p.weboffer_price_with_vat || p.retail_price_with_vat || '0',
       description: p.description || '',
       category: p.category || 'Uncategorized',
+      imageUrl: p.main_image || '',
     }));
 
     return products;

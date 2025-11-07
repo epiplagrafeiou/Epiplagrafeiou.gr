@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import {
   Card,
   CardContent,
@@ -16,16 +16,21 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { formatCurrency } from '@/lib/utils';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Terminal } from 'lucide-react';
+import { Terminal, Filter } from 'lucide-react';
 import { useProducts } from '@/lib/products-context';
 import { useToast } from '@/hooks/use-toast';
+import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 
 interface SyncedProduct {
+  id: string;
   name: string;
   price: string;
   description: string;
   category: string;
+  imageUrl: string;
 }
 
 export default function XmlImporterPage() {
@@ -36,6 +41,8 @@ export default function XmlImporterPage() {
   const [syncedProducts, setSyncedProducts] = useState<SyncedProduct[]>([]);
   const [error, setError] = useState<string | null>(null);
 
+  const [selectedCategories, setSelectedCategories] = useState<Set<string>>(new Set());
+
   const handleSync = async (supplierId: string, url: string) => {
     setLoadingSupplier(supplierId);
     setError(null);
@@ -43,6 +50,8 @@ export default function XmlImporterPage() {
     try {
       const products = await syncProductsFromXml(url);
       setSyncedProducts(products);
+      // Reset categories based on new sync
+      setSelectedCategories(new Set(['all']));
     } catch (e: any) {
       setError(e.message);
     } finally {
@@ -51,15 +60,21 @@ export default function XmlImporterPage() {
   };
 
   const handleAddToStore = () => {
-    const productsToadd = syncedProducts.map(p => ({
+    const productsToadd = filteredProducts.map(p => ({
         name: p.name,
         price: parseFloat(p.price) || 0,
         description: p.description,
-        category: p.category,
-        imageId: '' // We don't have images from XML yet
+        category: p.category.split('>').pop()?.trim() || 'Uncategorized',
+        imageId: `prod-img-${p.id}` // Use product ID to create a unique imageId
+    }));
+    
+    const imagesToadd = filteredProducts.map(p => ({
+      id: `prod-img-${p.id}`,
+      url: p.imageUrl,
+      hint: p.name.substring(0, 20) // a short hint for AI
     }));
 
-    addProducts(productsToadd);
+    addProducts(productsToadd, imagesToadd);
     
     toast({
         title: "Products Added!",
@@ -67,7 +82,46 @@ export default function XmlImporterPage() {
     });
 
     setSyncedProducts([]);
+    setSelectedCategories(new Set());
   }
+
+  const allCategories = useMemo(() => {
+    const categories = new Set<string>();
+    syncedProducts.forEach(p => categories.add(p.category));
+    return Array.from(categories).sort();
+  }, [syncedProducts]);
+
+  const handleCategoryToggle = (category: string) => {
+    setSelectedCategories(prev => {
+      const newSet = new Set(prev);
+      if (category === 'all') {
+        if (newSet.has('all')) {
+          newSet.clear();
+        } else {
+          allCategories.forEach(cat => newSet.add(cat));
+          newSet.add('all');
+        }
+      } else {
+        if (newSet.has(category)) {
+          newSet.delete(category);
+          newSet.delete('all'); // Uncheck "all" if a specific item is unchecked
+        } else {
+          newSet.add(category);
+          if (newSet.size === allCategories.length) {
+            newSet.add('all');
+          }
+        }
+      }
+      return newSet;
+    });
+  };
+
+  const filteredProducts = useMemo(() => {
+    if (selectedCategories.has('all') || selectedCategories.size === 0) {
+      return syncedProducts;
+    }
+    return syncedProducts.filter(p => selectedCategories.has(p.category));
+  }, [syncedProducts, selectedCategories]);
 
   return (
     <div className="p-8 pt-6">
@@ -111,39 +165,75 @@ export default function XmlImporterPage() {
       )}
 
       {syncedProducts.length > 0 && (
-        <Card className="mt-6">
-          <CardHeader>
-            <CardTitle>Synced Products</CardTitle>
-            <CardDescription>
-              Review the products below. You can add them to your store from here.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Category</TableHead>
-                  <TableHead className="text-right">Price</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {syncedProducts.map((product, index) => (
-                  <TableRow key={index}>
-                    <TableCell className="font-medium">{product.name}</TableCell>
-                    <TableCell>
-                      <Badge variant="outline">{product.category}</Badge>
-                    </TableCell>
-                    <TableCell className="text-right">{formatCurrency(parseFloat(product.price) || 0)}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-             <div className="flex justify-end mt-4">
-                <Button onClick={handleAddToStore}>Add All Products to Store</Button>
+        <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-4">
+            <div className="lg:col-span-1">
+                <Card>
+                    <CardHeader>
+                        <CardTitle className="flex items-center gap-2"><Filter className="h-5 w-5" /> Categories</CardTitle>
+                        <CardDescription>Select categories to import.</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <ScrollArea className="h-96">
+                            <div className="space-y-2">
+                                <div className="flex items-center space-x-2">
+                                    <Checkbox 
+                                        id="cat-all" 
+                                        checked={selectedCategories.has('all')}
+                                        onCheckedChange={() => handleCategoryToggle('all')}
+                                    />
+                                    <Label htmlFor="cat-all" className="font-semibold">Select All</Label>
+                                </div>
+                                {allCategories.map(category => (
+                                <div key={category} className="flex items-center space-x-2">
+                                    <Checkbox
+                                        id={`cat-${category}`}
+                                        checked={selectedCategories.has(category)}
+                                        onCheckedChange={() => handleCategoryToggle(category)}
+                                    />
+                                    <Label htmlFor={`cat-${category}`}>{category}</Label>
+                                </div>
+                                ))}
+                            </div>
+                        </ScrollArea>
+                    </CardContent>
+                </Card>
             </div>
-          </CardContent>
-        </Card>
+            <div className="lg:col-span-3">
+                <Card>
+                <CardHeader>
+                    <CardTitle>Synced Products ({filteredProducts.length})</CardTitle>
+                    <CardDescription>
+                    Review the products below. You can add them to your store from here.
+                    </CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <Table>
+                    <TableHeader>
+                        <TableRow>
+                        <TableHead>Name</TableHead>
+                        <TableHead>Category</TableHead>
+                        <TableHead className="text-right">Price</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {filteredProducts.map((product, index) => (
+                        <TableRow key={index}>
+                            <TableCell className="font-medium">{product.name}</TableCell>
+                            <TableCell>
+                            <Badge variant="outline">{product.category}</Badge>
+                            </TableCell>
+                            <TableCell className="text-right">{formatCurrency(parseFloat(product.price) || 0)}</TableCell>
+                        </TableRow>
+                        ))}
+                    </TableBody>
+                    </Table>
+                    <div className="flex justify-end mt-4">
+                        <Button onClick={handleAddToStore} disabled={filteredProducts.length === 0}>Add {filteredProducts.length} Products to Store</Button>
+                    </div>
+                </CardContent>
+                </Card>
+            </div>
+        </div>
       )}
     </div>
   );
