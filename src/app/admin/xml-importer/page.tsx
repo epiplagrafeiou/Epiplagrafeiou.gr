@@ -154,7 +154,7 @@ export default function XmlImporterPage() {
         const leafCategory = p.category.split('>').pop()?.trim();
         return leafCategory && selectedCategories.has(leafCategory);
     });
-  }, [syncedProducts, selectedCategories, allCategories]);
+  }, [syncedProducts, selectedCategories]);
 
   return (
     <div className="p-8 pt-6">
@@ -211,7 +211,7 @@ export default function XmlImporterPage() {
                                 <div className="flex items-center space-x-2">
                                     <Checkbox 
                                         id="cat-all" 
-                                        checked={selectedCategories.has('all') || selectedCategories.size === allCategories.length}
+                                        checked={selectedCategories.has('all') || (allCategories.length > 0 && selectedCategories.size === allCategories.length)}
                                         onCheckedChange={() => handleCategoryToggle('all')}
                                     />
                                     <Label htmlFor="cat-all" className="font-semibold">Select All</Label>
