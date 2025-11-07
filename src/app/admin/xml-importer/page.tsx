@@ -10,7 +10,7 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { useSuppliers } from '@/lib/suppliers-context';
+import { useSuppliers, type MarkupRule } from '@/lib/suppliers-context';
 import { syncProductsFromXml } from './actions';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
@@ -27,7 +27,8 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 interface SyncedProduct {
   id: string;
   name: string;
-  price: string;
+  retailPrice: string;
+  webOfferPrice: string;
   description: string;
   category: string;
   imageUrl: string;
@@ -38,6 +39,7 @@ export default function XmlImporterPage() {
   const { addProducts } = useProducts();
   const { toast } = useToast();
   const [loadingSupplier, setLoadingSupplier] = useState<string | null>(null);
+  const [activeSupplierId, setActiveSupplierId] = useState<string | null>(null);
   const [syncedProducts, setSyncedProducts] = useState<SyncedProduct[]>([]);
   const [error, setError] = useState<string | null>(null);
 
@@ -45,6 +47,7 @@ export default function XmlImporterPage() {
 
   const handleSync = async (supplierId: string, url: string) => {
     setLoadingSupplier(supplierId);
+    setActiveSupplierId(supplierId);
     setError(null);
     setSyncedProducts([]);
     try {
@@ -58,15 +61,38 @@ export default function XmlImporterPage() {
       setLoadingSupplier(null);
     }
   };
+  
+  const applyMarkup = (price: number, rules: MarkupRule[] = []): number => {
+    const applicableRule = rules.find(rule => price >= rule.from && price <= rule.to);
+    if (applicableRule) {
+      return price * (1 + applicableRule.markup / 100);
+    }
+    return price; // Return original price if no rule matches
+  };
 
   const handleAddToStore = () => {
-    const productsToadd = filteredProducts.map(p => ({
-        name: p.name,
-        price: parseFloat(p.price) || 0,
-        description: p.description,
-        category: p.category.split('>').pop()?.trim() || 'Uncategorized',
-        imageId: `prod-img-${p.id}` // Use product ID to create a unique imageId
-    }));
+    const activeSupplier = suppliers.find(s => s.id === activeSupplierId);
+    if (!activeSupplier) {
+        toast({
+            variant: "destructive",
+            title: "Error",
+            description: "Could not find the supplier to apply markup rules."
+        });
+        return;
+    }
+
+    const productsToadd = filteredProducts.map(p => {
+        const retailPrice = parseFloat(p.retailPrice) || 0;
+        const finalPrice = applyMarkup(retailPrice, activeSupplier.markupRules);
+
+        return {
+            name: p.name,
+            price: finalPrice,
+            description: p.description,
+            category: p.category.split('>').pop()?.trim() || 'Uncategorized',
+            imageId: `prod-img-${p.id}` // Use product ID to create a unique imageId
+        }
+    });
     
     const imagesToadd = filteredProducts.map(p => ({
       id: `prod-img-${p.id}`,
@@ -83,6 +109,7 @@ export default function XmlImporterPage() {
 
     setSyncedProducts([]);
     setSelectedCategories(new Set());
+    setActiveSupplierId(null);
   }
 
   const allCategories = useMemo(() => {
@@ -117,11 +144,11 @@ export default function XmlImporterPage() {
   };
 
   const filteredProducts = useMemo(() => {
-    if (selectedCategories.has('all') || selectedCategories.size === 0) {
+    if (selectedCategories.has('all') || selectedCategories.size === 0 || selectedCategories.size === allCategories.length) {
       return syncedProducts;
     }
     return syncedProducts.filter(p => selectedCategories.has(p.category));
-  }, [syncedProducts, selectedCategories]);
+  }, [syncedProducts, selectedCategories, allCategories.length]);
 
   return (
     <div className="p-8 pt-6">
@@ -178,7 +205,7 @@ export default function XmlImporterPage() {
                                 <div className="flex items-center space-x-2">
                                     <Checkbox 
                                         id="cat-all" 
-                                        checked={selectedCategories.has('all')}
+                                        checked={selectedCategories.has('all') || selectedCategories.size === allCategories.length}
                                         onCheckedChange={() => handleCategoryToggle('all')}
                                     />
                                     <Label htmlFor="cat-all" className="font-semibold">Select All</Label>
@@ -203,7 +230,7 @@ export default function XmlImporterPage() {
                 <CardHeader>
                     <CardTitle>Synced Products ({filteredProducts.length})</CardTitle>
                     <CardDescription>
-                    Review the products below. You can add them to your store from here.
+                    Review the products below. Markup rules from the active supplier will be applied.
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -212,7 +239,7 @@ export default function XmlImporterPage() {
                         <TableRow>
                         <TableHead>Name</TableHead>
                         <TableHead>Category</TableHead>
-                        <TableHead className="text-right">Price</TableHead>
+                        <TableHead className="text-right">Retail Price</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -222,7 +249,7 @@ export default function XmlImporterPage() {
                             <TableCell>
                             <Badge variant="outline">{product.category}</Badge>
                             </TableCell>
-                            <TableCell className="text-right">{formatCurrency(parseFloat(product.price) || 0)}</TableCell>
+                            <TableCell className="text-right">{formatCurrency(parseFloat(product.retailPrice) || 0)}</TableCell>
                         </TableRow>
                         ))}
                     </TableBody>
