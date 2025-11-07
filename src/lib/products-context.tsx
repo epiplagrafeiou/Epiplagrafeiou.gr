@@ -1,5 +1,5 @@
 
-"use client";
+'use client';
 
 import { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import { products as initialProducts, type Product } from './data';
@@ -10,6 +10,7 @@ interface ProductsContextType {
   addProducts: (newProducts: Omit<Product, 'id' | 'slug'>[], newImages?: { id: string; url: string; hint: string }[]) => void;
   deleteProducts: (productIds: string[]) => void;
   isLoaded: boolean;
+  categories: string[];
 }
 
 const ProductsContext = createContext<ProductsContextType | undefined>(undefined);
@@ -36,13 +37,22 @@ const createSlug = (name: string) => {
 
 
 export const ProductsProvider = ({ children }: { children: ReactNode }) => {
-  const [products, setProducts] = useState<Product[]>(initialProducts);
+  const [products, setProducts] = useState<Product[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
+  const [categories, setCategories] = useState<string[]>([]);
 
   useEffect(() => {
     const storedProducts = localStorage.getItem('products');
     if (storedProducts) {
-      setProducts(JSON.parse(storedProducts));
+      const parsedProducts: Product[] = JSON.parse(storedProducts);
+      setProducts(parsedProducts);
+
+      const uniqueCategories = Array.from(new Set(parsedProducts.map(p => p.category)));
+      setCategories(uniqueCategories);
+    } else {
+        setProducts(initialProducts);
+        const uniqueCategories = Array.from(new Set(initialProducts.map(p => p.category)));
+        setCategories(uniqueCategories);
     }
     setIsLoaded(true);
   }, []);
@@ -50,6 +60,8 @@ export const ProductsProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     if (isLoaded) {
       localStorage.setItem('products', JSON.stringify(products));
+      const uniqueCategories = Array.from(new Set(products.map(p => p.category)));
+      setCategories(uniqueCategories);
     }
   }, [products, isLoaded]);
 
@@ -85,7 +97,7 @@ export const ProductsProvider = ({ children }: { children: ReactNode }) => {
   };
 
   return (
-    <ProductsContext.Provider value={{ products, addProducts, deleteProducts, isLoaded }}>
+    <ProductsContext.Provider value={{ products, addProducts, deleteProducts, isLoaded, categories }}>
       {children}
     </ProductsContext.Provider>
   );

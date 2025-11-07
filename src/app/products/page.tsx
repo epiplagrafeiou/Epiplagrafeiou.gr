@@ -2,7 +2,6 @@
 'use client';
 
 import { ProductCard } from '@/components/products/ProductCard';
-import { categories } from '@/lib/data';
 import {
   Card,
   CardContent,
@@ -17,9 +16,32 @@ import { formatCurrency } from '@/lib/utils';
 import { Separator } from '@/components/ui/separator';
 import { useProducts } from '@/lib/products-context';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useState, useEffect, useCallback, useRef } from 'react';
+
+const PRODUCTS_PER_PAGE = 24;
 
 export default function ProductsPage() {
-  const { products, isLoaded } = useProducts();
+  const { products, isLoaded, categories } = useProducts();
+  const [visibleCount, setVisibleCount] = useState(PRODUCTS_PER_PAGE);
+  const observer = useRef<IntersectionObserver | null>(null);
+
+  const lastProductElementRef = useCallback(
+    (node: HTMLDivElement | null) => {
+      if (!isLoaded) return;
+      if (observer.current) observer.current.disconnect();
+
+      observer.current = new IntersectionObserver((entries) => {
+        if (entries[0].isIntersecting && visibleCount < products.length) {
+          setVisibleCount((prev) => prev + PRODUCTS_PER_PAGE);
+        }
+      });
+
+      if (node) observer.current.observe(node);
+    },
+    [isLoaded, visibleCount, products.length]
+  );
+  
+  const displayedProducts = products.slice(0, visibleCount);
 
   return (
     <div className="container mx-auto grid grid-cols-1 gap-8 px-4 py-8 md:grid-cols-4">
@@ -60,7 +82,7 @@ export default function ProductsPage() {
       <main className="md:col-span-3">
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {!isLoaded ? (
-            Array.from({ length: 6 }).map((_, index) => (
+            Array.from({ length: 9 }).map((_, index) => (
               <Card key={index}>
                 <Skeleton className="h-64 w-full" />
                 <CardContent className="p-4">
@@ -73,9 +95,16 @@ export default function ProductsPage() {
               </Card>
             ))
           ) : (
-            products.map((product) => (
-              <ProductCard key={product.id} product={product} />
-            ))
+            displayedProducts.map((product, index) => {
+              if (index === displayedProducts.length - 1) {
+                return (
+                  <div ref={lastProductElementRef} key={product.id}>
+                    <ProductCard product={product} />
+                  </div>
+                );
+              }
+              return <ProductCard key={product.id} product={product} />;
+            })
           )}
         </div>
       </main>

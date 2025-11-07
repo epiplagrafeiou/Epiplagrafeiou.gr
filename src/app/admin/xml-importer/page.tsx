@@ -63,9 +63,11 @@ export default function XmlImporterPage() {
   };
   
   const applyMarkup = (price: number, rules: MarkupRule[] = []): number => {
-    const applicableRule = rules.find(rule => price >= rule.from && price <= rule.to);
-    if (applicableRule) {
-      return price * (1 + applicableRule.markup / 100);
+    const sortedRules = [...rules].sort((a, b) => a.from - b.from);
+    for (const rule of sortedRules) {
+        if (price >= rule.from && price <= rule.to) {
+            return price * (1 + rule.markup / 100);
+        }
     }
     return price; // Return original price if no rule matches
   };
@@ -84,12 +86,13 @@ export default function XmlImporterPage() {
     const productsToAdd = filteredProducts.map(p => {
         const retailPrice = parseFloat(p.retailPrice) || 0;
         const finalPrice = applyMarkup(retailPrice, activeSupplier.markupRules);
+        const categoryPath = p.category.split('>').map(c => c.trim()).join(' > ');
 
         return {
             name: p.name,
             price: finalPrice,
             description: p.description,
-            category: p.category.split('>').pop()?.trim() || 'Uncategorized',
+            category: categoryPath,
             imageId: `prod-img-${p.id}` // Use product ID to create a unique imageId
         }
     });
@@ -115,8 +118,8 @@ export default function XmlImporterPage() {
   const allCategories = useMemo(() => {
     const categories = new Set<string>();
     syncedProducts.forEach(p => {
-        const leafCategory = p.category.split('>').pop()?.trim();
-        if(leafCategory) categories.add(leafCategory);
+        const categoryPath = p.category.split('>').map(c => c.trim()).join(' > ');
+        if(categoryPath) categories.add(categoryPath);
     });
     return Array.from(categories).sort();
   }, [syncedProducts]);
@@ -151,8 +154,8 @@ export default function XmlImporterPage() {
       return syncedProducts;
     }
     return syncedProducts.filter(p => {
-        const leafCategory = p.category.split('>').pop()?.trim();
-        return leafCategory && selectedCategories.has(leafCategory);
+        const categoryPath = p.category.split('>').map(c => c.trim()).join(' > ');
+        return categoryPath && selectedCategories.has(categoryPath);
     });
   }, [syncedProducts, selectedCategories, allCategories]);
 
@@ -260,7 +263,7 @@ export default function XmlImporterPage() {
                             <TableRow key={product.id}>
                                 <TableCell className="font-medium">{product.name}</TableCell>
                                 <TableCell>
-                                <Badge variant="outline">{product.category.split('>').pop()?.trim()}</Badge>
+                                <Badge variant="outline">{product.category}</Badge>
                                 </TableCell>
                                 <TableCell className="text-right">{formatCurrency(retailPrice)}</TableCell>
                                 <TableCell className="text-right font-semibold">{formatCurrency(finalPrice)}</TableCell>
