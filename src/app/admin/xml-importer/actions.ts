@@ -20,26 +20,33 @@ export async function syncProductsFromXml(url: string): Promise<Product[]> {
     const parser = new XMLParser({
       ignoreAttributes: false,
       attributeNamePrefix: '', // Remove @ prefix for easier access
+      // Stop parsing when the value is a string or number.
+      // This is to avoid parsing the content of the CDATA tags.
+      cdataPropName: '__cdata',
       isArray: (name, jpath, isLeafNode, isAttribute) => {
         // Force product to always be an array
-        if (jpath === 'mywebstore.products.product') return true;
+        if (jpath === 'megapap.products.product') return true;
         return false;
-      }
+      },
+      // The text content of a tag with attributes is parsed as a property.
+      // Set this to a specific name.
+      textNodeName: '_text',
+      // Trim whitespace from text nodes.
+      trimValues: true,
     });
     const parsed = parser.parse(xmlText);
     
-    // Adjusted path for cs-cart feed structure.
-    const productArray = parsed.mywebstore?.products?.product;
+    const productArray = parsed.megapap?.products?.product;
 
     if (!productArray || !Array.isArray(productArray)) {
         console.error("Parsed product data is not an array or is missing:", productArray);
-        throw new Error('The XML feed does not have the expected structure. Could not find a product array at `mywebstore.products.product`.');
+        throw new Error('The XML feed does not have the expected structure. Could not find a product array at `megapap.products.product`.');
     }
 
     const products: Product[] = productArray.map((p: any) => ({
       name: p.name || 'No Name',
-      // Prioritize price_with_vat for cs-cart feeds
-      price: p.price_with_vat || p.price || '0',
+      // Use web offer price if available, otherwise fall back.
+      price: p.weboffer_price_with_vat || p.retail_price_with_vat || '0',
       description: p.description || '',
       category: p.category || 'Uncategorized',
     }));
