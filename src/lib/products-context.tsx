@@ -8,7 +8,7 @@ import { createSlug } from './utils';
 
 interface ProductsContextType {
   products: Product[];
-  addProducts: (newProducts: Omit<Product, 'id' | 'slug'>[], newImages?: { id: string; url: string; hint: string }[]) => void;
+  addProducts: (newProducts: Omit<Product, 'id' | 'slug' | 'imageId'>[], newImages?: { id: string; url: string; hint: string, productId: string }[]) => void;
   deleteProducts: (productIds: string[]) => void;
   isLoaded: boolean;
   categories: string[];
@@ -48,7 +48,7 @@ export const ProductsProvider = ({ children }: { children: ReactNode }) => {
     return Array.from(new Set(products.map(p => p.category).filter(Boolean))).sort();
   }, [products, isLoaded]);
 
-  const addProducts = (newProducts: Omit<Product, 'id' | 'slug'>[], newImages?: { id: string; url: string; hint: string }[]) => {
+  const addProducts = (newProducts: Omit<Product, 'id' | 'slug' | 'imageId'>[], newImages?: { id: string; url: string; hint: string, productId: string }[]) => {
 
     if (newImages) {
         addDynamicPlaceholder(newImages.map(img => ({
@@ -61,16 +61,23 @@ export const ProductsProvider = ({ children }: { children: ReactNode }) => {
 
     setProducts((prevProducts) => {
       const productsToAdd = newProducts.map((p, index) => {
+        const productId = `prod-${Date.now()}-${index}`;
         const productSlug = createSlug(p.name);
-        // Find the first valid image URL to associate an imageId
-        const firstImage = p.images?.[0];
-        const imageId = newImages?.find(img => img.url === firstImage)?.id || `img-${productSlug}`;
+        
+        // Find all images for this product
+        const productImages = newImages?.filter(img => img.productId === p.id).map(img => img.url) || p.images || [];
 
+        // Find the specific placeholder object for the primary image
+        const mainImagePlaceholder = newImages?.find(img => img.productId === p.id);
+        
         return {
           ...p,
-          id: `prod-${Date.now()}-${index}`,
+          id: productId,
           slug: productSlug,
-          imageId: imageId,
+          // Use the placeholder's ID for the main image
+          imageId: mainImagePlaceholder?.id || `img-${productSlug}`,
+          // Assign all found image URLs
+          images: productImages,
         };
       });
 

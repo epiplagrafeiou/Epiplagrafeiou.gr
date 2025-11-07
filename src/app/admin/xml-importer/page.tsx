@@ -69,7 +69,10 @@ export default function XmlImporterPage() {
             return price * (1 + rule.markup / 100);
         }
     }
-    return price; // Return original price if no rule matches
+    // If no rule matches, find the closest one or apply a default.
+    // For now, returning original price if no rule matches.
+    const defaultRule = sortedRules.find(r => r.from === 0) || { markup: 0 };
+    return price * (1 + defaultRule.markup / 100);
   };
 
   const handleAddToStore = () => {
@@ -89,19 +92,25 @@ export default function XmlImporterPage() {
         const categoryPath = p.category.split('>').map(c => c.trim()).join(' > ');
 
         return {
+            id: p.id, // Pass original ID for image mapping
             name: p.name,
             price: finalPrice,
             description: p.description,
             category: categoryPath,
-            imageId: `prod-img-${p.id}` // Use product ID to create a unique imageId
+            images: p.images, // Pass all image URLs
         }
     });
     
-    const imagesToAdd = filteredProducts.map(p => ({
-      id: `prod-img-${p.id}`,
-      url: p.images[0] || 'https://placehold.co/600x400', // Use first image or a placeholder
-      hint: p.name.substring(0, 20) // a short hint for AI
-    }));
+    // Create detailed image info for placeholder registration
+    const imagesToAdd = filteredProducts.flatMap(p => 
+        p.images.map((imageUrl, index) => ({
+            id: `prod-img-${p.id}-${index}`, // Unique ID for each image
+            url: imageUrl,
+            hint: p.name.substring(0, 20),
+            productId: p.id // Link back to original product ID
+        }))
+    );
+
 
     addProducts(productsToAdd, imagesToAdd);
     
