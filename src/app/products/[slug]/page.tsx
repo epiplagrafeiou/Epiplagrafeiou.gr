@@ -17,21 +17,26 @@ export default function ProductDetailPage() {
   const { slug } = params;
 
   const [product, setProduct] = useState<Product | undefined>(undefined);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     if (products.length > 0 && slug) {
       const foundProduct = products.find((p) => p.slug === slug);
       setProduct(foundProduct);
+      setIsLoading(false);
+    } else if (products.length > 0) {
+      // If there are products but no slug, or product not found yet
+      setIsLoading(false);
     }
   }, [products, slug]);
 
-  if (products.length > 0 && !product) {
-    notFound();
-  }
-
-  if (!product) {
+  if (isLoading) {
     // You can return a loading state here
     return <div>Loading...</div>;
+  }
+  
+  if (!product) {
+    notFound();
   }
 
   const image = PlaceHolderImages.find((img) => img.id === product.imageId);
