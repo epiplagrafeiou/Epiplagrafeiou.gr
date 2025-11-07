@@ -1,42 +1,6 @@
 {
   "placeholderImages": [
     {
-      "id": "scandinavian-chair",
-      "description": "A minimalist Scandinavian-style chair with light wood and grey fabric.",
-      "imageUrl": "https://images.unsplash.com/photo-1624345690966-db232a144397?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw0fHxzY2FuZGluYXZpYW4lMjBjaGFpcnxlbnwwfHx8fDE3NjI1MDk1NzZ8MA&ixlib=rb-4.1.0&q=80&w=1080",
-      "imageHint": "scandinavian chair"
-    },
-    {
-      "id": "oak-dining-table",
-      "description": "A solid oak dining table that seats six people.",
-      "imageUrl": "https://images.unsplash.com/photo-1707749522047-47be5e1ec97d?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw1fHxvYWslMjB0YWJsZXxlbnwwfHx8fDE3NjI1MDk1NzZ8MA&ixlib=rb-4.1.0&q=80&w=1080",
-      "imageHint": "oak table"
-    },
-    {
-      "id": "modern-sofa",
-      "description": "A comfortable three-seater modern sofa in a neutral grey color.",
-      "imageUrl": "https://images.unsplash.com/photo-1586023492125-27b2c045efd7?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwyfHxtb2Rlcm4lMjBzb2ZhfGVufDB8fHx8MTc2MjQ1ODY3M3ww&ixlib=rb-4.1.0&q=80&w=1080",
-      "imageHint": "modern sofa"
-    },
-    {
-      "id": "bookshelf-ladder",
-      "description": "An industrial style bookshelf ladder made of metal and wood.",
-      "imageUrl": "https://images.unsplash.com/photo-1589816634282-bf08f4e43ba6?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwzfHx3b29kJTIwYm9va3NoZWxmfGVufDB8fHx8MTc2MjUwOTU3Nnww&ixlib=rb-4.1.0&q=80&w=1080",
-      "imageHint": "wood bookshelf"
-    },
-    {
-      "id": "minimalist-desk",
-      "description": "A sleek and minimalist desk with a white top and wooden legs.",
-      "imageUrl": "https://images.unsplash.com/photo-1528297506728-9533d2ac3fa4?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxMHx8bWluaW1hbGlzdCUyMGRlc2t8ZW58MHx8fHwxNzYyNTAzMjE1fDA&ixlib=rb-4.1.0&q=80&w=1080",
-      "imageHint": "minimalist desk"
-    },
-    {
-      "id": "pendant-light",
-      "description": "A modern pendant light with a metallic finish.",
-      "imageUrl": "https://images.unsplash.com/photo-1656402887556-e727ffe1f6d7?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwyfHxwZW5kYW50JTIwbGlnaHR8ZW58MHx8fHwxNzYyNDYxODg1fDA&ixlib=rb-4.1.0&q=80&w=1080",
-      "imageHint": "pendant light"
-    },
-    {
       "id": "hero-background",
       "description": "A bright and airy living room with modern furniture.",
       "imageUrl": "https://images.unsplash.com/photo-1554995207-c18c203602cb?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw4fHxsaXZpbmclMjByb29tfGVufDB8fHx8MTc2MjQ2MDM4N3ww&ixlib=rb-4.1.0&q=80&w=1080",
