@@ -80,42 +80,46 @@ export const ProductsProvider = ({ children }: { children: ReactNode }) => {
         const productSlug = createSlug(p.name);
         
         const mainImageUrl = p.mainImage;
-        const allImageUrls = p.images || [];
+        
+        let imageId: string | undefined;
 
-        // Find placeholder for the main image, or create it if it doesn't exist.
-        let mainImagePlaceholder = PlaceHolderImages.find(img => img.imageUrl === mainImageUrl);
-        let imageId = mainImagePlaceholder?.id;
-
-        if (!imageId && mainImageUrl) {
-           imageId = `prod-img-${p.id}-main`;
-           addDynamicPlaceholder({
-               id: imageId,
-               imageUrl: mainImageUrl,
-               description: p.name,
-               imageHint: p.name.substring(0, 20),
-           });
+        if (mainImageUrl) {
+          const mainImagePlaceholder = PlaceHolderImages.find(img => img.imageUrl === mainImageUrl);
+          if(mainImagePlaceholder) {
+            imageId = mainImagePlaceholder.id;
+          } else {
+            const newImageId = `prod-img-${p.id}-main`;
+            addDynamicPlaceholder({
+                 id: newImageId,
+                 imageUrl: mainImageUrl,
+                 description: p.name,
+                 imageHint: p.name.substring(0, 20),
+            });
+            imageId = newImageId;
+          }
         }
         
-        // If still no imageId, try to find one from the rest of the images
-        if (!imageId && allImageUrls.length > 0) {
-            const firstImagePlaceholder = PlaceHolderImages.find(img => img.imageUrl === allImageUrls[0]);
+        if (!imageId && p.images && p.images.length > 0) {
+            const firstImagePlaceholder = PlaceHolderImages.find(img => img.imageUrl === p.images[0]);
             imageId = firstImagePlaceholder?.id;
         }
 
-        // Fallback if no images are found at all
         if (!imageId) {
             imageId = `prod-fallback-${p.id}`;
         }
+        
+        const allImageUrls = p.images || [];
 
         return {
           ...p,
           id: productId,
           slug: productSlug,
           imageId: imageId,
-          images: allImageUrls, // This will be stripped before saving to localStorage
+          // images: allImageUrls, // This is intentionally left out to reduce localStorage size
           price: p.price,
           category: p.category,
-          description: p.description
+          description: p.description,
+          stock: p.stock,
         };
       });
       
@@ -133,10 +137,10 @@ export const ProductsProvider = ({ children }: { children: ReactNode }) => {
     setProducts(prev => {
         const productsToKeep = prev.filter(p => {
             if (idsToDeleteSet.has(p.id)) {
-                // Collect all image IDs associated with this product for deletion
-                const placeholdersForProduct = PlaceHolderImages.filter(img => (p.images || []).includes(img.imageUrl));
+                // Heuristically find associated images in placeholder list
+                const productNumId = p.id.replace('prod-', '');
+                const placeholdersForProduct = PlaceHolderImages.filter(img => img.id.includes(productNumId));
                 imageIdsToDelete.push(...placeholdersForProduct.map(img => img.id));
-                // Also add the main imageId if it exists
                 if (p.imageId) {
                     imageIdsToDelete.push(p.imageId);
                 }
@@ -154,8 +158,21 @@ export const ProductsProvider = ({ children }: { children: ReactNode }) => {
   };
 
 
+  const enrichedProducts = useMemo(() => {
+    if (!isLoaded) return [];
+    return products.map(p => {
+        // Since `images` is not stored, we reconstruct it from placeholders
+        const productNumId = p.id.replace('prod-', '');
+        const productImages = PlaceHolderImages.filter(img => img.id.includes(productNumId));
+        return {
+            ...p,
+            images: productImages.map(img => img.imageUrl)
+        }
+    });
+  }, [products, isLoaded]);
+
   return (
-    <ProductsContext.Provider value={{ products, addProducts, deleteProducts, isLoaded, categories, allCategories }}>
+    <ProductsContext.Provider value={{ products: enrichedProducts, addProducts, deleteProducts, isLoaded, categories, allCategories }}>
       {children}
     </ProductsContext.Provider>
   );
@@ -166,18 +183,5 @@ export const useProducts = () => {
   if (context === undefined) {
     throw new Error('useProducts must be used within a ProductsProvider');
   }
-
-  // At runtime, enrich products with the full image list from the placeholder system
-  const runtimeProducts = useMemo(() => {
-    if (!context.isLoaded) return [];
-    return context.products.map(p => {
-        const productImages = PlaceHolderImages.filter(img => img.id.startsWith(`prod-img-${p.id.replace('prod-','')}`));
-        return {
-            ...p,
-            images: productImages.map(img => img.imageUrl)
-        }
-    });
-  }, [context.products, context.isLoaded]);
-  
-  return { ...context, products: runtimeProducts };
+  return context;
 };

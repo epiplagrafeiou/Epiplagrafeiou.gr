@@ -12,6 +12,7 @@ interface Product {
   category: string;
   mainImage: string | null;
   images: string[];
+  stock: number;
 }
 
 export async function syncProductsFromXml(url: string): Promise<Product[]> {
@@ -31,6 +32,9 @@ export async function syncProductsFromXml(url: string): Promise<Product[]> {
       textNodeName: '_text',
       trimValues: true,
       cdataPropName: '__cdata',
+      parseNodeValue: true,
+      parseAttributeValue: true,
+      parseTrueNumberOnly: true,
     });
     
     // The parser creates objects for CDATA tags. We need to flatten them.
@@ -91,6 +95,7 @@ export async function syncProductsFromXml(url: string): Promise<Product[]> {
             category: p.category || 'Uncategorized',
             mainImage: mainImage,
             images: allImages,
+            stock: p.qty ?? 0,
         };
     });
 

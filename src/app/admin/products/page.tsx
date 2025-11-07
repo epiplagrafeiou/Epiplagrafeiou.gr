@@ -132,7 +132,7 @@ export default function AdminProductsPage() {
             <TableBody>
               {products.map((product) => {
                  const image = PlaceHolderImages.find((img) => img.id === product.imageId);
-                 const stock = Math.floor(Math.random() * 100);
+                 const stock = product.stock ?? 0;
                  return (
                   <TableRow key={product.id} data-state={selectedProducts.has(product.id) && "selected"}>
                     <TableCell>

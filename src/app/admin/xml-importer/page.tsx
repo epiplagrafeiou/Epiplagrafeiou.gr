@@ -32,6 +32,7 @@ interface SyncedProduct {
   description: string;
   category: string;
   images: string[];
+  stock: number;
 }
 
 export default function XmlImporterPage() {
@@ -98,6 +99,7 @@ export default function XmlImporterPage() {
             description: p.description,
             category: categoryPath,
             images: p.images, // Pass all image URLs
+            stock: p.stock,
         }
     });
     
@@ -259,6 +261,7 @@ export default function XmlImporterPage() {
                         <TableRow>
                         <TableHead>Name</TableHead>
                         <TableHead>Category</TableHead>
+                        <TableHead>Stock</TableHead>
                         <TableHead className="text-right">Supplier Price</TableHead>
                         <TableHead className="text-right">Your Price</TableHead>
                         </TableRow>
@@ -274,6 +277,7 @@ export default function XmlImporterPage() {
                                 <TableCell>
                                 <Badge variant="outline">{product.category}</Badge>
                                 </TableCell>
+                                <TableCell>{product.stock}</TableCell>
                                 <TableCell className="text-right">{formatCurrency(supplierPrice)}</TableCell>
                                 <TableCell className="text-right font-semibold">{formatCurrency(finalPrice)}</TableCell>
                             </TableRow>
