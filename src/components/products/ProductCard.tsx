@@ -3,7 +3,7 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import type { Product } from '@/lib/data';
 import { formatCurrency } from '@/lib/utils';
 import {
@@ -14,25 +14,37 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import AddToCartButton from './AddToCartButton';
+import { PlaceHolderImages } from '@/lib/placeholder-images';
 
 interface ProductCardProps {
   product: Product;
 }
 
 export function ProductCard({ product }: ProductCardProps) {
-  const [primaryImage, ...secondaryImages] = product.images || [];
-  const secondaryImage = secondaryImages[0];
+  // Find the primary image from the placeholder data using imageId
+  const primaryPlaceholder = PlaceHolderImages.find(p => p.id === product.imageId);
+  const primaryImageSrc = primaryPlaceholder?.imageUrl;
 
-  const [currentImage, setCurrentImage] = useState(primaryImage);
+  // The product.images array holds all image URLs for the product
+  const allImageUrls = product.images || [];
+  
+  // The first image in the array is the default hover image if it's different from the primary one
+  const secondaryImageSrc = allImageUrls.find(url => url !== primaryImageSrc) || primaryImageSrc;
+
+  const [currentImage, setCurrentImage] = useState(primaryImageSrc);
+
+  useEffect(() => {
+    setCurrentImage(primaryImageSrc);
+  }, [primaryImageSrc]);
 
   const handleMouseEnter = () => {
-    if (secondaryImage) {
-      setCurrentImage(secondaryImage);
+    if (secondaryImageSrc) {
+      setCurrentImage(secondaryImageSrc);
     }
   };
 
   const handleMouseLeave = () => {
-    setCurrentImage(primaryImage);
+    setCurrentImage(primaryImageSrc);
   };
 
   return (
