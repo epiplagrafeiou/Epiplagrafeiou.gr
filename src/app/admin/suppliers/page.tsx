@@ -1,7 +1,9 @@
+'use client';
+
+import { useState } from 'react';
 import {
   Table,
   TableBody,
-  TableCaption,
   TableCell,
   TableHead,
   TableHeader,
@@ -16,8 +18,8 @@ import {
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { PlusCircle } from 'lucide-react';
-import { suppliers } from '@/lib/data';
+import { PlusCircle, Trash2 } from 'lucide-react';
+import { suppliers as initialSuppliers } from '@/lib/data';
 import { formatCurrency } from '@/lib/utils';
 import {
   Dialog,
@@ -27,51 +29,161 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from '@/components/ui/dialog'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+
+type MarkupRule = {
+  from: number;
+  to: number;
+  markup: number;
+};
+
+type Supplier = typeof initialSuppliers[0] & { markupRules?: MarkupRule[] };
 
 export default function SuppliersPage() {
+  const [suppliers, setSuppliers] = useState<Supplier[]>(
+    initialSuppliers.map((s) => ({ ...s, markupRules: [{ from: 0, to: 99999, markup: s.markup }] }))
+  );
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [newSupplierName, setNewSupplierName] = useState('');
+  const [newSupplierUrl, setNewSupplierUrl] = useState('');
+  const [markupRules, setMarkupRules] = useState<MarkupRule[]>([
+    { from: 0, to: 100, markup: 50 },
+    { from: 101, to: 500, markup: 40 },
+    { from: 501, to: 99999, markup: 30 },
+  ]);
+
+  const handleRuleChange = (index: number, field: keyof MarkupRule, value: string) => {
+    const newRules = [...markupRules];
+    newRules[index] = { ...newRules[index], [field]: Number(value) };
+    setMarkupRules(newRules);
+  };
+
+  const addRule = () => {
+    setMarkupRules([...markupRules, { from: 0, to: 0, markup: 0 }]);
+  };
+
+  const removeRule = (index: number) => {
+    const newRules = markupRules.filter((_, i) => i !== index);
+    setMarkupRules(newRules);
+  };
+
+  const handleAddSupplier = () => {
+    if (newSupplierName && newSupplierUrl) {
+      const newSupplier: Supplier = {
+        id: `sup${suppliers.length + 1}`,
+        name: newSupplierName,
+        url: newSupplierUrl,
+        markup: 0, // No longer the primary source
+        conversionRate: Math.random() * 0.2,
+        profitability: Math.random() * 10000,
+        markupRules,
+      };
+      setSuppliers([...suppliers, newSupplier]);
+      setDialogOpen(false);
+      // Reset form
+      setNewSupplierName('');
+      setNewSupplierUrl('');
+      setMarkupRules([
+        { from: 0, to: 100, markup: 50 },
+        { from: 101, to: 500, markup: 40 },
+        { from: 501, to: 99999, markup: 30 },
+      ]);
+    }
+  };
+
   return (
     <div className="p-8 pt-6">
       <div className="flex items-center justify-between">
         <h2 className="text-3xl font-bold tracking-tight">Suppliers</h2>
-        <Dialog>
+        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
             <Button>
               <PlusCircle className="mr-2 h-4 w-4" />
               Add Supplier
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-[425px]">
+          <DialogContent className="sm:max-w-2xl">
             <DialogHeader>
               <DialogTitle>Add New Supplier</DialogTitle>
               <DialogDescription>
-                Enter the details for the new supplier. Click save when you're done.
+                Enter the details and markup rules for the new supplier.
               </DialogDescription>
             </DialogHeader>
-            <div className="grid gap-4 py-4">
+            <div className="grid gap-6 py-4">
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="name" className="text-right">
                   Name
                 </Label>
-                <Input id="name" defaultValue="Nordic Designs" className="col-span-3" />
+                <Input
+                  id="name"
+                  value={newSupplierName}
+                  onChange={(e) => setNewSupplierName(e.target.value)}
+                  className="col-span-3"
+                  placeholder="Supplier Name"
+                />
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="url" className="text-right">
                   XML URL
                 </Label>
-                <Input id="url" defaultValue="https://example.com/feed.xml" className="col-span-3" />
+                <Input
+                  id="url"
+                  value={newSupplierUrl}
+                  onChange={(e) => setNewSupplierUrl(e.target.value)}
+                  className="col-span-3"
+                  placeholder="https://example.com/feed.xml"
+                />
               </div>
-               <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="markup" className="text-right">
-                  Markup (%)
-                </Label>
-                <Input id="markup" type="number" defaultValue="30" className="col-span-3" />
+              <div>
+                <Label className="font-semibold">Markup Rules</Label>
+                <p className="text-sm text-muted-foreground mb-4">Set markup percentages based on product retail price ranges.</p>
+                <div className="space-y-4">
+                  {markupRules.map((rule, index) => (
+                    <div key={index} className="grid grid-cols-12 items-center gap-2">
+                      <div className="col-span-1 text-sm text-muted-foreground">From:</div>
+                       <div className="col-span-3">
+                          <Input
+                            type="number"
+                            value={rule.from}
+                            onChange={(e) => handleRuleChange(index, 'from', e.target.value)}
+                            placeholder="€0"
+                          />
+                       </div>
+                       <div className="col-span-1 text-sm text-muted-foreground">To:</div>
+                       <div className="col-span-3">
+                          <Input
+                            type="number"
+                            value={rule.to}
+                            onChange={(e) => handleRuleChange(index, 'to', e.target.value)}
+                            placeholder="€100"
+                          />
+                        </div>
+                        <div className="col-span-3">
+                           <Input
+                            type="number"
+                            value={rule.markup}
+                            onChange={(e) => handleRuleChange(index, 'markup', e.target.value)}
+                            placeholder="Markup %"
+                          />
+                        </div>
+                      <div className="col-span-1">
+                        <Button variant="ghost" size="icon" onClick={() => removeRule(index)}>
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                 <Button onClick={addRule} variant="outline" size="sm" className="mt-4">
+                    <PlusCircle className="mr-2 h-4 w-4" /> Add Rule
+                  </Button>
               </div>
             </div>
             <DialogFooter>
-              <Button type="submit">Save changes</Button>
+              <Button onClick={() => setDialogOpen(false)} variant="outline">Cancel</Button>
+              <Button onClick={handleAddSupplier}>Save Supplier</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
@@ -89,7 +201,7 @@ export default function SuppliersPage() {
               <TableRow>
                 <TableHead>Supplier</TableHead>
                 <TableHead>XML Feed URL</TableHead>
-                <TableHead className="text-center">Markup</TableHead>
+                <TableHead className="text-center">Markup Rules</TableHead>
                 <TableHead className="text-center">Conversion</TableHead>
                 <TableHead className="text-right">Profitability</TableHead>
               </TableRow>
@@ -109,7 +221,11 @@ export default function SuppliersPage() {
                     </a>
                   </TableCell>
                   <TableCell className="text-center">
-                    <Badge variant="secondary">{supplier.markup}%</Badge>
+                    <div className="flex flex-col items-center gap-1">
+                      {supplier.markupRules?.map((rule, i) => (
+                         <Badge key={i} variant="secondary">{`${formatCurrency(rule.from)} - ${formatCurrency(rule.to)}: ${rule.markup}%`}</Badge>
+                      )) || <Badge variant="secondary">{supplier.markup}%</Badge>}
+                    </div>
                   </TableCell>
                   <TableCell className="text-center">{supplier.conversionRate * 100}%</TableCell>
                   <TableCell className="text-right">
