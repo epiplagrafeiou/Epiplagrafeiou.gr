@@ -18,34 +18,14 @@ interface ProductsContextType {
 const ProductsContext = createContext<ProductsContextType | undefined>(undefined);
 
 export const ProductsProvider = ({ children }: { children: ReactNode }) => {
-  const [products, setProducts] = useState<Product[]>([]);
+  const [products, setProducts] = useState<Product[]>(initialProducts);
   const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
-    const storedProducts = localStorage.getItem('products');
-    if (storedProducts) {
-      try {
-        setProducts(JSON.parse(storedProducts));
-      } catch (e) {
-        console.error("Failed to parse products from localStorage, initializing with default.", e);
-        setProducts(initialProducts);
-      }
-    } else {
-      setProducts(initialProducts);
-    }
+    // We no longer load products from local storage to avoid quota errors.
+    // The component will initialize with the static product data.
     setIsLoaded(true);
   }, []);
-
-  useEffect(() => {
-    if (isLoaded) {
-      try {
-        localStorage.setItem('products', JSON.stringify(products));
-      } catch (e) {
-         console.error("Failed to save products to localStorage. Quota may be exceeded.", e);
-         // Here you might want to inform the user or try to clean up older data
-      }
-    }
-  }, [products, isLoaded]);
 
   const categories = useMemo(() => {
     if (!isLoaded) return [];
@@ -77,17 +57,23 @@ export const ProductsProvider = ({ children }: { children: ReactNode }) => {
         const mainImageUrl = p.mainImage;
         const allImageUrls = p.images || [];
 
-        const mainImagePlaceholder = newImagesData?.find(img => img.url === mainImageUrl && img.productId === p.id);
-        
-        const imageId = mainImagePlaceholder?.id || `prod-img-${p.id}-main`;
+        const mainImagePlaceholder = PlaceHolderImages.find(img => img.imageUrl === mainImageUrl);
+        let imageId = mainImagePlaceholder?.id;
 
-        if (!mainImagePlaceholder && mainImageUrl) {
+        // If no placeholder exists for the main image, create one.
+        if (!imageId && mainImageUrl) {
+           imageId = `prod-img-${p.id}-main`;
            addDynamicPlaceholder({
                id: imageId,
                imageUrl: mainImageUrl,
                description: p.name,
                imageHint: p.name.substring(0, 20),
            });
+        }
+        // Fallback imageId if no main image is provided
+        if (!imageId) {
+          const firstImagePlaceholder = PlaceHolderImages.find(img => img.imageUrl === allImageUrls[0]);
+          imageId = firstImagePlaceholder?.id || `prod-${p.id}-fallback`;
         }
 
         return {
@@ -115,18 +101,18 @@ export const ProductsProvider = ({ children }: { children: ReactNode }) => {
     setProducts(prev => {
         const productsToKeep = prev.filter(p => {
             if (productIds.includes(p.id)) {
-                // Collect image IDs for associated placeholders to delete
-                if (p.imageId) {
-                    imageIdsToDelete.push(p.imageId);
-                }
-                if (p.images) {
-                    // This assumes images are identified by URL in some way or we need a better mapping.
-                    // For now, let's assume we need to find placeholders by URL.
-                    // This part is tricky if IDs are not stored directly with product.
-                    // Let's find placeholder IDs associated with this product's image URLs.
-                     const allProductImages = PlaceHolderImages.filter(img => (p.images || []).includes(img.imageUrl));
-                     imageIdsToDelete.push(...allProductImages.map(img => img.id));
-                }
+                // Find all placeholder images associated with this product's image URLs
+                 const productImages = new Set(p.images || []);
+                 if (p.imageId) {
+                    const mainPlaceholder = PlaceHolderImages.find(img => img.id === p.imageId);
+                    if (mainPlaceholder) {
+                        productImages.add(mainPlaceholder.imageUrl);
+                    }
+                 }
+                
+                 const placeholdersForProduct = PlaceHolderImages.filter(img => productImages.has(img.imageUrl));
+                 imageIdsToDelete.push(...placeholdersForProduct.map(img => img.id));
+
                 return false;
             }
             return true;
@@ -135,7 +121,6 @@ export const ProductsProvider = ({ children }: { children: ReactNode }) => {
     });
 
     if (imageIdsToDelete.length > 0) {
-      // Remove duplicates
       const uniqueImageIds = Array.from(new Set(imageIdsToDelete));
       removeDynamicPlaceholders(uniqueImageIds);
     }
