@@ -3,13 +3,14 @@
 import Image from 'next/image';
 import { notFound, useParams } from 'next/navigation';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
-import { formatCurrency, cn } from '@/lib/utils';
+import { formatCurrency, cn, createSlug } from '@/lib/utils';
 import AddToCartButton from '@/components/products/AddToCartButton';
 import { Separator } from '@/components/ui/separator';
 import { ProductCard } from '@/components/products/ProductCard';
 import { useProducts } from '@/lib/products-context';
 import { useEffect, useState } from 'react';
 import type { Product } from '@/lib/data';
+import Link from 'next/link';
 
 export default function ProductDetailPage() {
   const { products, isLoaded } = useProducts();
@@ -23,25 +24,25 @@ export default function ProductDetailPage() {
     if (isLoaded && products.length > 0 && slug) {
       const foundProduct = products.find((p) => p.slug === slug);
       setProduct(foundProduct);
-      if (foundProduct?.images?.[0]) {
-        setActiveImage(foundProduct.images[0]);
-      }
     }
   }, [isLoaded, products, slug]);
-
+  
   const allImages = product?.images?.map(imageUrl => {
-    // Try to find a matching placeholder by URL
     const placeholder = PlaceHolderImages.find(p => p.imageUrl === imageUrl);
     return {
       url: imageUrl,
       hint: placeholder?.imageHint || product.name.substring(0,20)
     }
-  });
-
+  }) || [];
 
   useEffect(() => {
-    if (product && allImages && allImages.length > 0) {
-      setActiveImage(allImages[0].url);
+    if (product) {
+      const firstImage = allImages.find(img => img.url === product.imageId);
+      if (firstImage) {
+        setActiveImage(firstImage.url);
+      } else if (allImages.length > 0) {
+        setActiveImage(allImages[0].url);
+      }
     }
   }, [product, allImages]);
 
@@ -61,11 +62,32 @@ export default function ProductDetailPage() {
     .filter((p) => p.category === product.category && p.id !== product.id)
     .slice(0, 4);
 
+  const categoryParts = product.category.split(' > ');
+  let currentPath = '';
+  const breadcrumbs = categoryParts.map((part, index) => {
+    currentPath += `${currentPath ? '/' : ''}${createSlug(part)}`;
+    return {
+      name: part,
+      href: `/category/${currentPath}`
+    };
+  });
+
   return (
     <div className="container mx-auto px-4 py-12">
+       <div className="mb-6 flex items-center space-x-2 text-sm text-muted-foreground">
+        <Link href="/" className="hover:text-foreground">Home</Link>
+        <span>/</span>
+        <Link href="/products" className="hover:text-foreground">Products</Link>
+        {breadcrumbs.map((crumb, index) => (
+          <span key={index} className="flex items-center space-x-2">
+            <span>/</span>
+            <Link href={crumb.href} className="hover:text-foreground">{crumb.name}</Link>
+          </span>
+        ))}
+      </div>
       <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:gap-16">
         <div>
-          <div className="rounded-lg bg-secondary aspect-square flex items-center justify-center">
+          <div className="relative aspect-square rounded-lg bg-secondary flex items-center justify-center">
             {activeImage ? (
               <Image
                 src={activeImage}

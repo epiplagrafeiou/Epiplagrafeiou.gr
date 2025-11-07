@@ -1,6 +1,6 @@
 'use client';
 import Link from 'next/link';
-import { ShoppingBag, Search, Menu, X, ChevronDown } from 'lucide-react';
+import { ShoppingBag, Search, Menu, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Logo } from '@/components/icons/Logo';
@@ -17,17 +17,86 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuPortal,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger
 } from '@/components/ui/dropdown-menu';
 import { useProducts } from '@/lib/products-context';
+import { createSlug } from '@/lib/utils';
 
 const navLinks = [
   { href: '/admin', label: 'Admin Panel' },
 ];
 
+interface CategoryNode {
+  name: string;
+  slug: string;
+  path: string;
+  children: CategoryNode[];
+}
+
+function buildCategoryTree(categories: string[]): CategoryNode[] {
+  const root: CategoryNode = { name: 'root', slug: '', path: '', children: [] };
+
+  categories.forEach(categoryPath => {
+    let currentNode = root;
+    const parts = categoryPath.split(' > ');
+    let currentPath = '';
+
+    parts.forEach(part => {
+      currentPath = currentPath ? `${currentPath}/${createSlug(part)}` : createSlug(part);
+      let childNode = currentNode.children.find(child => child.name === part);
+      if (!childNode) {
+        childNode = {
+          name: part,
+          slug: createSlug(part),
+          path: currentPath,
+          children: [],
+        };
+        currentNode.children.push(childNode);
+      }
+      currentNode = childNode;
+    });
+  });
+
+  return root.children;
+}
+
+
+function CategorySubMenu({ nodes }: { nodes: CategoryNode[] }) {
+  return (
+    <>
+      {nodes.map(node => {
+        if (node.children.length > 0) {
+          return (
+            <DropdownMenuSub key={node.slug}>
+              <DropdownMenuSubTrigger>
+                <Link href={`/category/${node.path}`} className="w-full text-left">{node.name}</Link>
+              </DropdownMenuSubTrigger>
+              <DropdownMenuPortal>
+                <DropdownMenuSubContent>
+                  <CategorySubMenu nodes={node.children} />
+                </DropdownMenuSubContent>
+              </DropdownMenuPortal>
+            </DropdownMenuSub>
+          );
+        }
+        return (
+          <DropdownMenuItem key={node.slug} asChild>
+            <Link href={`/category/${node.path}`}>{node.name}</Link>
+          </DropdownMenuItem>
+        );
+      })}
+    </>
+  );
+}
+
 export default function Header() {
   const { itemCount } = useCart();
-  const { categories } = useProducts();
-  const [isSheetOpen, setIsSheetOpen] = useState(false);
+  const { allCategories } = useProducts();
+
+  const categoryTree = buildCategoryTree(allCategories);
 
   return (
     <header className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur-sm">
@@ -39,25 +108,16 @@ export default function Header() {
           <nav className="hidden items-center gap-4 md:flex">
              <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Link
-                  href="/products"
-                  className="group flex items-center gap-1 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
-                >
+                <Button variant="ghost" className="group flex items-center gap-1 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground">
                   Shop by Category
                   <ChevronDown className="h-4 w-4 transition-transform duration-200 group-data-[state=open]:rotate-180" />
-                </Link>
+                </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start">
                 <DropdownMenuItem asChild>
                    <Link href="/products">All Products</Link>
                 </DropdownMenuItem>
-                {categories.map((category) => (
-                  <DropdownMenuItem key={category} asChild>
-                    <Link href={`/products?category=${encodeURIComponent(category)}`}>
-                      {category}
-                    </Link>
-                  </DropdownMenuItem>
-                ))}
+                <CategorySubMenu nodes={categoryTree} />
               </DropdownMenuContent>
             </DropdownMenu>
             {navLinks.map((link) => (
@@ -93,7 +153,7 @@ export default function Header() {
           </Button>
 
           <div className="md:hidden">
-            <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
+            <Sheet>
               <SheetTrigger asChild>
                 <Button variant="ghost" size="icon">
                   <Menu className="h-6 w-6" />
