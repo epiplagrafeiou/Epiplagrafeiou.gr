@@ -2,14 +2,16 @@
 'use server';
 
 import { megapapParser, type XmlProduct } from '@/lib/xml-parsers/megapap-parser';
+import { b2bportalParser } from '@/lib/xml-parsers/b2bportal-parser';
 
 // In the future, we can add more parsers here.
 const parsers: { [key: string]: (url: string) => Promise<XmlProduct[]> } = {
   'default': megapapParser, // Default for any unspecified 'megapap' format
-  'Megapap': megapapParser, // Assuming the first supplier is named this
+  'Megapap': megapapParser,
   'Nordic Designs': megapapParser, // For existing mock data
   'Milano Furnishings': megapapParser,
-  'Office Solutions Inc.': megapParser,
+  'Office Solutions Inc.': megapapParser,
+  'b2bportal.gr': b2bportalParser, // New parser for b2bportal
 };
 
 export async function syncProductsFromXml(url: string, supplierName: string): Promise<XmlProduct[]> {
