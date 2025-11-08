@@ -6,7 +6,6 @@ import { createSlug } from './utils';
 import { useCollection } from '@/firebase/firestore/use-collection';
 import { collection, writeBatch, doc } from 'firebase/firestore';
 import { useFirestore, useMemoFirebase, FirestorePermissionError, errorEmitter } from '@/firebase';
-import placeholderData from './placeholder-images.json';
 
 export interface Product {
   id: string;
