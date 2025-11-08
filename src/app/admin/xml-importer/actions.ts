@@ -6,18 +6,20 @@ import { b2bportalParser } from '@/lib/xml-parsers/b2bportal-parser';
 
 // In the future, we can add more parsers here.
 const parsers: { [key: string]: (url: string) => Promise<XmlProduct[]> } = {
-  'default': megapapParser, // Default for any unspecified 'megapap' format
-  'Megapap': megapapParser,
-  'Nordic Designs': megapapParser, // For existing mock data
-  'Milano Furnishings': megapapParser,
-  'Office Solutions Inc.': megapapParser,
-  'b2bportal.gr': b2bportalParser, // New parser for b2bportal
+  'megapap': megapapParser,
+  'nordic designs': megapapParser,
+  'milano furnishings': megapapParser,
+  'office solutions inc.': megapapParser,
+  'b2bportal.gr': b2bportalParser,
+  'b2b portal': b2bportalParser,
 };
 
 export async function syncProductsFromXml(url: string, supplierName: string): Promise<XmlProduct[]> {
-  const parser = parsers[supplierName] || parsers['default'];
+  const normalizedSupplierName = supplierName.toLowerCase();
+  const parser = parsers[normalizedSupplierName] || megapapParser;
 
   if (!parser) {
+    // This case should ideally not be reached with the fallback, but it's good practice.
     throw new Error(`No parser found for supplier: ${supplierName}`);
   }
 
