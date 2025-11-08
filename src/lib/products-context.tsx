@@ -95,14 +95,16 @@ export const ProductsProvider = ({ children }: { children: ReactNode }) => {
   const categories = useMemo(() => {
     if (!isLoaded) return [];
     // Categories should only be generated from products that are visible in the store
-    return Array.from(new Set(inStockProducts.map(p => p.category.split(' > ').pop()!).filter(Boolean))).sort();
-  }, [inStockProducts, isLoaded]);
+    const publicFacingProducts = enrichedProducts.filter(p => (p.stock ?? 0) > 0);
+    return Array.from(new Set(publicFacingProducts.map(p => p.category.split(' > ').pop()!).filter(Boolean))).sort();
+  }, [enrichedProducts, isLoaded]);
   
   const allCategories = useMemo(() => {
     if (!isLoaded) return [];
     // All categories should also only be from in-stock products
-    return Array.from(new Set(inStockProducts.map(p => p.category).filter(Boolean))).sort();
-  }, [inStockProducts, isLoaded]);
+    const publicFacingProducts = enrichedProducts.filter(p => (p.stock ?? 0) > 0);
+    return Array.from(new Set(publicFacingProducts.map(p => p.category).filter(Boolean))).sort();
+  }, [enrichedProducts, isLoaded]);
 
   const addProducts = (newProducts: Omit<Product, 'slug' | 'imageId'>[], newImagesData?: { id: string; url: string; hint: string, productId: string }[]) => {
     
