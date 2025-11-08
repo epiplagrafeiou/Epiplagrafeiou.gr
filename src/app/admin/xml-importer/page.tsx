@@ -47,13 +47,13 @@ export default function XmlImporterPage() {
 
   const [selectedCategories, setSelectedCategories] = useState<Set<string>>(new Set());
 
-  const handleSync = async (supplierId: string, url: string) => {
+  const handleSync = async (supplierId: string, url: string, name: string) => {
     setLoadingSupplier(supplierId);
     setActiveSupplierId(supplierId);
     setError(null);
     setSyncedProducts([]);
     try {
-      const products = await syncProductsFromXml(url);
+      const products = await syncProductsFromXml(url, name);
       setSyncedProducts(products);
       // Reset categories based on new sync
       setSelectedCategories(new Set(['all']));
@@ -186,7 +186,7 @@ export default function XmlImporterPage() {
                   <p className="text-sm text-muted-foreground">{supplier.url}</p>
                 </div>
                 <Button
-                  onClick={() => handleSync(supplier.id, supplier.url)}
+                  onClick={() => handleSync(supplier.id, supplier.url, supplier.name)}
                   disabled={loadingSupplier === supplier.id}
                 >
                   {loadingSupplier === supplier.id ? 'Syncing...' : 'Sync Products'}
