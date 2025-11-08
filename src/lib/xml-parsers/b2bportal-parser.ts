@@ -49,9 +49,14 @@ export async function b2bportalParser(url: string): Promise<XmlProduct[]> {
   const products: XmlProduct[] = productArray.map((p: any) => {
     let allImages: string[] = [];
     
-    // Main image
+    // Prioritize the high-quality `image` tag.
     if (p.image && typeof p.image === 'string') {
         allImages.push(p.image);
+    }
+
+    // Add the `thumb` only if a higher quality image doesn't already exist.
+    if (p.thumb && typeof p.thumb === 'string' && !allImages.includes(p.image)) {
+        allImages.push(p.thumb);
     }
 
     // Gallery images
@@ -64,11 +69,6 @@ export async function b2bportalParser(url: string): Promise<XmlProduct[]> {
       } else if (typeof p.gallery.image === 'string') {
         allImages.push(p.gallery.image);
       }
-    }
-    
-    // Ensure thumb is included if it exists
-    if(p.thumb && !allImages.includes(p.thumb)){
-        allImages.unshift(p.thumb);
     }
     
     allImages = Array.from(new Set(allImages)); // Remove duplicates
