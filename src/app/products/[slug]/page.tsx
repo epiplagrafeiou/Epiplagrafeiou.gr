@@ -36,28 +36,9 @@ export default function ProductDetailPage() {
   const [current, setCurrent] = useState(0)
  
   const allImages = useMemo(() => {
-    if (!product) return [];
-
-    const productNumId = product.id.replace('prod-', '');
-    // Precise filtering: find images whose ID starts with the unique product identifier prefix
-    const imagePlaceholders = PlaceHolderImages.filter(p => p.id.startsWith(`prod-img-${productNumId}-`));
-
-    let imageUrls = imagePlaceholders.map(p => p.imageUrl);
-
-    // De-duplicate URLs to be safe
-    imageUrls = Array.from(new Set(imageUrls));
-
-    // Ensure the designated main image is always first in the array.
-    const mainImagePlaceholder = PlaceHolderImages.find(p => p.id === product.imageId);
-    if (mainImagePlaceholder) {
-      const mainUrl = mainImagePlaceholder.imageUrl;
-      // Remove main URL from array if it exists
-      imageUrls = imageUrls.filter(url => url !== mainUrl);
-      // Add it to the very beginning
-      imageUrls.unshift(mainUrl);
-    }
-    
-    return imageUrls.map(url => {
+    if (!product || !product.images) return [];
+    // product.images already contains all URLs with the main one first.
+    return product.images.map(url => {
       const placeholder = PlaceHolderImages.find(p => p.imageUrl === url);
       return {
         url: url,

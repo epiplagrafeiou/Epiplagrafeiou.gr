@@ -6,6 +6,7 @@ import { createSlug } from './utils';
 import { useCollection } from '@/firebase/firestore/use-collection';
 import { collection, writeBatch, doc } from 'firebase/firestore';
 import { useFirestore, useMemoFirebase, FirestorePermissionError, errorEmitter } from '@/firebase';
+import { PlaceHolderImages } from './placeholder-images';
 
 export interface Product {
   id: string;
@@ -47,41 +48,44 @@ export const ProductsProvider = ({ children }: { children: React.ReactNode }) =>
   const products = useMemo(() => fetchedProducts || [], [fetchedProducts]);
 
   const addProducts = async (
-    newProducts: Omit<Product, 'slug' | 'imageId'>[],
+    newProducts: (Omit<Product, 'slug' | 'imageId'> & { mainImage?: string })[],
     newImagesData?: { id: string; url: string; hint: string; productId: string }[]
   ) => {
     if (!firestore) return;
-    
+
     const batch = writeBatch(firestore);
-    const productBatchData: { path: string, data: any }[] = [];
+    const productBatchData: { path: string; data: any }[] = [];
 
     newProducts.forEach((p) => {
         const productId = `prod-${p.id}`;
         const productRef = doc(firestore, 'products', productId);
         const productSlug = createSlug(p.name);
         
-        let imageId: string;
+        // Find the placeholder info for the main image designated by the XML feed
         const mainImageInfo = newImagesData?.find(
-          (img) => img.productId === p.id && img.url === (p as any).mainImage
+          (img) => img.productId === p.id && img.url === p.mainImage
         );
 
-        if (mainImageInfo) {
-          imageId = mainImageInfo.id;
-        } else {
-          const anyImageInfo = newImagesData?.find((img) => img.productId === p.id);
-          imageId = anyImageInfo?.id || `prod-fallback-${p.id}`;
-        }
+        // Find any image if the main one isn't available for some reason
+        const anyImageInfo = newImagesData?.find((img) => img.productId === p.id);
+        
+        // The imageId for the product MUST be the placeholder's unique ID, not the URL.
+        const imageId = mainImageInfo?.id || anyImageInfo?.id || `prod-fallback-${p.id}`;
         
         const productData = {
           ...p,
+          id: productId, // Ensure the final product ID is set
           slug: productSlug,
-          imageId: imageId,
+          imageId: imageId, // Assign the correct placeholder ID
           price: p.price,
           category: p.category,
           description: p.description,
           stock: Number(p.stock) || 0,
         };
         
+        // Remove temporary fields before saving
+        delete (productData as any).mainImage;
+
         productBatchData.push({ path: productRef.path, data: productData });
         batch.set(productRef, productData, { merge: true });
     });
@@ -119,16 +123,58 @@ export const ProductsProvider = ({ children }: { children: React.ReactNode }) =>
     });
   };
 
+  const enrichedProducts = useMemo(() => {
+    return products.map((p) => {
+      const productNumId = p.id.replace('prod-', '');
+      const imagePlaceholders = PlaceHolderImages.filter(
+        (img) => img.id && img.id.startsWith(`prod-img-${productNumId}-`)
+      );
+
+      let allImageUrls = imagePlaceholders.map((img) => img.imageUrl);
+
+      const mainImage = PlaceHolderImages.find((img) => img.id === p.imageId);
+      if (mainImage) {
+        allImageUrls = [
+          mainImage.imageUrl,
+          ...allImageUrls.filter((url) => url !== mainImage.imageUrl),
+        ];
+      }
+
+      return {
+        ...p,
+        images: Array.from(new Set(allImageUrls)),
+      };
+    });
+  }, [products]);
+
+  const categories = useMemo(() => {
+    const publicFacingProducts = enrichedProducts.filter((p) => (p.stock ?? 0) > 0);
+    return Array.from(
+      new Set(
+        publicFacingProducts
+          .map((p) => p.category.split(' > ').pop()!)
+          .filter(Boolean)
+      )
+    ).sort();
+  }, [enrichedProducts]);
+  
+  const allCategories = useMemo(() => {
+    const publicFacingProducts = enrichedProducts.filter((p) => (p.stock ?? 0) > 0);
+    return Array.from(
+      new Set(publicFacingProducts.map((p) => p.category).filter(Boolean))
+    ).sort();
+  }, [enrichedProducts]);
+
   return (
     <ProductsContext.Provider
       value={{
-        products: products,
-        adminProducts: products,
+        products: enrichedProducts.filter(p => (p.stock ?? 0) > 0),
+        adminProducts: enrichedProducts,
         addProducts,
         deleteProducts,
         isLoaded: !isLoading,
-        categories: [],
-        allCategories: [],
+        categories: categories,
+        allCategories: allCategories,
       }}
     >
       {children}
