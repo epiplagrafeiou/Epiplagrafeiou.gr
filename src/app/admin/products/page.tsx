@@ -152,7 +152,7 @@ export default function AdminProductsPage() {
                       <Badge variant="outline">{product.category}</Badge>
                     </TableCell>
                     <TableCell>
-                       <Badge variant={stock > 0 ? "secondary" : "destructive"}>
+                       <Badge variant={stock > 0 ? 'default' : 'destructive'} className={stock > 0 ? 'bg-green-600 text-white hover:bg-green-700' : ''}>
                         {stock > 0 ? `${stock} in stock` : 'Out of Stock'}
                       </Badge>
                     </TableCell>
