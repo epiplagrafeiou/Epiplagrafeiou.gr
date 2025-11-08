@@ -24,7 +24,7 @@ interface ProductsContextType {
   products: Product[];
   adminProducts: Product[];
   addProducts: (
-    newProducts: Omit<Product, 'slug' | 'imageId' | 'id' | 'supplierId'>[] & { id: string; supplierId: string, images: string[], mainImage: string }[],
+    newProducts: Omit<Product, 'slug' | 'imageId' | 'id' | 'supplierId'>[] & { id: string; supplierId: string, images: string[], mainImage: string | null }[],
   ) => void;
   deleteProducts: (productIds: string[]) => void;
   isLoaded: boolean;
@@ -46,7 +46,7 @@ export const ProductsProvider = ({ children }: { children: React.ReactNode }) =>
   const products = useMemo(() => fetchedProducts || [], [fetchedProducts]);
 
   const addProducts = async (
-    newProducts: (Omit<Product, 'slug' | 'imageId'> & { mainImage?: string, images: string[] })[],
+    newProducts: (Omit<Product, 'slug' | 'imageId'> & { mainImage?: string | null, images: string[] })[],
   ) => {
     if (!firestore) return;
 
@@ -58,26 +58,24 @@ export const ProductsProvider = ({ children }: { children: React.ReactNode }) =>
         const productRef = doc(firestore, 'products', productId);
         const productSlug = createSlug(p.name);
         
-        // Ensure the main image is the first in the array, if it exists
         const sortedImages = [...(p.images || [])];
         if (p.mainImage) {
             const mainImageIndex = sortedImages.indexOf(p.mainImage);
             if (mainImageIndex > 0) {
-                // Move main image to the front
                 [sortedImages[0], sortedImages[mainImageIndex]] = [sortedImages[mainImageIndex], sortedImages[0]];
             } else if (mainImageIndex === -1) {
                 sortedImages.unshift(p.mainImage);
             }
         }
         
-        const imageId = sortedImages[0] || ''; // The main image is the first URL
+        const imageId = sortedImages[0] || '';
         
         const productData = {
           ...p,
           id: productId,
           slug: productSlug,
           imageId: imageId,
-          images: sortedImages, // Save the full array of image URLs
+          images: sortedImages,
           price: p.price,
           category: p.category,
           description: p.description,
@@ -126,8 +124,7 @@ export const ProductsProvider = ({ children }: { children: React.ReactNode }) =>
   const allProducts = useMemo(() => {
     return products.map((p) => {
         const allImageUrls = p.images || [];
-        const mainImage = p.imageId || allImageUrls[0];
-        // Ensure main image is first in the list for consistent gallery display
+        const mainImage = p.imageId || allImageUrls[0] || '';
         const sortedImages = mainImage
             ? [mainImage, ...allImageUrls.filter(url => url !== mainImage)]
             : allImageUrls;

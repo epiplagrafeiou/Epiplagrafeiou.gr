@@ -22,7 +22,7 @@ interface ProductCardProps {
 export function ProductCard({ product }: ProductCardProps) {
   const primaryImageSrc = product.imageId;
   const allImageUrls = product.images || [];
-  const secondaryImageSrc = allImageUrls.find(url => url !== primaryImageSrc) || primaryImageSrc;
+  const secondaryImageSrc = allImageUrls.find(url => url && url !== primaryImageSrc) || primaryImageSrc;
 
   const [currentImage, setCurrentImage] = useState(primaryImageSrc);
 
@@ -49,7 +49,7 @@ export function ProductCard({ product }: ProductCardProps) {
       <Link href={`/products/${product.slug}`} className="group">
         <CardHeader className="p-0">
           <div className="relative h-64 w-full bg-white">
-            {currentImage ? (
+            {currentImage && currentImage.length > 0 ? (
               <Image
                 src={currentImage}
                 alt={product.name}
