@@ -83,7 +83,7 @@ const SupplierForm = ({
   
     const handleSave = () => {
       if (name && url) {
-        onSave({ name, url, markupRules: rules, markup: 0 });
+        onSave({ name, url, markupRules: rules });
       }
     };
   
@@ -211,7 +211,7 @@ export default function SuppliersPage() {
                     <div className="flex flex-col items-center gap-1">
                       {supplier.markupRules?.map((rule, i) => (
                          <Badge key={i} variant="secondary">{`${formatCurrency(rule.from)} - ${formatCurrency(rule.to)}: ${rule.markup}%`}</Badge>
-                      )) || <Badge variant="secondary">{supplier.markup}%</Badge>}
+                      ))}
                     </div>
                   </TableCell>
                   <TableCell className="text-center">{`${(supplier.conversionRate * 100).toFixed(0)}%`}</TableCell>
@@ -268,4 +268,3 @@ export default function SuppliersPage() {
     </div>
   );
 }
-

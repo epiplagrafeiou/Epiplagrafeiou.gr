@@ -6,29 +6,39 @@
       "type": "object",
       "description": "Represents a supplier of products.",
       "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the supplier."
-        },
         "name": {
           "type": "string",
           "description": "The name of the supplier."
         },
-        "xmlFeedUrl": {
+        "url": {
           "type": "string",
           "description": "URL of the supplier's XML feed.",
           "format": "uri"
         },
-        "markupPercentage": {
-          "type": "number",
-          "description": "The markup percentage applied to the supplier's products."
+        "markupRules": {
+          "type": "array",
+          "description": "Rules for applying markup based on price ranges.",
+          "items": {
+            "type": "object",
+            "properties": {
+              "from": { "type": "number" },
+              "to": { "type": "number" },
+              "markup": { "type": "number" }
+            },
+            "required": ["from", "to", "markup"]
+          }
+        },
+        "conversionRate": {
+            "type": "number"
+        },
+        "profitability": {
+            "type": "number"
         }
       },
       "required": [
-        "id",
         "name",
-        "xmlFeedUrl",
-        "markupPercentage"
+        "url",
+        "markupRules"
       ]
     },
     "Product": {
@@ -37,236 +47,48 @@
       "type": "object",
       "description": "Represents a product in the eShop.",
       "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the product."
-        },
-        "supplierId": {
-          "type": "string",
-          "description": "Reference to Supplier. (Relationship: Supplier 1:N Product)"
-        },
         "name": {
           "type": "string",
           "description": "The name of the product."
+        },
+        "slug": {
+          "type": "string",
+          "description": "URL-friendly slug for the product."
         },
         "description": {
           "type": "string",
           "description": "A description of the product."
         },
-        "imageUrl": {
-          "type": "string",
-          "description": "URL of the product image.",
-          "format": "uri"
-        },
         "price": {
           "type": "number",
           "description": "The price of the product."
         },
-        "currency": {
-          "type": "string",
-          "description": "The currency of the product price (e.g., EUR)."
-        },
-        "language": {
-          "type": "string",
-          "description": "The language of the product details (e.g., Greek, English)."
-        },
         "category": {
           "type": "string",
           "description": "The product's category (e.g., Tables)."
+        },
+        "imageId": {
+            "type": "string",
+            "description": "ID of the primary placeholder image."
+        },
+        "stock": {
+            "type": "number",
+            "description": "Available stock quantity."
+        },
+        "supplierId": {
+          "type": "string",
+          "description": "Reference to the supplier for this product."
         }
       },
       "required": [
-        "id",
-        "supplierId",
         "name",
+        "slug",
         "description",
-        "imageUrl",
         "price",
-        "currency",
-        "language"
-      ]
-    },
-    "User": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "User",
-      "type": "object",
-      "description": "Represents a user of the eShop.  DO NOT STORE PASSWORDS HERE. Use an external authentication provider.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the user."
-        },
-        "email": {
-          "type": "string",
-          "description": "The user's email address.",
-          "format": "email"
-        },
-        "firstName": {
-          "type": "string",
-          "description": "The user's first name."
-        },
-        "lastName": {
-          "type": "string",
-          "description": "The user's last name."
-        },
-        "role": {
-          "type": "string",
-          "description": "The user's role (e.g., admin, customer)."
-        }
-      },
-      "required": [
-        "id",
-        "email",
-        "firstName",
-        "lastName",
-        "role"
-      ]
-    },
-    "Order": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Order",
-      "type": "object",
-      "description": "Represents a customer order.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the order."
-        },
-        "userId": {
-          "type": "string",
-          "description": "Reference to User. (Relationship: User 1:N Order)"
-        },
-        "orderDate": {
-          "type": "string",
-          "description": "The date the order was placed.",
-          "format": "date-time"
-        },
-        "totalAmount": {
-          "type": "number",
-          "description": "The total amount of the order."
-        },
-        "paymentMethod": {
-          "type": "string",
-          "description": "The payment method used for the order (e.g., Stripe, Klarna)."
-        },
-        "shippingAddress": {
-          "type": "string",
-          "description": "The shipping address for the order."
-        },
-        "orderItems": {
-          "type": "array",
-          "description": "The items included in the order.",
-          "items": {
-            "type": "string"
-          }
-        }
-      },
-      "required": [
-        "id",
-        "userId",
-        "orderDate",
-        "totalAmount",
-        "paymentMethod",
-        "shippingAddress",
-        "orderItems"
-      ]
-    },
-    "Cart": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Cart",
-      "type": "object",
-      "description": "Represents a user's shopping cart.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the cart."
-        },
-        "userId": {
-          "type": "string",
-          "description": "Reference to User. (Relationship: User 1:1 Cart)"
-        },
-        "items": {
-          "type": "array",
-          "description": "An array of product IDs in the cart.",
-          "items": {
-            "type": "string"
-          }
-        },
-        "createdAt": {
-          "type": "string",
-          "description": "The date and time the cart was created.",
-          "format": "date-time"
-        },
-        "updatedAt": {
-          "type": "string",
-          "description": "The date and time the cart was last updated.",
-          "format": "date-time"
-        }
-      },
-      "required": [
-        "id",
-        "userId",
-        "items",
-        "createdAt",
-        "updatedAt"
-      ]
-    },
-    "NewsletterSubscription": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "NewsletterSubscription",
-      "type": "object",
-      "description": "Represents a newsletter subscription.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the subscription."
-        },
-        "email": {
-          "type": "string",
-          "description": "The email address subscribed to the newsletter.",
-          "format": "email"
-        },
-        "subscribedAt": {
-          "type": "string",
-          "description": "The date and time the user subscribed.",
-          "format": "date-time"
-        }
-      },
-      "required": [
-        "id",
-        "email",
-        "subscribedAt"
-      ]
-    },
-    "AbandonedCart": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "AbandonedCart",
-      "type": "object",
-      "description": "Represents an abandoned shopping cart.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the abandoned cart."
-        },
-        "cartId": {
-          "type": "string",
-          "description": "Reference to Cart. (Relationship: Cart 1:1 AbandonedCart)"
-        },
-        "abandonedAt": {
-          "type": "string",
-          "description": "The date and time the cart was abandoned.",
-          "format": "date-time"
-        },
-        "notificationSent": {
-          "type": "boolean",
-          "description": "Indicates whether a reminder email has been sent."
-        }
-      },
-      "required": [
-        "id",
-        "cartId",
-        "abandonedAt",
-        "notificationSent"
+        "category",
+        "imageId",
+        "stock",
+        "supplierId"
       ]
     }
   },
@@ -283,142 +105,21 @@
         "definition": {
           "entityName": "Supplier",
           "schema": {
-            "$ref": "#/backend/entities/Supplier"
+            "$ref": "#/entities/Supplier"
           },
-          "description": "Stores supplier information. Only admins can create, update, or delete suppliers.",
-          "params": [
-            {
-              "name": "supplierId",
-              "description": "Unique identifier for the supplier."
-            }
-          ]
+          "description": "Stores supplier information."
         }
       },
       {
-        "path": "/suppliers/{supplierId}/products/{productId}",
+        "path": "/products/{productId}",
         "definition": {
           "entityName": "Product",
           "schema": {
-            "$ref": "#/backend/entities/Product"
+            "$ref": "#/entities/Product"
           },
-          "description": "Products are stored as subcollections of Suppliers to easily manage the relationship. Includes a denormalized 'supplierId' field. Only admins can manage product information.",
-          "params": [
-            {
-              "name": "supplierId",
-              "description": "Unique identifier for the supplier."
-            },
-            {
-              "name": "productId",
-              "description": "Unique identifier for the product."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/users/{userId}",
-        "definition": {
-          "entityName": "User",
-          "schema": {
-            "$ref": "#/backend/entities/User"
-          },
-          "description": "Stores user profiles. Path-based ownership ensures that only the user and admins can access their own data.",
-          "params": [
-            {
-              "name": "userId",
-              "description": "Unique identifier for the user."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/users/{userId}/orders/{orderId}",
-        "definition": {
-          "entityName": "Order",
-          "schema": {
-            "$ref": "#/backend/entities/Order"
-          },
-          "description": "Orders are stored as subcollections of Users, guaranteeing ownership. Only the user and admins can access order information.",
-          "params": [
-            {
-              "name": "userId",
-              "description": "Unique identifier for the user."
-            },
-            {
-              "name": "orderId",
-              "description": "Unique identifier for the order."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/users/{userId}/carts/{cartId}",
-        "definition": {
-          "entityName": "Cart",
-          "schema": {
-            "$ref": "#/backend/entities/Cart"
-          },
-          "description": "Carts are stored as subcollections of Users, ensuring only the user can access their cart.",
-          "params": [
-            {
-              "name": "userId",
-              "description": "Unique identifier for the user."
-            },
-            {
-              "name": "cartId",
-              "description": "Unique identifier for the cart."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/abandonedCarts/{abandonedCartId}",
-        "definition": {
-          "entityName": "AbandonedCart",
-          "schema": {
-            "$ref": "#/backend/entities/AbandonedCart"
-          },
-          "description": "Stores abandoned cart information. Admins use Cloud Functions to monitor and send reminder emails.",
-          "params": [
-            {
-              "name": "abandonedCartId",
-              "description": "Unique identifier for the abandoned cart."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/newsletterSubscriptions/{newsletterSubscriptionId}",
-        "definition": {
-          "entityName": "NewsletterSubscription",
-          "schema": {
-            "$ref": "#/backend/entities/NewsletterSubscription"
-          },
-          "description": "Stores newsletter subscription information.",
-          "params": [
-            {
-              "name": "newsletterSubscriptionId",
-              "description": "Unique identifier for the subscription."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/roles_admin/{userId}",
-        "definition": {
-          "entityName": "User",
-          "schema": {
-            "$ref": "#/backend/entities/User"
-          },
-          "description": "Documents exist if the user is an admin. Existence-based rules secure the admin panel.",
-          "params": [
-            {
-              "name": "userId",
-              "description": "Unique identifier for the user."
-            }
-          ]
+          "description": "Stores all product information."
         }
       }
-    ],
-    "reasoning": "This Firestore structure prioritizes security, scalability, and ease of debugging for the Epipla Graphiou AI eShop. It strongly emphasizes Authorization Independence to avoid cascading `get()` calls in security rules, which are detrimental to atomic operations and debugging. Data is structured to minimize complexity and facilitate robust security rules.\n\n*   **Suppliers:** `/suppliers/{supplierId}`: Stores supplier information. Authorization: Only admins can create, update, or delete suppliers.\n*   **Products:** `/suppliers/{supplierId}/products/{productId}`: Products are stored as subcollections of Suppliers to easily manage the relationship. Includes a denormalized `supplierId` field. Authorization: Only admins can manage product information.\n*   **Users:** `/users/{userId}`: Stores user profiles. Path-based ownership ensures that only the user and admins can access their own data. The `role` property indicates user's permissions (admin, customer). \n*   **Orders:** `/users/{userId}/orders/{orderId}`: Orders are stored as subcollections of Users, guaranteeing ownership. Authorization: Only the user and admins can access order information.\n*   **Carts:** `/users/{userId}/carts/{cartId}`: Carts are stored as subcollections of Users, ensuring only the user can access their cart. \n*   **Abandoned Carts:** `/abandonedCarts/{abandonedCartId}`: Stores abandoned cart information. Admins use Cloud Functions to monitor and send reminder emails.\n*   **Newsletter Subscriptions:** `/newsletterSubscriptions/{newsletterSubscriptionId}`: Stores newsletter subscription information.\n*   **Admin Roles:** `/roles_admin/{userId}`: Documents exist if the user is an admin. Existence-based rules secure the admin panel.\n\n**Authorization Independence & Denormalization:**\n\nAuthorization Independence is achieved by avoiding hierarchical authorization dependencies. For example, product access does NOT depend on retrieving the supplier document. While products are stored as a subcollection of suppliers, any authorization needed to access products independently of the supplier (e.g. read access for displaying products) should be managed at the product level, potentially by denormalizing authorization data (e.g., storing an `admin` flag on the product). This minimizes `get()` calls in security rules.\n\n**QAPs (Rules Are Not Filters):**\n\n*   **Secure `list` operations for Products:** By restricting product management to admins, listing all products is safe because it's assumed admins have access to all product data. If public read access were needed, consider a separate `/public_products` collection.\n*   **Secure User Data:** Path-based ownership for users, orders, and carts guarantees that listing operations are inherently secure, as each user can only access their own data."
+    ]
   }
 }

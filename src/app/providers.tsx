@@ -7,17 +7,20 @@ import NewsletterPopup from "@/components/layout/NewsletterPopup";
 import { ReactNode } from "react";
 import { SuppliersProvider } from "@/lib/suppliers-context";
 import { ProductsProvider } from "@/lib/products-context";
+import { FirebaseClientProvider } from "@/firebase/client-provider";
 
 export function Providers({ children }: { children: ReactNode }) {
   return (
-    <ProductsProvider>
-      <CartProvider>
-        <SuppliersProvider>
-          {children}
-          <Toaster />
-          <NewsletterPopup />
-        </SuppliersProvider>
-      </CartProvider>
-    </ProductsProvider>
+    <FirebaseClientProvider>
+      <ProductsProvider>
+        <CartProvider>
+          <SuppliersProvider>
+            {children}
+            <Toaster />
+            <NewsletterPopup />
+          </SuppliersProvider>
+        </CartProvider>
+      </ProductsProvider>
+    </FirebaseClientProvider>
   );
 }

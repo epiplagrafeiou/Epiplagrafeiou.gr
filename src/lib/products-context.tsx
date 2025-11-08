@@ -1,8 +1,11 @@
 'use client';
 
-import { createContext, useContext, useState, ReactNode, useEffect, useMemo } from 'react';
+import { createContext, useContext, useState, ReactNode, useMemo } from 'react';
 import { addDynamicPlaceholder, removeDynamicPlaceholders, PlaceHolderImages } from './placeholder-images';
 import { createSlug } from './utils';
+import { useCollection } from '@/firebase/firestore/use-collection';
+import { collection, writeBatch, doc } from 'firebase/firestore';
+import { useFirestore, useMemoFirebase } from '@/firebase';
 
 export interface Product {
   id: string;
@@ -14,13 +17,14 @@ export interface Product {
   category: string;
   images?: string[];
   stock?: number;
+  supplierId: string;
 }
 
 interface ProductsContextType {
   products: Product[];
   adminProducts: Product[];
   addProducts: (
-    newProducts: Omit<Product, 'slug' | 'imageId'>[],
+    newProducts: Omit<Product, 'slug' | 'imageId' | 'id' | 'supplierId'>[] & { id: string; supplierId: string }[],
     newImages?: { id: string; url: string; hint: string; productId: string }[]
   ) => void;
   deleteProducts: (productIds: string[]) => void;
@@ -32,46 +36,17 @@ interface ProductsContextType {
 const ProductsContext = createContext<ProductsContextType | undefined>(undefined);
 
 export const ProductsProvider = ({ children }: { children: ReactNode }) => {
-  const [products, setProducts] = useState<Product[]>([]);
-  const [isLoaded, setIsLoaded] = useState(false);
+  const firestore = useFirestore();
 
-  useEffect(() => {
-    try {
-      const storedData = localStorage.getItem('products');
-      if (storedData) {
-        const storedProducts = JSON.parse(storedData);
-        // Normalize stock as number
-        setProducts(
-          storedProducts.map((p: Product) => ({
-            ...p,
-            stock: Number(p.stock) || 0,
-          }))
-        );
-      }
-    } catch (e) {
-      console.error('Failed to parse products from localStorage', e);
-      setProducts([]);
-    } finally {
-      setIsLoaded(true);
-    }
-  }, []);
+  const productsQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return collection(firestore, 'products');
+  }, [firestore]);
 
-  useEffect(() => {
-    if (isLoaded) {
-      try {
-        const productsForStorage = products.map(({ images, ...rest }) => ({
-          ...rest,
-          stock: Number(rest.stock) || 0,
-        }));
-        localStorage.setItem('products', JSON.stringify(productsForStorage));
-      } catch (e) {
-        console.error('Failed to save products to localStorage', e);
-      }
-    }
-  }, [products, isLoaded]);
+  const { data: fetchedProducts, isLoading } = useCollection<Omit<Product, 'id'>>(productsQuery);
+  const products = useMemo(() => fetchedProducts || [], [fetchedProducts]);
 
   const enrichedProducts = useMemo(() => {
-    if (!isLoaded) return [];
     return products.map((p) => {
       const productNumId = p.id.replace('prod-', '');
       const imagePlaceholders = PlaceHolderImages.filter(
@@ -90,11 +65,10 @@ export const ProductsProvider = ({ children }: { children: ReactNode }) => {
 
       return {
         ...p,
-        stock: Number(p.stock) || 0,
         images: Array.from(new Set(allImageUrls)),
       };
     });
-  }, [products, isLoaded, PlaceHolderImages]);
+  }, [products, PlaceHolderImages]);
 
   const inStockProducts = useMemo(
     () => enrichedProducts.filter((p) => Number(p.stock) > 0),
@@ -102,7 +76,7 @@ export const ProductsProvider = ({ children }: { children: ReactNode }) => {
   );
 
   const categories = useMemo(() => {
-    if (!isLoaded) return [];
+    if (isLoading) return [];
     const publicFacingProducts = enrichedProducts.filter((p) => Number(p.stock) > 0);
     return Array.from(
       new Set(
@@ -111,20 +85,22 @@ export const ProductsProvider = ({ children }: { children: ReactNode }) => {
           .filter(Boolean)
       )
     ).sort();
-  }, [enrichedProducts, isLoaded]);
+  }, [enrichedProducts, isLoading]);
 
   const allCategories = useMemo(() => {
-    if (!isLoaded) return [];
+    if (isLoading) return [];
     const publicFacingProducts = enrichedProducts.filter((p) => Number(p.stock) > 0);
     return Array.from(
       new Set(publicFacingProducts.map((p) => p.category).filter(Boolean))
     ).sort();
-  }, [enrichedProducts, isLoaded]);
+  }, [enrichedProducts, isLoading]);
 
-  const addProducts = (
+  const addProducts = async (
     newProducts: Omit<Product, 'slug' | 'imageId'>[],
     newImagesData?: { id: string; url: string; hint: string; productId: string }[]
   ) => {
+    if (!firestore) return;
+
     if (newImagesData) {
       const allPlaceholdersToAdd = newImagesData.map((img) => ({
         id: img.id,
@@ -134,66 +110,65 @@ export const ProductsProvider = ({ children }: { children: ReactNode }) => {
       }));
       addDynamicPlaceholder(allPlaceholdersToAdd);
     }
+    
+    const batch = writeBatch(firestore);
 
-    setProducts((prevProducts) => {
-      const productsToAdd = newProducts.map((p) => {
+    newProducts.forEach((p) => {
         const productId = `prod-${p.id}`;
+        const productRef = doc(firestore, 'products', productId);
         const productSlug = createSlug(p.name);
-
-        let imageId: string | undefined;
+        
+        let imageId: string;
         const mainImageInfo = newImagesData?.find(
           (img) => img.productId === p.id && img.url === (p as any).mainImage
         );
 
         if (mainImageInfo) {
           imageId = mainImageInfo.id;
-        } else if (p.images && p.images.length > 0) {
-          const anyImageInfo = newImagesData?.find((img) => img.productId === p.id);
-          imageId = anyImageInfo?.id;
         } else {
-          imageId = `prod-fallback-${p.id}`;
+          const anyImageInfo = newImagesData?.find((img) => img.productId === p.id);
+          imageId = anyImageInfo?.id || `prod-fallback-${p.id}`;
         }
-
-        return {
+        
+        const productData = {
           ...p,
-          id: productId,
           slug: productSlug,
-          imageId,
+          imageId: imageId,
           price: p.price,
           category: p.category,
           description: p.description,
           stock: Number(p.stock) || 0,
         };
-      });
 
-      const productMap = new Map(prevProducts.map((p) => [p.id, p]));
-      productsToAdd.forEach((p) => productMap.set(p.id, p));
-
-      return Array.from(productMap.values());
+        batch.set(productRef, productData, { merge: true });
     });
+
+    await batch.commit();
   };
 
-  const deleteProducts = (productIds: string[]) => {
+  const deleteProducts = async (productIds: string[]) => {
+    if (!firestore) return;
+    
+    const batch = writeBatch(firestore);
     let imageIdsToDelete: string[] = [];
-    const idsToDeleteSet = new Set(productIds);
 
-    setProducts((prev) => {
-      const productsToKeep = prev.filter((p) => {
-        if (idsToDeleteSet.has(p.id)) {
-          const productNumId = p.id.replace('prod-', '');
-          const placeholdersForProduct = PlaceHolderImages.filter(
-            (img) => img.id && img.id.startsWith(`prod-img-${productNumId}-`)
-          );
-          imageIdsToDelete.push(...placeholdersForProduct.map((img) => img.id));
-          if (p.imageId && !imageIdsToDelete.includes(p.imageId)) {
-            imageIdsToDelete.push(p.imageId);
-          }
-          return false;
-        }
-        return true;
-      });
-      return productsToKeep;
+    productIds.forEach(productId => {
+      const productRef = doc(firestore, 'products', productId);
+      batch.delete(productRef);
+      
+      const productNumId = productId.replace('prod-', '');
+      const placeholdersForProduct = PlaceHolderImages.filter(
+        (img) => img.id && img.id.startsWith(`prod-img-${productNumId}-`)
+      );
+      imageIdsToDelete.push(...placeholdersForProduct.map(img => img.id));
+      
+      const product = products.find(p => p.id === productId);
+      if (product?.imageId && !imageIdsToDelete.includes(product.imageId)) {
+          imageIdsToDelete.push(product.imageId);
+      }
     });
+
+    await batch.commit();
 
     if (imageIdsToDelete.length > 0) {
       const uniqueImageIds = Array.from(new Set(imageIdsToDelete));
@@ -208,7 +183,7 @@ export const ProductsProvider = ({ children }: { children: ReactNode }) => {
         adminProducts: enrichedProducts,
         addProducts,
         deleteProducts,
-        isLoaded,
+        isLoaded: !isLoading,
         categories,
         allCategories,
       }}

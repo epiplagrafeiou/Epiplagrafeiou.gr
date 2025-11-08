@@ -93,17 +93,18 @@ export default function XmlImporterPage() {
         const categoryPath = p.category.split('>').map(c => c.trim()).join(' > ');
 
         return {
-            id: p.id, // Pass original ID for image mapping
+            id: p.id,
+            supplierId: activeSupplier.id,
             name: p.name,
             price: finalPrice,
             description: p.description,
             category: categoryPath,
-            images: p.images, // Pass all image URLs
+            images: p.images,
+            mainImage: p.images[0],
             stock: p.stock,
         }
     });
     
-    // Create detailed image info for placeholder registration
     const imagesToAdd = filteredProducts.flatMap(p => 
         p.images.map((imageUrl, index) => ({
             id: `prod-img-${p.id}-${index}`, // Unique ID for each image
@@ -112,7 +113,6 @@ export default function XmlImporterPage() {
             productId: p.id // Link back to original product ID
         }))
     );
-
 
     addProducts(productsToAdd, imagesToAdd);
     

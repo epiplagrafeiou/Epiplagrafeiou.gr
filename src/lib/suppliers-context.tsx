@@ -1,8 +1,10 @@
-
 'use client';
 
-import { createContext, useContext, useState, ReactNode, useEffect } from 'react';
-import { suppliers as initialSuppliers } from './data';
+import { createContext, useContext, ReactNode, useMemo } from 'react';
+import { useCollection } from '@/firebase/firestore/use-collection';
+import { collection, addDoc, doc, updateDoc, deleteDoc } from 'firebase/firestore';
+import { useFirestore, useMemoFirebase } from '@/firebase';
+
 
 export type MarkupRule = {
   from: number;
@@ -14,7 +16,6 @@ export type Supplier = {
   id: string;
   name: string;
   url: string;
-  markup: number; // This can be deprecated or used as a default
   conversionRate: number;
   profitability: number;
   markupRules?: MarkupRule[];
@@ -30,51 +31,42 @@ interface SuppliersContextType {
 const SuppliersContext = createContext<SuppliersContextType | undefined>(undefined);
 
 export const SuppliersProvider = ({ children }: { children: ReactNode }) => {
-  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
-  const [isClient, setIsClient] = useState(false);
+  const firestore = useFirestore();
 
-  useEffect(() => {
-    setIsClient(true);
-    const storedSuppliers = localStorage.getItem('suppliers');
-    if (storedSuppliers) {
-      setSuppliers(JSON.parse(storedSuppliers));
-    } else {
-      // Initialize with default data only if nothing is in local storage
-      const initializedSuppliers = initialSuppliers.map((s) => ({ ...s, markupRules: [{ from: 0, to: 99999, markup: s.markup }] }));
-      setSuppliers(initializedSuppliers);
-    }
-  }, []);
+  const suppliersQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return collection(firestore, 'suppliers');
+  }, [firestore]);
 
-  useEffect(() => {
-    // Only save to localStorage if it's the client and the initial load is complete
-    if (isClient && suppliers.length > 0) {
-      localStorage.setItem('suppliers', JSON.stringify(suppliers));
-    }
-  }, [suppliers, isClient]);
+  const { data: suppliers, isLoading } = useCollection<Omit<Supplier, 'id'>>(suppliersQuery);
+  const memoizedSuppliers = useMemo(() => suppliers || [], [suppliers]);
 
-  const addSupplier = (supplierData: Omit<Supplier, 'id' | 'conversionRate' | 'profitability'>) => {
-    setSuppliers((prevSuppliers) => {
-      const newSupplier: Supplier = {
+  const addSupplier = async (supplierData: Omit<Supplier, 'id' | 'conversionRate' | 'profitability'>) => {
+    if (!firestore) return;
+    const newSupplier = {
         ...supplierData,
-        id: `sup${Date.now()}`,
-        conversionRate: Math.random() * 0.2, // Mock data
-        profitability: Math.random() * 10000, // Mock data
-      };
-      return [...prevSuppliers, newSupplier];
-    });
+        conversionRate: Math.random() * 0.2,
+        profitability: Math.random() * 10000,
+    };
+    await addDoc(collection(firestore, 'suppliers'), newSupplier);
   };
 
-  const updateSupplier = (updatedSupplier: Supplier) => {
-    setSuppliers(prev => prev.map(s => s.id === updatedSupplier.id ? updatedSupplier : s));
+  const updateSupplier = async (updatedSupplier: Supplier) => {
+    if (!firestore) return;
+    const { id, ...data } = updatedSupplier;
+    const supplierRef = doc(firestore, 'suppliers', id);
+    await updateDoc(supplierRef, data);
   };
 
-  const deleteSupplier = (supplierId: string) => {
-    setSuppliers(prev => prev.filter(s => s.id !== supplierId));
+  const deleteSupplier = async (supplierId: string) => {
+    if (!firestore) return;
+    const supplierRef = doc(firestore, 'suppliers', supplierId);
+    await deleteDoc(supplierRef);
   };
 
 
   return (
-    <SuppliersContext.Provider value={{ suppliers, addSupplier, updateSupplier, deleteSupplier }}>
+    <SuppliersContext.Provider value={{ suppliers: memoizedSuppliers, addSupplier, updateSupplier, deleteSupplier }}>
       {children}
     </SuppliersContext.Provider>
   );
