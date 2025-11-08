@@ -14,7 +14,6 @@ export interface XmlProduct {
   mainImage: string | null;
   images: string[];
   stock: number;
-  shippingSurcharge: number;
 }
 
 export async function megapapParser(url: string): Promise<XmlProduct[]> {
@@ -89,24 +88,22 @@ export async function megapapParser(url: string): Promise<XmlProduct[]> {
       const stock = Number(rawStock) || 0;
       const rawCategory = p.category || 'Uncategorized';
       
-      let shippingSurcharge = 0;
+      let finalWebOfferPrice = parseFloat(p.weboffer_price_with_vat || p.retail_price_with_vat || '0');
       const productName = p.name?.toLowerCase() || '';
       if (productName.includes('καναπ') || productName.includes('sofa')) {
-        shippingSurcharge = 130;
+        finalWebOfferPrice += 130;
       }
 
       return {
         id: p.id?.toString() || `temp-id-${Math.random()}`,
         name: p.name || 'No Name',
         retailPrice: p.retail_price_with_vat || '0',
-        webOfferPrice:
-          p.weboffer_price_with_vat || p.retail_price_with_vat || '0',
+        webOfferPrice: finalWebOfferPrice.toString(),
         description: p.description || '',
         category: mapCategory(rawCategory),
         mainImage,
         images: allImages,
         stock,
-        shippingSurcharge,
       };
     });
 

@@ -82,10 +82,10 @@ export async function b2bportalParser(url: string): Promise<XmlProduct[]> {
     // Set a default quantity if available.
     const stock = p.availability === 1 ? 10 : 0;
     
-    let shippingSurcharge = 0;
+    let finalWebOfferPrice = parseFloat(p.retail_price?.toString() || '0');
     const productName = p.name?.toLowerCase() || '';
     if (productName.includes('καναπ') || productName.includes('sofa')) {
-      shippingSurcharge = 130;
+      finalWebOfferPrice += 130;
     }
 
 
@@ -93,13 +93,12 @@ export async function b2bportalParser(url: string): Promise<XmlProduct[]> {
       id: p.id?.toString() || `temp-id-${Math.random()}`,
       name: p.name || 'No Name',
       retailPrice: p.retail_price?.toString() || '0',
-      webOfferPrice: p.retail_price?.toString() || '0',
+      webOfferPrice: finalWebOfferPrice.toString(),
       description: p.descr || '',
       category: mapCategory(rawCategory),
       mainImage: mainImage,
       images: allImages,
       stock: stock,
-      shippingSurcharge: shippingSurcharge,
     };
   });
 

@@ -19,7 +19,6 @@ export interface Product {
   images?: string[];
   stock?: number;
   supplierId: string;
-  shippingSurcharge?: number;
 }
 
 interface ProductsContextType {
@@ -89,7 +88,6 @@ export const ProductsProvider = ({ children }: { children: React.ReactNode }) =>
           category: p.category,
           description: p.description,
           stock: Number(p.stock) || 0,
-          shippingSurcharge: p.shippingSurcharge || 0,
         };
         
         delete (productData as any).mainImage;

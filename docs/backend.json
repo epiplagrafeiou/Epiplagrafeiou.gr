@@ -87,10 +87,6 @@
         "supplierId": {
           "type": "string",
           "description": "Reference to the supplier for this product."
-        },
-        "shippingSurcharge": {
-            "type": "number",
-            "description": "Additional shipping cost for this specific item."
         }
       },
       "required": [

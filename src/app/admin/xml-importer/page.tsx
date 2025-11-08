@@ -93,7 +93,6 @@ export default function XmlImporterPage() {
             images: p.images,
             mainImage: p.mainImage,
             stock: p.stock,
-            shippingSurcharge: p.shippingSurcharge,
         }
     });
     
@@ -310,7 +309,6 @@ export default function XmlImporterPage() {
                         <TableHead>Stock</TableHead>
                         <TableHead className="text-right">Supplier Price</TableHead>
                         <TableHead className="text-right">Your Price</TableHead>
-                        <TableHead className="text-right">Surcharge</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -327,7 +325,6 @@ export default function XmlImporterPage() {
                                 <TableCell>{product.stock}</TableCell>
                                 <TableCell className="text-right">{formatCurrency(supplierPrice)}</TableCell>
                                 <TableCell className="text-right font-semibold">{formatCurrency(finalPrice)}</TableCell>
-                                <TableCell className="text-right">{formatCurrency(product.shippingSurcharge)}</TableCell>
                             </TableRow>
                           );
                         })}
