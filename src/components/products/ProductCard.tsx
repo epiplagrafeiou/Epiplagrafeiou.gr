@@ -1,4 +1,3 @@
-
 'use client';
 
 import Image from 'next/image';
@@ -20,7 +19,11 @@ interface ProductCardProps {
 }
 
 export function ProductCard({ product }: ProductCardProps) {
-  const primaryImageSrc = product.imageId;
+  const primaryImageSrc =
+    product.imageId && product.imageId.length > 0
+      ? product.imageId
+      : product.images?.[0];
+
   const allImageUrls = product.images || [];
   const secondaryImageSrc =
     allImageUrls.find((url) => url && url !== primaryImageSrc) || primaryImageSrc;
