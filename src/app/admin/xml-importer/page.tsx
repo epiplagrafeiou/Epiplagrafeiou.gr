@@ -32,6 +32,7 @@ interface SyncedProduct {
   description: string;
   category: string;
   images: string[];
+  mainImage: string | null;
   stock: number;
 }
 
@@ -100,21 +101,12 @@ export default function XmlImporterPage() {
             description: p.description,
             category: categoryPath,
             images: p.images,
-            mainImage: p.images[0],
+            mainImage: p.mainImage,
             stock: p.stock,
         }
     });
     
-    const imagesToAdd = filteredProducts.flatMap(p => 
-        p.images.map((imageUrl, index) => ({
-            id: `prod-img-${p.id}-${index}`, // Unique ID for each image
-            url: imageUrl,
-            hint: p.name.substring(0, 20),
-            productId: p.id // Link back to original product ID
-        }))
-    );
-
-    addProducts(productsToAdd, imagesToAdd);
+    addProducts(productsToAdd);
     
     toast({
         title: "Products Added!",

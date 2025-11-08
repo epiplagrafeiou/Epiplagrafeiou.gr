@@ -23,7 +23,6 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import Image from 'next/image';
-import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { Separator } from '@/components/ui/separator';
 
 const checkoutSchema = z.object({
@@ -72,19 +71,16 @@ export default function CheckoutPage() {
             <CardContent>
               <div className="space-y-4">
                 {cartItems.map((item) => {
-                  const image = PlaceHolderImages.find(
-                    (img) => img.id === item.imageId
-                  );
+                  const image = item.imageId;
                   return (
                     <div key={item.id} className="flex items-center gap-4">
                       <div className="relative h-16 w-16 flex-shrink-0 overflow-hidden rounded-md border">
                         {image && (
                           <Image
-                            src={image.imageUrl}
+                            src={image}
                             alt={item.name}
                             fill
                             className="object-cover"
-                            data-ai-hint={image.imageHint}
                           />
                         )}
                         <span className="absolute -right-2 -top-2 flex h-6 w-6 items-center justify-center rounded-full bg-secondary text-sm font-medium">

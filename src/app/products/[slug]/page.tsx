@@ -2,7 +2,6 @@
 'use client';
 import Image from 'next/image';
 import { notFound, useParams } from 'next/navigation';
-import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { formatCurrency, cn, createSlug } from '@/lib/utils';
 import AddToCartButton from '@/components/products/AddToCartButton';
 import { Separator } from '@/components/ui/separator';
@@ -37,14 +36,7 @@ export default function ProductDetailPage() {
  
   const allImages = useMemo(() => {
     if (!product || !product.images) return [];
-    // product.images already contains all URLs with the main one first.
-    return product.images.map(url => {
-      const placeholder = PlaceHolderImages.find(p => p.imageUrl === url);
-      return {
-        url: url,
-        hint: placeholder?.imageHint || product.name.substring(0, 20)
-      }
-    });
+    return product.images;
   }, [product]);
 
   useEffect(() => {
@@ -134,16 +126,15 @@ export default function ProductDetailPage() {
             }}
           >
             <CarouselContent>
-              {allImages.length > 0 ? allImages.map((image, index) => (
+              {allImages.length > 0 ? allImages.map((imageUrl, index) => (
                 <CarouselItem key={index}>
                   <Card>
                     <CardContent className="relative flex aspect-square items-center justify-center p-0">
                       <Image
-                        src={image.url}
+                        src={imageUrl}
                         alt={`${product.name} image ${index + 1}`}
                         fill
                         className="rounded-lg object-contain"
-                        data-ai-hint={image.hint}
                       />
                     </CardContent>
                   </Card>
@@ -168,7 +159,7 @@ export default function ProductDetailPage() {
           
           {allImages.length > 1 && (
             <div className="mt-4 grid grid-cols-5 gap-4">
-              {allImages.map((image, index) => (
+              {allImages.map((imageUrl, index) => (
                  <button
                   key={index}
                   onClick={() => onThumbClick(index)}
@@ -178,7 +169,7 @@ export default function ProductDetailPage() {
                   )}
                  >
                   <Image
-                    src={image.url}
+                    src={imageUrl}
                     alt={`${product.name} thumbnail ${index + 1}`}
                     width={100}
                     height={100}

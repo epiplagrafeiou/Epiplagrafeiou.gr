@@ -3,7 +3,6 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { useCart, CartItem } from '@/lib/cart-context';
-import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
@@ -16,18 +15,17 @@ const FREE_SHIPPING_THRESHOLD = 150;
 
 function CartItemRow({ item }: { item: CartItem }) {
   const { updateQuantity, removeFromCart } = useCart();
-  const image = PlaceHolderImages.find((img) => img.id === item.imageId);
+  const image = item.imageId;
 
   return (
     <div className="flex items-center gap-4 py-4">
       <div className="relative h-24 w-24 flex-shrink-0 overflow-hidden rounded-md bg-secondary">
         {image && (
           <Image
-            src={image.imageUrl}
+            src={image}
             alt={item.name}
             fill
             className="object-cover"
-            data-ai-hint={image.imageHint}
           />
         )}
       </div>

@@ -4,7 +4,7 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
-import type { Product } from '@/lib/data';
+import type { Product } from '@/lib/products-context';
 import { formatCurrency } from '@/lib/utils';
 import {
   Card,
@@ -14,18 +14,14 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import AddToCartButton from './AddToCartButton';
-import { PlaceHolderImages } from '@/lib/placeholder-images';
 
 interface ProductCardProps {
   product: Product;
 }
 
 export function ProductCard({ product }: ProductCardProps) {
-  const primaryPlaceholder = PlaceHolderImages.find(p => p.id === product.imageId);
-  const primaryImageSrc = primaryPlaceholder?.imageUrl;
-
+  const primaryImageSrc = product.imageId;
   const allImageUrls = product.images || [];
-  
   const secondaryImageSrc = allImageUrls.find(url => url !== primaryImageSrc) || primaryImageSrc;
 
   const [currentImage, setCurrentImage] = useState(primaryImageSrc);

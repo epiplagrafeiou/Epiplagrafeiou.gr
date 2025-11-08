@@ -71,6 +71,14 @@
             "type": "string",
             "description": "ID of the primary placeholder image."
         },
+        "images": {
+            "type": "array",
+            "description": "Array of image URLs for the product gallery.",
+            "items": {
+                "type": "string",
+                "format": "uri"
+            }
+        },
         "stock": {
             "type": "number",
             "description": "Available stock quantity."
@@ -87,6 +95,7 @@
         "price",
         "category",
         "imageId",
+        "images",
         "stock",
         "supplierId"
       ]

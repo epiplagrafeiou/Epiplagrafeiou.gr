@@ -21,7 +21,6 @@ import { Badge } from '@/components/ui/badge';
 import { PlusCircle, Trash2 } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 import Image from 'next/image';
-import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { useProducts } from '@/lib/products-context';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
@@ -131,7 +130,7 @@ export default function AdminProductsPage() {
             </TableHeader>
             <TableBody>
               {adminProducts.map((product) => {
-                 const image = PlaceHolderImages.find((img) => img.id === product.imageId);
+                 const image = product.imageId;
                  const stock = product.stock ?? 0;
                  return (
                   <TableRow key={product.id} data-state={selectedProducts.has(product.id) && "selected"}>
@@ -144,7 +143,7 @@ export default function AdminProductsPage() {
                     </TableCell>
                     <TableCell>
                       <div className="relative h-12 w-12 rounded-md bg-secondary">
-                        {image ? <Image src={image.imageUrl} alt={product.name} fill className="rounded-md object-cover" data-ai-hint={image.imageHint} /> : <div className="flex h-full w-full items-center justify-center text-xs text-muted-foreground">No Image</div>}
+                        {image ? <Image src={image} alt={product.name} fill className="rounded-md object-cover" /> : <div className="flex h-full w-full items-center justify-center text-xs text-muted-foreground">No Image</div>}
                       </div>
                     </TableCell>
                     <TableCell className="font-medium">{product.name}</TableCell>

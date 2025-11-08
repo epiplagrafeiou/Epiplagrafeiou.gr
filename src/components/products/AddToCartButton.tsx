@@ -2,7 +2,7 @@
 'use client';
 
 import { useCart } from '@/lib/cart-context';
-import type { Product } from '@/lib/data';
+import type { Product } from '@/lib/products-context';
 import { Button, type ButtonProps } from '@/components/ui/button';
 import { ShoppingCart } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
