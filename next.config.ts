@@ -33,6 +33,12 @@ const nextConfig: NextConfig = {
         hostname: 'www.megapap.com',
         port: '',
         pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'www.b2bportal.gr',
+        port: '',
+        pathname: '/**',
       }
     ],
   },
