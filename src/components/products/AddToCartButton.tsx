@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useCart } from '@/lib/cart-context';
@@ -14,6 +15,7 @@ interface AddToCartButtonProps extends ButtonProps {
 export default function AddToCartButton({ product, quantity = 1, ...props }: AddToCartButtonProps) {
   const { addToCart } = useCart();
   const { toast } = useToast();
+  const isInStock = (product.stock ?? 0) > 0;
 
   const handleAddToCart = () => {
     addToCart(product, quantity);
@@ -22,6 +24,14 @@ export default function AddToCartButton({ product, quantity = 1, ...props }: Add
       description: `${product.name} has been added to your cart.`,
     });
   };
+
+  if (!isInStock) {
+    return (
+      <Button disabled {...props}>
+        Out of Stock
+      </Button>
+    )
+  }
 
   return (
     <Button onClick={handleAddToCart} {...props} className="bg-accent text-accent-foreground hover:bg-accent/90">

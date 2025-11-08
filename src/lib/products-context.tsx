@@ -61,16 +61,41 @@ export const ProductsProvider = ({ children }: { children: ReactNode }) => {
       }
     }
   }, [products, isLoaded]);
+  
+  const allProducts = useMemo(() => {
+    if (!isLoaded) return [];
+    return products.map(p => {
+        const productNumId = p.id.replace('prod-', '');
+        const imagePlaceholders = PlaceHolderImages.filter(img => img.id && img.id.startsWith(`prod-img-${productNumId}-`));
 
+        let allImageUrls = imagePlaceholders.map(img => img.imageUrl);
+        
+        const mainImage = PlaceHolderImages.find(img => img.id === p.imageId);
+        if (mainImage) {
+           allImageUrls = [mainImage.imageUrl, ...allImageUrls.filter(url => url !== mainImage.imageUrl)];
+        }
+
+        return {
+            ...p,
+            stock: p.stock ?? 0,
+            images: Array.from(new Set(allImageUrls))
+        }
+    });
+  }, [products, isLoaded]);
+
+  const inStockProducts = useMemo(() => {
+    return allProducts.filter(p => (p.stock ?? 0) > 0);
+  }, [allProducts]);
+  
   const categories = useMemo(() => {
     if (!isLoaded) return [];
-    return Array.from(new Set(products.map(p => p.category.split(' > ').pop()!).filter(Boolean))).sort();
-  }, [products, isLoaded]);
+    return Array.from(new Set(inStockProducts.map(p => p.category.split(' > ').pop()!).filter(Boolean))).sort();
+  }, [inStockProducts, isLoaded]);
   
   const allCategories = useMemo(() => {
     if (!isLoaded) return [];
-    return Array.from(new Set(products.map(p => p.category).filter(Boolean))).sort();
-  }, [products, isLoaded]);
+    return Array.from(new Set(inStockProducts.map(p => p.category).filter(Boolean))).sort();
+  }, [inStockProducts, isLoaded]);
 
   const addProducts = (newProducts: Omit<Product, 'slug' | 'imageId'>[], newImagesData?: { id: string; url: string; hint: string, productId: string }[]) => {
     
@@ -146,30 +171,8 @@ export const ProductsProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-
-  const enrichedProducts = useMemo(() => {
-    if (!isLoaded) return [];
-    return products.map(p => {
-        const productNumId = p.id.replace('prod-', '');
-        const imagePlaceholders = PlaceHolderImages.filter(img => img.id && img.id.startsWith(`prod-img-${productNumId}-`));
-
-        let allImageUrls = imagePlaceholders.map(img => img.imageUrl);
-        
-        const mainImage = PlaceHolderImages.find(img => img.id === p.imageId);
-        if (mainImage) {
-           allImageUrls = [mainImage.imageUrl, ...allImageUrls.filter(url => url !== mainImage.imageUrl)];
-        }
-
-        return {
-            ...p,
-            stock: p.stock ?? 0,
-            images: Array.from(new Set(allImageUrls))
-        }
-    });
-  }, [products, isLoaded]);
-
   return (
-    <ProductsContext.Provider value={{ products: enrichedProducts, addProducts, deleteProducts, isLoaded, categories, allCategories }}>
+    <ProductsContext.Provider value={{ products: inStockProducts, addProducts, deleteProducts, isLoaded, categories, allCategories }}>
       {children}
     </ProductsContext.Provider>
   );
