@@ -78,6 +78,10 @@ export async function b2bportalParser(url: string): Promise<XmlProduct[]> {
     // The logic for category is to combine subcategory and category
     const rawCategory = [p.subcategory, p.category].filter(Boolean).join(' > ');
 
+    // Correctly interpret availability: 1 means in stock, not quantity 1.
+    // Set a default quantity if available.
+    const stock = p.availability === 1 ? 10 : 0;
+
     return {
       id: p.id?.toString() || `temp-id-${Math.random()}`,
       name: p.name || 'No Name',
@@ -87,7 +91,7 @@ export async function b2bportalParser(url: string): Promise<XmlProduct[]> {
       category: mapCategory(rawCategory),
       mainImage: mainImage,
       images: allImages,
-      stock: Number(p.availability) || 0,
+      stock: stock,
     };
   });
 
