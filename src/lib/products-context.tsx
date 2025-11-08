@@ -2,9 +2,21 @@
 'use client';
 
 import { createContext, useContext, useState, ReactNode, useEffect, useMemo } from 'react';
-import { products as initialProductsData, type Product } from './data';
 import { addDynamicPlaceholder, removeDynamicPlaceholders, PlaceHolderImages } from './placeholder-images';
 import { createSlug } from './utils';
+
+export interface Product {
+  id: string;
+  name: string;
+  slug: string;
+  price: number;
+  description: string;
+  imageId: string;
+  category: string;
+  images?: string[];
+  stock?: number;
+}
+
 
 interface ProductsContextType {
   products: Product[];
@@ -32,24 +44,12 @@ export const ProductsProvider = ({ children }: { children: ReactNode }) => {
       console.error("Failed to parse products from localStorage", e);
     }
     
-    const initialProductMap = new Map<string, Product>(initialProductsData.map(p => [p.id, p]));
-    const productMap = new Map<string, Product>();
-
-    initialProductsData.forEach(p => productMap.set(p.id, p));
-
-    storedProducts.forEach(p_stored => {
-        const initial = initialProductMap.get(p_stored.id);
-        const combined = { ...initial, ...p_stored };
-        productMap.set(p_stored.id, combined);
-    });
-
-    setProducts(Array.from(productMap.values()));
+    setProducts(storedProducts);
     setIsLoaded(true);
   }, []);
 
   useEffect(() => {
     if (isLoaded) {
-      // Exclude the 'images' array before saving to localStorage to save space
       const productsForStorage = products.map(({ images, ...rest }) => ({
         ...rest,
         stock: rest.stock ?? 0 // Ensure stock is always a number
