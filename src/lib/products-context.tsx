@@ -1,11 +1,11 @@
+
 'use client';
 
-import { createContext, useContext, useState, ReactNode, useMemo } from 'react';
-import { addDynamicPlaceholder, removeDynamicPlaceholders, PlaceHolderImages } from './placeholder-images';
+import { createContext, useContext, useMemo } from 'react';
 import { createSlug } from './utils';
 import { useCollection } from '@/firebase/firestore/use-collection';
 import { collection, writeBatch, doc } from 'firebase/firestore';
-import { useFirestore, useMemoFirebase } from '@/firebase';
+import { useFirestore, useMemoFirebase, FirestorePermissionError, errorEmitter } from '@/firebase';
 
 export interface Product {
   id: string;
@@ -35,7 +35,7 @@ interface ProductsContextType {
 
 const ProductsContext = createContext<ProductsContextType | undefined>(undefined);
 
-export const ProductsProvider = ({ children }: { children: ReactNode }) => {
+export const ProductsProvider = ({ children }: { children: React.ReactNode }) => {
   const firestore = useFirestore();
 
   const productsQuery = useMemoFirebase(() => {
@@ -46,72 +46,14 @@ export const ProductsProvider = ({ children }: { children: ReactNode }) => {
   const { data: fetchedProducts, isLoading } = useCollection<Omit<Product, 'id'>>(productsQuery);
   const products = useMemo(() => fetchedProducts || [], [fetchedProducts]);
 
-  const enrichedProducts = useMemo(() => {
-    return products.map((p) => {
-      const productNumId = p.id.replace('prod-', '');
-      const imagePlaceholders = PlaceHolderImages.filter(
-        (img) => img.id && img.id.startsWith(`prod-img-${productNumId}-`)
-      );
-
-      let allImageUrls = imagePlaceholders.map((img) => img.imageUrl);
-
-      const mainImage = PlaceHolderImages.find((img) => img.id === p.imageId);
-      if (mainImage) {
-        allImageUrls = [
-          mainImage.imageUrl,
-          ...allImageUrls.filter((url) => url !== mainImage.imageUrl),
-        ];
-      }
-
-      return {
-        ...p,
-        images: Array.from(new Set(allImageUrls)),
-      };
-    });
-  }, [products, PlaceHolderImages]);
-
-  const inStockProducts = useMemo(
-    () => enrichedProducts.filter((p) => Number(p.stock) > 0),
-    [enrichedProducts]
-  );
-
-  const categories = useMemo(() => {
-    if (isLoading) return [];
-    const publicFacingProducts = enrichedProducts.filter((p) => Number(p.stock) > 0);
-    return Array.from(
-      new Set(
-        publicFacingProducts
-          .map((p) => p.category.split(' > ').pop()!)
-          .filter(Boolean)
-      )
-    ).sort();
-  }, [enrichedProducts, isLoading]);
-
-  const allCategories = useMemo(() => {
-    if (isLoading) return [];
-    const publicFacingProducts = enrichedProducts.filter((p) => Number(p.stock) > 0);
-    return Array.from(
-      new Set(publicFacingProducts.map((p) => p.category).filter(Boolean))
-    ).sort();
-  }, [enrichedProducts, isLoading]);
-
   const addProducts = async (
     newProducts: Omit<Product, 'slug' | 'imageId'>[],
     newImagesData?: { id: string; url: string; hint: string; productId: string }[]
   ) => {
     if (!firestore) return;
-
-    if (newImagesData) {
-      const allPlaceholdersToAdd = newImagesData.map((img) => ({
-        id: img.id,
-        imageUrl: img.url,
-        description: img.hint,
-        imageHint: img.hint,
-      }));
-      addDynamicPlaceholder(allPlaceholdersToAdd);
-    }
     
     const batch = writeBatch(firestore);
+    const productBatchData: { path: string, data: any }[] = [];
 
     newProducts.forEach((p) => {
         const productId = `prod-${p.id}`;
@@ -139,53 +81,54 @@ export const ProductsProvider = ({ children }: { children: ReactNode }) => {
           description: p.description,
           stock: Number(p.stock) || 0,
         };
-
+        
+        productBatchData.push({ path: productRef.path, data: productData });
         batch.set(productRef, productData, { merge: true });
     });
 
-    await batch.commit();
+    batch.commit().catch(error => {
+       productBatchData.forEach(item => {
+         const permissionError = new FirestorePermissionError({
+           path: item.path,
+           operation: 'create',
+           requestResourceData: item.data,
+         });
+         errorEmitter.emit('permission-error', permissionError);
+       });
+    });
   };
 
   const deleteProducts = async (productIds: string[]) => {
     if (!firestore) return;
     
     const batch = writeBatch(firestore);
-    let imageIdsToDelete: string[] = [];
 
     productIds.forEach(productId => {
       const productRef = doc(firestore, 'products', productId);
       batch.delete(productRef);
-      
-      const productNumId = productId.replace('prod-', '');
-      const placeholdersForProduct = PlaceHolderImages.filter(
-        (img) => img.id && img.id.startsWith(`prod-img-${productNumId}-`)
-      );
-      imageIdsToDelete.push(...placeholdersForProduct.map(img => img.id));
-      
-      const product = products.find(p => p.id === productId);
-      if (product?.imageId && !imageIdsToDelete.includes(product.imageId)) {
-          imageIdsToDelete.push(product.imageId);
-      }
     });
 
-    await batch.commit();
-
-    if (imageIdsToDelete.length > 0) {
-      const uniqueImageIds = Array.from(new Set(imageIdsToDelete));
-      removeDynamicPlaceholders(uniqueImageIds);
-    }
+    batch.commit().catch(error => {
+        productIds.forEach(productId => {
+            const permissionError = new FirestorePermissionError({
+                path: `products/${productId}`,
+                operation: 'delete',
+            });
+            errorEmitter.emit('permission-error', permissionError);
+        });
+    });
   };
 
   return (
     <ProductsContext.Provider
       value={{
-        products: inStockProducts,
-        adminProducts: enrichedProducts,
+        products: products,
+        adminProducts: products,
         addProducts,
         deleteProducts,
         isLoaded: !isLoading,
-        categories,
-        allCategories,
+        categories: [],
+        allCategories: [],
       }}
     >
       {children}

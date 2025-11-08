@@ -1,9 +1,10 @@
+
 'use client';
 
 import { createContext, useContext, ReactNode, useMemo } from 'react';
 import { useCollection } from '@/firebase/firestore/use-collection';
 import { collection, addDoc, doc, updateDoc, deleteDoc } from 'firebase/firestore';
-import { useFirestore, useMemoFirebase } from '@/firebase';
+import { useFirestore, useMemoFirebase, errorEmitter, FirestorePermissionError } from '@/firebase';
 
 
 export type MarkupRule = {
@@ -38,30 +39,51 @@ export const SuppliersProvider = ({ children }: { children: ReactNode }) => {
     return collection(firestore, 'suppliers');
   }, [firestore]);
 
-  const { data: suppliers, isLoading } = useCollection<Omit<Supplier, 'id'>>(suppliersQuery);
+  const { data: suppliers } = useCollection<Omit<Supplier, 'id'>>(suppliersQuery);
   const memoizedSuppliers = useMemo(() => suppliers || [], [suppliers]);
 
-  const addSupplier = async (supplierData: Omit<Supplier, 'id' | 'conversionRate' | 'profitability'>) => {
+  const addSupplier = (supplierData: Omit<Supplier, 'id' | 'conversionRate' | 'profitability'>) => {
     if (!firestore) return;
     const newSupplier = {
         ...supplierData,
         conversionRate: Math.random() * 0.2,
         profitability: Math.random() * 10000,
     };
-    await addDoc(collection(firestore, 'suppliers'), newSupplier);
+    const collectionRef = collection(firestore, 'suppliers');
+    addDoc(collectionRef, newSupplier).catch(error => {
+        const permissionError = new FirestorePermissionError({
+            path: collectionRef.path,
+            operation: 'create',
+            requestResourceData: newSupplier,
+        });
+        errorEmitter.emit('permission-error', permissionError);
+    });
   };
 
-  const updateSupplier = async (updatedSupplier: Supplier) => {
+  const updateSupplier = (updatedSupplier: Supplier) => {
     if (!firestore) return;
     const { id, ...data } = updatedSupplier;
     const supplierRef = doc(firestore, 'suppliers', id);
-    await updateDoc(supplierRef, data);
+    updateDoc(supplierRef, data).catch(error => {
+        const permissionError = new FirestorePermissionError({
+            path: supplierRef.path,
+            operation: 'update',
+            requestResourceData: data,
+        });
+        errorEmitter.emit('permission-error', permissionError);
+    });
   };
 
-  const deleteSupplier = async (supplierId: string) => {
+  const deleteSupplier = (supplierId: string) => {
     if (!firestore) return;
     const supplierRef = doc(firestore, 'suppliers', supplierId);
-    await deleteDoc(supplierRef);
+    deleteDoc(supplierRef).catch(error => {
+        const permissionError = new FirestorePermissionError({
+            path: supplierRef.path,
+            operation: 'delete',
+        });
+        errorEmitter.emit('permission-error', permissionError);
+    });
   };
 
 
