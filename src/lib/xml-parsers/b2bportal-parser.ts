@@ -82,7 +82,7 @@ export async function b2bportalParser(url: string): Promise<XmlProduct[]> {
       id: p.id?.toString() || `temp-id-${Math.random()}`,
       name: p.name || 'No Name',
       retailPrice: p.retail_price?.toString() || '0',
-      webOfferPrice: p.price?.toString() || p.retail_price?.toString() || '0',
+      webOfferPrice: p.retail_price?.toString() || '0',
       description: p.descr || '',
       category: mapCategory(rawCategory),
       mainImage: mainImage,
