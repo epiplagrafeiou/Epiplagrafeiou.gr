@@ -3,6 +3,7 @@
 
 import { XMLParser } from 'fast-xml-parser';
 import type { XmlProduct } from './megapap-parser';
+import { mapCategory } from '../category-mapper';
 
 export async function b2bportalParser(url: string): Promise<XmlProduct[]> {
   const response = await fetch(url, { cache: 'no-store' });
@@ -75,7 +76,7 @@ export async function b2bportalParser(url: string): Promise<XmlProduct[]> {
     const mainImage = allImages[0] || null;
 
     // The logic for category is to combine subcategory and category
-    const category = [p.subcategory, p.category].filter(Boolean).join(' > ');
+    const rawCategory = [p.subcategory, p.category].filter(Boolean).join(' > ');
 
     return {
       id: p.id?.toString() || `temp-id-${Math.random()}`,
@@ -83,7 +84,7 @@ export async function b2bportalParser(url: string): Promise<XmlProduct[]> {
       retailPrice: p.retail_price?.toString() || '0',
       webOfferPrice: p.price?.toString() || p.retail_price?.toString() || '0',
       description: p.descr || '',
-      category: category,
+      category: mapCategory(rawCategory),
       mainImage: mainImage,
       images: allImages,
       stock: Number(p.availability) || 0,

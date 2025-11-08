@@ -2,6 +2,7 @@
 'use server';
 
 import { XMLParser } from 'fast-xml-parser';
+import { mapCategory } from '../category-mapper';
 
 export interface XmlProduct {
   id: string;
@@ -85,6 +86,7 @@ export async function megapapParser(url: string): Promise<XmlProduct[]> {
         p.quantity ??
         0;
       const stock = Number(rawStock) || 0;
+      const rawCategory = p.category || 'Uncategorized';
 
       return {
         id: p.id || `temp-id-${Math.random()}`,
@@ -93,7 +95,7 @@ export async function megapapParser(url: string): Promise<XmlProduct[]> {
         webOfferPrice:
           p.weboffer_price_with_vat || p.retail_price_with_vat || '0',
         description: p.description || '',
-        category: p.category || 'Uncategorized',
+        category: mapCategory(rawCategory),
         mainImage,
         images: allImages,
         stock,
