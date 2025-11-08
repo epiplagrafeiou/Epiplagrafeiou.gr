@@ -91,7 +91,7 @@ export async function megapapParser(url: string): Promise<XmlProduct[]> {
       let finalWebOfferPrice = parseFloat(p.weboffer_price_with_vat || p.retail_price_with_vat || '0');
       const productName = p.name?.toLowerCase() || '';
       if (productName.includes('καναπ') || productName.includes('sofa')) {
-        finalWebOfferPrice += 130;
+        finalWebOfferPrice += 75;
       }
 
       return {

@@ -82,12 +82,7 @@ export async function b2bportalParser(url: string): Promise<XmlProduct[]> {
     // Set a default quantity if available.
     const stock = p.availability === 1 ? 10 : 0;
     
-    let finalWebOfferPrice = parseFloat(p.retail_price?.toString() || '0');
-    const productName = p.name?.toLowerCase() || '';
-    if (productName.includes('καναπ') || productName.includes('sofa')) {
-      finalWebOfferPrice += 130;
-    }
-
+    const finalWebOfferPrice = parseFloat(p.retail_price?.toString() || '0');
 
     return {
       id: p.id?.toString() || `temp-id-${Math.random()}`,
