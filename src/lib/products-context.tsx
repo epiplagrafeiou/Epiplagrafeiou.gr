@@ -19,7 +19,8 @@ export interface Product {
 
 
 interface ProductsContextType {
-  products: Product[];
+  products: Product[]; // For public-facing store (in-stock only)
+  adminProducts: Product[]; // For admin panel (all products)
   addProducts: (newProducts: Omit<Product, 'slug' | 'imageId'>[], newImages?: { id: string; url: string; hint: string, productId: string }[]) => void;
   deleteProducts: (productIds: string[]) => void;
   isLoaded: boolean;
@@ -62,8 +63,9 @@ export const ProductsProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [products, isLoaded]);
   
-  const allProducts = useMemo(() => {
+  const enrichedProducts = useMemo(() => {
     if (!isLoaded) return [];
+    // This is the source of truth for ALL products
     return products.map(p => {
         const productNumId = p.id.replace('prod-', '');
         const imagePlaceholders = PlaceHolderImages.filter(img => img.id && img.id.startsWith(`prod-img-${productNumId}-`));
@@ -81,19 +83,22 @@ export const ProductsProvider = ({ children }: { children: ReactNode }) => {
             images: Array.from(new Set(allImageUrls))
         }
     });
-  }, [products, isLoaded]);
+  }, [products, isLoaded, PlaceHolderImages]);
 
   const inStockProducts = useMemo(() => {
-    return allProducts.filter(p => (p.stock ?? 0) > 0);
-  }, [allProducts]);
+    // Filter for public-facing store
+    return enrichedProducts.filter(p => (p.stock ?? 0) > 0);
+  }, [enrichedProducts]);
   
   const categories = useMemo(() => {
     if (!isLoaded) return [];
+    // Categories should only be generated from products that are visible in the store
     return Array.from(new Set(inStockProducts.map(p => p.category.split(' > ').pop()!).filter(Boolean))).sort();
   }, [inStockProducts, isLoaded]);
   
   const allCategories = useMemo(() => {
     if (!isLoaded) return [];
+    // All categories should also only be from in-stock products
     return Array.from(new Set(inStockProducts.map(p => p.category).filter(Boolean))).sort();
   }, [inStockProducts, isLoaded]);
 
@@ -172,7 +177,15 @@ export const ProductsProvider = ({ children }: { children: ReactNode }) => {
   };
 
   return (
-    <ProductsContext.Provider value={{ products: inStockProducts, addProducts, deleteProducts, isLoaded, categories, allCategories }}>
+    <ProductsContext.Provider value={{ 
+        products: inStockProducts, // Public list
+        adminProducts: enrichedProducts, // Admin list
+        addProducts, 
+        deleteProducts, 
+        isLoaded, 
+        categories, 
+        allCategories 
+    }}>
       {children}
     </ProductsContext.Provider>
   );

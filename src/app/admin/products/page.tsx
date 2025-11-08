@@ -38,13 +38,13 @@ import {
 import { useToast } from '@/hooks/use-toast';
 
 export default function AdminProductsPage() {
-  const { products, deleteProducts } = useProducts();
+  const { adminProducts, deleteProducts } = useProducts();
   const { toast } = useToast();
   const [selectedProducts, setSelectedProducts] = useState<Set<string>>(new Set());
 
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
-      setSelectedProducts(new Set(products.map(p => p.id)));
+      setSelectedProducts(new Set(adminProducts.map(p => p.id)));
     } else {
       setSelectedProducts(new Set());
     }
@@ -118,7 +118,7 @@ export default function AdminProductsPage() {
                 <TableHead className="w-[50px]">
                    <Checkbox
                     onCheckedChange={(checked) => handleSelectAll(Boolean(checked))}
-                    checked={selectedProducts.size === products.length && products.length > 0}
+                    checked={selectedProducts.size === adminProducts.length && adminProducts.length > 0}
                     aria-label="Select all"
                   />
                 </TableHead>
@@ -130,7 +130,7 @@ export default function AdminProductsPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {products.map((product) => {
+              {adminProducts.map((product) => {
                  const image = PlaceHolderImages.find((img) => img.id === product.imageId);
                  const stock = product.stock ?? 0;
                  return (
@@ -152,7 +152,7 @@ export default function AdminProductsPage() {
                       <Badge variant="outline">{product.category}</Badge>
                     </TableCell>
                     <TableCell>
-                      <Badge variant={stock > 0 ? "secondary" : "destructive"}>
+                       <Badge variant={stock > 0 ? "secondary" : "destructive"}>
                         {stock > 0 ? `${stock} in stock` : 'Out of Stock'}
                       </Badge>
                     </TableCell>
