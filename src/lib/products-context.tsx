@@ -54,7 +54,7 @@ export const ProductsProvider = ({ children }: { children: React.ReactNode }) =>
     const productBatchData: { path: string; data: any }[] = [];
 
     newProducts.forEach((p) => {
-        const productId = `prod-${p.id}`;
+        const productId = p.id;
         const productRef = doc(firestore, 'products', productId);
         const productSlug = createSlug(p.name);
         
@@ -134,6 +134,7 @@ export const ProductsProvider = ({ children }: { children: React.ReactNode }) =>
 
         return {
             ...p,
+            imageId: mainImage,
             images: Array.from(new Set(sortedImages))
         };
     });
