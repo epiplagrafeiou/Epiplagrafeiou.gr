@@ -51,9 +51,10 @@ export const ProductsProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     if (isLoaded) {
+      // Ensure stock is always a number when saving
       const productsForStorage = products.map(({ images, ...rest }) => ({
         ...rest,
-        stock: rest.stock ?? 0 // Ensure stock is always a number
+        stock: rest.stock ?? 0
       }));
       try {
         localStorage.setItem('products', JSON.stringify(productsForStorage));
@@ -77,11 +78,12 @@ export const ProductsProvider = ({ children }: { children: ReactNode }) => {
            allImageUrls = [mainImage.imageUrl, ...allImageUrls.filter(url => url !== mainImage.imageUrl)];
         }
 
+        // Correctly merge existing product data (including stock) with new image array
         return {
             ...p,
             stock: p.stock ?? 0,
             images: Array.from(new Set(allImageUrls))
-        }
+        };
     });
   }, [products, isLoaded, PlaceHolderImages]);
 
