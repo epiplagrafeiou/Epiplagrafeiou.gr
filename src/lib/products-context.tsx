@@ -6,6 +6,7 @@ import { createSlug } from './utils';
 import { useCollection } from '@/firebase/firestore/use-collection';
 import { collection, writeBatch, doc } from 'firebase/firestore';
 import { useFirestore, useMemoFirebase, FirestorePermissionError, errorEmitter } from '@/firebase';
+import { PlaceHolderImages } from './placeholder-images';
 
 export interface Product {
   id: string;
@@ -44,6 +45,13 @@ export const ProductsProvider = ({ children }: { children: React.ReactNode }) =>
 
   const { data: fetchedProducts, isLoading } = useCollection<Omit<Product, 'id'>>(productsQuery);
   const products = useMemo(() => fetchedProducts || [], [fetchedProducts]);
+  
+  const resolveImageUrl = (idOrUrl: string | undefined): string => {
+    if (!idOrUrl) return '/fallback.png';
+    if (idOrUrl.startsWith('http') || idOrUrl.startsWith('/')) return idOrUrl;
+    const found = PlaceHolderImages.find((img) => img.id === idOrUrl);
+    return found?.imageUrl || '/fallback.png';
+  };
 
   const addProducts = async (
     newProducts: (Omit<Product, 'slug' | 'imageId'> & { mainImage?: string | null, images: string[] })[],
@@ -74,7 +82,7 @@ export const ProductsProvider = ({ children }: { children: React.ReactNode }) =>
           ...p,
           id: productId,
           slug: productSlug,
-          imageId: imageId,
+          imageId: imageId, // Save the URL
           images: sortedImages,
           price: p.price,
           category: p.category,
@@ -123,16 +131,13 @@ export const ProductsProvider = ({ children }: { children: React.ReactNode }) =>
 
   const allProducts = useMemo(() => {
     return products.map((p) => {
-        const allImageUrls = p.images || [];
-        const mainImage = p.imageId || allImageUrls[0] || '';
-        const sortedImages = mainImage
-            ? [mainImage, ...allImageUrls.filter(url => url !== mainImage)]
-            : allImageUrls;
+        const mainImageUrl = resolveImageUrl(p.imageId);
+        const allImageUrls = (p.images || []).map(resolveImageUrl);
 
         return {
             ...p,
-            imageId: mainImage,
-            images: Array.from(new Set(sortedImages)).filter(Boolean)
+            imageId: mainImageUrl,
+            images: Array.from(new Set([mainImageUrl, ...allImageUrls])).filter(Boolean)
         };
     });
   }, [products]);
