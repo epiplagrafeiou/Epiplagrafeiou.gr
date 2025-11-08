@@ -47,10 +47,10 @@ export const ProductsProvider = ({ children }: { children: React.ReactNode }) =>
   const products = useMemo(() => fetchedProducts || [], [fetchedProducts]);
   
   const resolveImageUrl = (idOrUrl: string | undefined): string => {
-    if (!idOrUrl) return '/fallback.png';
+    if (!idOrUrl) return '';
     if (idOrUrl.startsWith('http') || idOrUrl.startsWith('/')) return idOrUrl;
     const found = PlaceHolderImages.find((img) => img.id === idOrUrl);
-    return found?.imageUrl || '/fallback.png';
+    return found?.imageUrl || '';
   };
 
   const addProducts = async (
