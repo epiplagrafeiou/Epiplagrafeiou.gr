@@ -89,7 +89,7 @@ export async function megapapParser(url: string): Promise<XmlProduct[]> {
       const rawCategory = p.category || 'Uncategorized';
 
       return {
-        id: p.id || `temp-id-${Math.random()}`,
+        id: p.id?.toString() || `temp-id-${Math.random()}`,
         name: p.name || 'No Name',
         retailPrice: p.retail_price_with_vat || '0',
         webOfferPrice:
@@ -104,3 +104,5 @@ export async function megapapParser(url: string): Promise<XmlProduct[]> {
 
     return products;
 }
+
+    

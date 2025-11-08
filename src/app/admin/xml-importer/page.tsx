@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import {
   Card,
   CardContent,
@@ -16,34 +16,36 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { formatCurrency } from '@/lib/utils';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Terminal, Filter } from 'lucide-react';
+import { Terminal, Filter, Zap } from 'lucide-react';
 import { useProducts } from '@/lib/products-context';
 import { useToast } from '@/hooks/use-toast';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ScrollArea } from '@/components/ui/scroll-area';
-
-
-interface SyncedProduct {
-  id: string;
-  name: string;
-  retailPrice: string;
-  webOfferPrice: string;
-  description: string;
-  category: string;
-  images: string[];
-  mainImage: string | null;
-  stock: number;
-}
+import type { XmlProduct } from '@/lib/xml-parsers/megapap-parser';
 
 export default function XmlImporterPage() {
   const { suppliers } = useSuppliers();
   const { addProducts } = useProducts();
   const { toast } = useToast();
   const [loadingSupplier, setLoadingSupplier] = useState<string | null>(null);
+  const [quickSyncingSupplier, setQuickSyncingSupplier] = useState<string | null>(null);
   const [activeSupplierId, setActiveSupplierId] = useState<string | null>(null);
-  const [syncedProducts, setSyncedProducts] = useState<SyncedProduct[]>([]);
+  const [syncedProducts, setSyncedProducts] = useState<XmlProduct[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [lastSyncCategories, setLastSyncCategories] = useState<Record<string, string[]>>({});
+
+  useEffect(() => {
+    const loadedCategories: Record<string, string[]> = {};
+    suppliers.forEach(s => {
+      const saved = localStorage.getItem(`lastSyncCategories_${s.id}`);
+      if (saved) {
+        loadedCategories[s.id] = JSON.parse(saved);
+      }
+    });
+    setLastSyncCategories(loadedCategories);
+  }, [suppliers]);
+
 
   const [selectedCategories, setSelectedCategories] = useState<Set<string>>(new Set());
 
@@ -71,31 +73,19 @@ export default function XmlImporterPage() {
             return price * (1 + rule.markup / 100);
         }
     }
-    // If no rule matches, find the closest one or apply a default.
-    // For now, returning original price if no rule matches.
     const defaultRule = sortedRules.find(r => r.from === 0) || { markup: 0 };
     return price * (1 + defaultRule.markup / 100);
   };
-
-  const handleAddToStore = () => {
-    const activeSupplier = suppliers.find(s => s.id === activeSupplierId);
-    if (!activeSupplier) {
-        toast({
-            variant: "destructive",
-            title: "Error",
-            description: "Could not find the supplier to apply markup rules."
-        });
-        return;
-    }
-
-    const productsToAdd = filteredProducts.map(p => {
+  
+  const processAndAddProducts = (productsToProcess: XmlProduct[], supplier: (typeof suppliers)[0]) => {
+     const productsToAdd = productsToProcess.map(p => {
         const retailPrice = parseFloat(p.webOfferPrice) || 0;
-        const finalPrice = applyMarkup(retailPrice, activeSupplier.markupRules);
+        const finalPrice = applyMarkup(retailPrice, supplier.markupRules);
         const categoryPath = p.category.split('>').map(c => c.trim()).join(' > ');
 
         return {
             id: p.id,
-            supplierId: activeSupplier.id,
+            supplierId: supplier.id,
             name: p.name,
             price: finalPrice,
             description: p.description,
@@ -112,10 +102,63 @@ export default function XmlImporterPage() {
         title: "Products Added!",
         description: `${productsToAdd.length} products have been added to your store.`
     });
+  }
+
+  const handleAddToStore = () => {
+    const activeSupplier = suppliers.find(s => s.id === activeSupplierId);
+    if (!activeSupplier) {
+        toast({
+            variant: "destructive",
+            title: "Error",
+            description: "Could not find the supplier to apply markup rules."
+        });
+        return;
+    }
+    
+    // Save categories for quick sync
+    const categoriesToSave = Array.from(selectedCategories);
+    localStorage.setItem(`lastSyncCategories_${activeSupplier.id}`, JSON.stringify(categoriesToSave));
+    setLastSyncCategories(prev => ({...prev, [activeSupplier.id]: categoriesToSave}));
+
+
+    processAndAddProducts(filteredProducts, activeSupplier);
 
     setSyncedProducts([]);
     setSelectedCategories(new Set());
     setActiveSupplierId(null);
+  }
+
+  const handleQuickSync = async (supplier: (typeof suppliers)[0]) => {
+      const savedCategories = lastSyncCategories[supplier.id];
+      if (!savedCategories) {
+          toast({ variant: 'destructive', title: 'No saved categories', description: 'Please perform a manual sync first to save category selections.'});
+          return;
+      }
+
+      setQuickSyncingSupplier(supplier.id);
+      setError(null);
+      
+      try {
+          const allProducts = await syncProductsFromXml(supplier.url, supplier.name);
+          const productsToSync = allProducts.filter(p => {
+              const categoryPath = p.category.split('>').map(c => c.trim()).join(' > ');
+              return savedCategories.includes(categoryPath) || savedCategories.includes('all');
+          });
+
+          if (productsToSync.length === 0) {
+              toast({ title: 'Quick Sync Complete', description: 'No products found matching your last selected categories.'});
+              return;
+          }
+          
+          processAndAddProducts(productsToSync, supplier);
+
+      } catch(e: any) {
+          setError(e.message);
+          toast({ variant: 'destructive', title: 'Quick Sync Failed', description: e.message });
+      } finally {
+          setQuickSyncingSupplier(null);
+      }
+
   }
 
   const allCategories = useMemo(() => {
@@ -171,7 +214,7 @@ export default function XmlImporterPage() {
         <CardHeader>
           <CardTitle>Sync Products from Suppliers</CardTitle>
           <CardDescription>
-            Fetch and review products from your suppliers' XML feeds before adding them to your store.
+            Fetch products from XML feeds. Use Quick Sync to re-import using the last saved category selection.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -185,12 +228,22 @@ export default function XmlImporterPage() {
                   <h3 className="font-semibold">{supplier.name}</h3>
                   <p className="text-sm text-muted-foreground">{supplier.url}</p>
                 </div>
-                <Button
-                  onClick={() => handleSync(supplier.id, supplier.url, supplier.name)}
-                  disabled={loadingSupplier === supplier.id}
-                >
-                  {loadingSupplier === supplier.id ? 'Syncing...' : 'Sync Products'}
-                </Button>
+                <div className="flex gap-2">
+                    <Button
+                        onClick={() => handleQuickSync(supplier)}
+                        disabled={!lastSyncCategories[supplier.id] || quickSyncingSupplier === supplier.id || loadingSupplier === supplier.id}
+                        variant="outline"
+                    >
+                       <Zap className="mr-2 h-4 w-4" />
+                       {quickSyncingSupplier === supplier.id ? 'Syncing...' : 'Quick Sync'}
+                    </Button>
+                    <Button
+                    onClick={() => handleSync(supplier.id, supplier.url, supplier.name)}
+                    disabled={loadingSupplier === supplier.id || quickSyncingSupplier === supplier.id}
+                    >
+                    {loadingSupplier === supplier.id ? 'Syncing...' : 'Sync Products'}
+                    </Button>
+                </div>
               </div>
             ))}
           </div>
@@ -288,3 +341,5 @@ export default function XmlImporterPage() {
     </div>
   );
 }
+
+    
