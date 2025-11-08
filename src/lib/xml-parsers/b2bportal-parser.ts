@@ -81,6 +81,13 @@ export async function b2bportalParser(url: string): Promise<XmlProduct[]> {
     // Correctly interpret availability: 1 means in stock, not quantity 1.
     // Set a default quantity if available.
     const stock = p.availability === 1 ? 10 : 0;
+    
+    let shippingSurcharge = 0;
+    const productName = p.name?.toLowerCase() || '';
+    if (productName.includes('καναπ') || productName.includes('sofa')) {
+      shippingSurcharge = 130;
+    }
+
 
     return {
       id: p.id?.toString() || `temp-id-${Math.random()}`,
@@ -92,6 +99,7 @@ export async function b2bportalParser(url: string): Promise<XmlProduct[]> {
       mainImage: mainImage,
       images: allImages,
       stock: stock,
+      shippingSurcharge: shippingSurcharge,
     };
   });
 

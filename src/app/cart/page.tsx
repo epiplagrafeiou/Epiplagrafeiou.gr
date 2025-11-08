@@ -1,3 +1,4 @@
+
 'use client';
 
 import Image from 'next/image';
@@ -36,6 +37,11 @@ function CartItemRow({ item }: { item: CartItem }) {
         <p className="text-sm text-muted-foreground">
           {formatCurrency(item.price)}
         </p>
+        {item.shippingSurcharge && item.shippingSurcharge > 0 && (
+          <p className="text-xs text-destructive">
+            + {formatCurrency(item.shippingSurcharge)} shipping surcharge
+          </p>
+        )}
         <div className="mt-2 flex items-center gap-2">
           <Input
             type="number"
@@ -63,8 +69,10 @@ function CartItemRow({ item }: { item: CartItem }) {
 export default function CartPage() {
   const { cartItems, totalAmount } = useCart();
 
-  const shipping = totalAmount >= FREE_SHIPPING_THRESHOLD || totalAmount === 0 ? 0 : SHIPPING_COST;
-  const total = totalAmount + shipping;
+  const totalSurcharge = cartItems.reduce((acc, item) => acc + (item.shippingSurcharge || 0) * item.quantity, 0);
+  const baseShipping = totalAmount >= FREE_SHIPPING_THRESHOLD || totalAmount === 0 ? 0 : SHIPPING_COST;
+  const totalShipping = baseShipping + totalSurcharge;
+  const total = totalAmount + totalShipping;
 
   if (cartItems.length === 0) {
     return (
@@ -100,8 +108,13 @@ export default function CartPage() {
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Shipping</span>
-                <span>{shipping > 0 ? formatCurrency(shipping) : 'Free'}</span>
+                <span>{totalShipping > 0 ? formatCurrency(totalShipping) : 'Free'}</span>
               </div>
+               {totalSurcharge > 0 && (
+                <div className="flex justify-between pl-4 text-xs text-muted-foreground">
+                    <span>(Includes {formatCurrency(totalSurcharge)} in surcharges)</span>
+                </div>
+               )}
               <Separator />
               <div className="flex justify-between font-bold">
                 <span>Total</span>

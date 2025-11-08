@@ -14,6 +14,7 @@ export interface XmlProduct {
   mainImage: string | null;
   images: string[];
   stock: number;
+  shippingSurcharge: number;
 }
 
 export async function megapapParser(url: string): Promise<XmlProduct[]> {
@@ -87,6 +88,12 @@ export async function megapapParser(url: string): Promise<XmlProduct[]> {
         0;
       const stock = Number(rawStock) || 0;
       const rawCategory = p.category || 'Uncategorized';
+      
+      let shippingSurcharge = 0;
+      const productName = p.name?.toLowerCase() || '';
+      if (productName.includes('καναπ') || productName.includes('sofa')) {
+        shippingSurcharge = 130;
+      }
 
       return {
         id: p.id?.toString() || `temp-id-${Math.random()}`,
@@ -99,10 +106,9 @@ export async function megapapParser(url: string): Promise<XmlProduct[]> {
         mainImage,
         images: allImages,
         stock,
+        shippingSurcharge,
       };
     });
 
     return products;
 }
-
-    

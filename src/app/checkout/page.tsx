@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useForm } from 'react-hook-form';
@@ -49,8 +50,10 @@ export default function CheckoutPage() {
     },
   });
 
-  const shipping = totalAmount >= FREE_SHIPPING_THRESHOLD ? 0 : SHIPPING_COST;
-  const total = totalAmount + shipping;
+  const totalSurcharge = cartItems.reduce((acc, item) => acc + (item.shippingSurcharge || 0) * item.quantity, 0);
+  const baseShipping = totalAmount >= FREE_SHIPPING_THRESHOLD ? 0 : SHIPPING_COST;
+  const totalShipping = baseShipping + totalSurcharge;
+  const total = totalAmount + totalShipping;
 
   const onSubmit = (data: CheckoutFormValues) => {
     console.log(data);
@@ -89,6 +92,9 @@ export default function CheckoutPage() {
                       </div>
                       <div className="flex-grow">
                         <p className="font-medium">{item.name}</p>
+                         {item.shippingSurcharge && item.shippingSurcharge > 0 && (
+                            <p className="text-xs text-destructive">+ {formatCurrency(item.shippingSurcharge)} surcharge</p>
+                         )}
                       </div>
                       <p className="font-medium">
                         {formatCurrency(item.price * item.quantity)}
@@ -105,8 +111,13 @@ export default function CheckoutPage() {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Shipping</span>
-                  <span>{shipping > 0 ? formatCurrency(shipping) : 'Free'}</span>
+                  <span>{totalShipping > 0 ? formatCurrency(totalShipping) : 'Free'}</span>
                 </div>
+                 {totalSurcharge > 0 && (
+                    <div className="flex justify-between pl-4 text-xs text-muted-foreground">
+                        <span>(Includes {formatCurrency(totalSurcharge)} in surcharges)</span>
+                    </div>
+                )}
                 <Separator className="my-2" />
                 <div className="flex justify-between text-lg font-bold">
                   <span>Total</span>
