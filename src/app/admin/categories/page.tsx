@@ -47,7 +47,7 @@ interface StoreCategory {
     children: StoreCategory[];
 }
 
-const StoreCategoryItem = ({ category, onAddRawCategory }: { category: StoreCategory, onAddRawCategory: (categoryId: string, rawCategory: string) => void }) => {
+const StoreCategoryItem = ({ category, onDelete }: { category: StoreCategory, onDelete: (categoryId: string) => void }) => {
     const {
         attributes,
         listeners,
@@ -80,7 +80,7 @@ const StoreCategoryItem = ({ category, onAddRawCategory }: { category: StoreCate
                     </span>
                     <span className="font-semibold">{category.name}</span>
                 </div>
-                <Button variant="ghost" size="icon">
+                <Button variant="ghost" size="icon" onClick={() => onDelete(category.id)}>
                     <Trash2 className="h-4 w-4 text-destructive" />
                 </Button>
             </div>
@@ -132,6 +132,10 @@ export default function AdminCategoriesPage() {
         };
         setStoreCategories(prev => [...prev, newCategory]);
         setNewCategoryName('');
+    };
+
+    const handleDeleteStoreCategory = (categoryId: string) => {
+        setStoreCategories(prev => prev.filter(sc => sc.id !== categoryId));
     };
 
     const handleDragStart = (event: DragStartEvent) => {
@@ -236,7 +240,7 @@ export default function AdminCategoriesPage() {
 
                              <SortableContext items={storeCategories.map(c => c.id)} strategy={verticalListSortingStrategy}>
                                 {storeCategories.map(cat => (
-                                    <StoreCategoryItem key={cat.id} category={cat} onAddRawCategory={handleAddRawToStoreCategory} />
+                                    <StoreCategoryItem key={cat.id} category={cat} onDelete={handleDeleteStoreCategory} />
                                 ))}
                             </SortableContext>
                         </CardContent>
