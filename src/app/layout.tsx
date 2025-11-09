@@ -1,9 +1,7 @@
 import type { Metadata } from 'next';
 import './globals.css';
 import { Providers } from './providers';
-import Header from '@/components/layout/Header';
-import Footer from '@/components/layout/Footer';
-import TopBar from '@/components/layout/TopBar';
+import AppShell from './AppShell';
 
 export const metadata: Metadata = {
   title: 'Epipla Graphiou AI eShop',
@@ -31,12 +29,7 @@ export default function RootLayout({
       </head>
       <body className="font-body antialiased">
         <Providers>
-          <div className="flex min-h-screen flex-col">
-            <TopBar />
-            <Header />
-            <main className="flex-grow bg-white">{children}</main>
-            <Footer />
-          </div>
+          <AppShell>{children}</AppShell>
         </Providers>
       </body>
     </html>
