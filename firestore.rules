@@ -26,6 +26,13 @@ service cloud.firestore {
     }
 
     /**
+     * @description Public read and write for admins.
+     */
+    match /categories/{categoryId} {
+        allow read, write: if isAdmin();
+    }
+
+    /**
      * @description Allows a user to read and manage their own profile. Allows admins to read any profile.
      */
     match /users/{userId} {

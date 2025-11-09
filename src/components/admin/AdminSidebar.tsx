@@ -19,12 +19,14 @@ import {
   CircleUser,
   LogOut,
   FileCode,
+  FolderKanban,
 } from 'lucide-react';
 
 const menuItems = [
   { href: '/admin', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/admin/suppliers', label: 'Suppliers', icon: Truck },
   { href: '/admin/products', label: 'Products', icon: Package },
+  { href: '/admin/categories', label: 'Categories', icon: FolderKanban },
   { href: '/admin/xml-importer', label: 'XML Importer', icon: FileCode },
   { href: '/admin/settings', label: 'Settings', icon: Settings },
 ];

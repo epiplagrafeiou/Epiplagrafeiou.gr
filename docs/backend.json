@@ -66,7 +66,7 @@
         },
         "category": {
           "type": "string",
-          "description": "The product's category (e.g., Tables)."
+          "description": "The product's raw category from the supplier (e.g., Tables)."
         },
         "imageId": {
             "type": "string",
@@ -100,6 +100,42 @@
         "stock",
         "supplierId"
       ]
+    },
+     "Category": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Category",
+      "type": "object",
+      "description": "Represents a curated store category.",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The display name of the category."
+        },
+        "slug": {
+          "type": "string",
+          "description": "URL-friendly slug for the category."
+        },
+        "parentId": {
+          "type": ["string", "null"],
+          "description": "The ID of the parent category, or null for a top-level category."
+        },
+        "path": {
+          "type": "string",
+          "description": "The full slug path of the category (e.g., 'furniture/desks')."
+        },
+        "rawCategories": {
+          "type": "array",
+          "description": "A list of raw category strings from suppliers that are mapped to this curated category.",
+          "items": {
+            "type": "string"
+          }
+        },
+        "order": {
+          "type": "number",
+          "description": "The display order of the category within its level."
+        }
+      },
+      "required": ["name", "slug", "path", "rawCategories", "order"]
     }
   },
   "auth": {
@@ -128,6 +164,16 @@
             "$ref": "#/entities/Product"
           },
           "description": "Stores all product information."
+        }
+      },
+      {
+        "path": "/categories/{categoryId}",
+        "definition": {
+          "entityName": "Category",
+          "schema": {
+            "$ref": "#/entities/Category"
+          },
+          "description": "Stores the curated category structure for the eShop."
         }
       }
     ]
