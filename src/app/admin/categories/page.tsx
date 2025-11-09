@@ -47,7 +47,7 @@ interface StoreCategory {
     children: StoreCategory[];
 }
 
-const StoreCategoryItem = ({ category, onDelete }: { category: StoreCategory, onDelete: (categoryId: string) => void }) => {
+const StoreCategoryItem = ({ category, onDelete, onRemoveRawCategory }: { category: StoreCategory, onDelete: (categoryId: string) => void, onRemoveRawCategory: (categoryId: string, rawCategory: string) => void }) => {
     const {
         attributes,
         listeners,
@@ -88,7 +88,7 @@ const StoreCategoryItem = ({ category, onDelete }: { category: StoreCategory, on
                 {category.rawCategories.map(raw => (
                     <div key={raw} className="flex items-center justify-between rounded-md bg-white p-2 text-sm">
                         <span>{raw}</span>
-                        <Button variant="ghost" size="icon" className="h-6 w-6">
+                        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => onRemoveRawCategory(category.id, raw)}>
                             <Trash2 className="h-3 w-3 text-muted-foreground"/>
                         </Button>
                     </div>
@@ -138,30 +138,43 @@ export default function AdminCategoriesPage() {
         setStoreCategories(prev => prev.filter(sc => sc.id !== categoryId));
     };
 
+    const handleRemoveRawCategory = (storeCategoryId: string, rawCategory: string) => {
+        setStoreCategories(prev =>
+          prev.map(sc => {
+            if (sc.id === storeCategoryId) {
+              return {
+                ...sc,
+                rawCategories: sc.rawCategories.filter(rc => rc !== rawCategory),
+              };
+            }
+            return sc;
+          })
+        );
+      };
+
     const handleDragStart = (event: DragStartEvent) => {
         setActiveId(event.active.id as string);
     };
 
     const handleAddRawToStoreCategory = useCallback((categoryId: string, rawCategory: string) => {
         setStoreCategories(prev => {
-            const newStoreCategories = prev.map(sc => {
+            // First, remove the rawCategory from any store category it might be in.
+            const categoriesWithoutRaw = prev.map(sc => ({
+                ...sc,
+                rawCategories: sc.rawCategories.filter(rc => rc !== rawCategory),
+            }));
+    
+            // Then, add the rawCategory to the target store category.
+            const newStoreCategories = categoriesWithoutRaw.map(sc => {
                 if (sc.id === categoryId) {
+                    // Avoid adding duplicates if it somehow still exists.
                     if (!sc.rawCategories.includes(rawCategory)) {
-                         return { ...sc, rawCategories: [...sc.rawCategories, rawCategory] };
+                        return { ...sc, rawCategories: [...sc.rawCategories, rawCategory] };
                     }
                 }
-                // Also remove from other categories if it exists
-                 return { ...sc, rawCategories: sc.rawCategories.filter(rc => rc !== rawCategory) };
+                return sc;
             });
-
-            // This ensures adding to the correct category even if it was previously in another
-             const targetCategoryIndex = newStoreCategories.findIndex(sc => sc.id === categoryId);
-             if (targetCategoryIndex !== -1) {
-                 if (!newStoreCategories[targetCategoryIndex].rawCategories.includes(rawCategory)) {
-                     newStoreCategories[targetCategoryIndex].rawCategories.push(rawCategory);
-                 }
-             }
-
+    
             return newStoreCategories;
         });
     }, []);
@@ -240,7 +253,12 @@ export default function AdminCategoriesPage() {
 
                              <SortableContext items={storeCategories.map(c => c.id)} strategy={verticalListSortingStrategy}>
                                 {storeCategories.map(cat => (
-                                    <StoreCategoryItem key={cat.id} category={cat} onDelete={handleDeleteStoreCategory} />
+                                    <StoreCategoryItem 
+                                        key={cat.id} 
+                                        category={cat} 
+                                        onDelete={handleDeleteStoreCategory}
+                                        onRemoveRawCategory={handleRemoveRawCategory} 
+                                    />
                                 ))}
                             </SortableContext>
                         </CardContent>
