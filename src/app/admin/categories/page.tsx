@@ -10,7 +10,7 @@ import {
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useProducts } from '@/lib/products-context';
-import { DndContext, useDraggable, useDroppable, closestCenter, DragEndEvent, DragOverlay, DragStartEvent } from '@dnd-kit/core';
+import { DndContext, useDraggable, useDroppable, closestCenter, DragEndEvent, DragOverlay, DragStartEvent, UniqueIdentifier } from '@dnd-kit/core';
 import {
   SortableContext,
   verticalListSortingStrategy,
@@ -45,9 +45,20 @@ interface StoreCategory {
     name: string;
     rawCategories: string[];
     children: StoreCategory[];
+    parentId: string | null;
 }
 
-const StoreCategoryItem = ({ category, onDelete, onRemoveRawCategory }: { category: StoreCategory, onDelete: (categoryId: string) => void, onRemoveRawCategory: (categoryId: string, rawCategory: string) => void }) => {
+const StoreCategoryItem = ({ 
+    category, 
+    onDelete, 
+    onRemoveRawCategory,
+    isOverlay
+}: { 
+    category: StoreCategory, 
+    onDelete: (categoryId: string) => void, 
+    onRemoveRawCategory: (categoryId: string, rawCategory: string) => void,
+    isOverlay?: boolean
+}) => {
     const {
         attributes,
         listeners,
@@ -63,7 +74,7 @@ const StoreCategoryItem = ({ category, onDelete, onRemoveRawCategory }: { catego
     
     const { isOver, setNodeRef: droppableRef } = useDroppable({
         id: category.id,
-        data: { type: 'store-category-droppable', categoryId: category.id },
+        data: { type: 'store-category-droppable', categoryId: category.id, isContainer: true },
     });
 
     const combinedRef = (node: HTMLElement | null) => {
@@ -72,7 +83,7 @@ const StoreCategoryItem = ({ category, onDelete, onRemoveRawCategory }: { catego
     };
 
     return (
-        <div ref={combinedRef} style={style} className={`mb-2 rounded-lg border p-4 ${isOver ? 'bg-green-100' : 'bg-secondary/50'}`}>
+        <div ref={combinedRef} style={style} className={`rounded-lg border p-4 ${isOver && !isOverlay ? 'bg-green-100' : 'bg-secondary/50'}`}>
             <div className="flex items-center justify-between">
                 <div className="flex items-center">
                     <span {...attributes} {...listeners} className="cursor-grab p-2 active:cursor-grabbing">
@@ -93,7 +104,18 @@ const StoreCategoryItem = ({ category, onDelete, onRemoveRawCategory }: { catego
                         </Button>
                     </div>
                 ))}
-                {category.rawCategories.length === 0 && <p className="text-xs text-muted-foreground py-2">Drag raw categories here</p>}
+                {category.children.length === 0 && category.rawCategories.length === 0 && <p className="text-xs text-muted-foreground py-2">Drag raw categories or other categories here</p>}
+                
+                {/* Render children recursively */}
+                {category.children.map(child => (
+                     <div key={child.id} className="mt-2">
+                        <StoreCategoryItem 
+                            category={child} 
+                            onDelete={onDelete} 
+                            onRemoveRawCategory={onRemoveRawCategory}
+                        />
+                     </div>
+                ))}
             </div>
         </div>
     )
@@ -102,11 +124,11 @@ const StoreCategoryItem = ({ category, onDelete, onRemoveRawCategory }: { catego
 export default function AdminCategoriesPage() {
     const { adminProducts } = useProducts();
     const [storeCategories, setStoreCategories] = useState<StoreCategory[]>([
-        { id: 'cat-1', name: 'Office Chairs', rawCategories: ['Καρέκλες Γραφείου', 'Gaming Chairs'], children: [] },
-        { id: 'cat-2', name: 'Desks', rawCategories: ['Γραφεία'], children: [] },
+        { id: 'cat-1', name: 'Office Chairs', rawCategories: ['Καρέκλες Γραφείου', 'Gaming Chairs'], children: [], parentId: null },
+        { id: 'cat-2', name: 'Desks', rawCategories: ['Γραφεία'], children: [], parentId: null },
     ]);
     const [newCategoryName, setNewCategoryName] = useState('');
-    const [activeId, setActiveId] = useState<string | null>(null);
+    const [activeId, setActiveId] = useState<UniqueIdentifier | null>(null);
 
     const allRawCategories = useMemo(() => {
         const set = new Set<string>();
@@ -114,11 +136,46 @@ export default function AdminCategoriesPage() {
         return Array.from(set);
     }, [adminProducts]);
 
+    const findCategory = (id: string, categories: StoreCategory[]): StoreCategory | undefined => {
+        for (const category of categories) {
+            if (category.id === id) return category;
+            const foundInChildren = findCategory(id, category.children);
+            if (foundInChildren) return foundInChildren;
+        }
+        return undefined;
+    };
+
+    const removeCategory = (id: string, categories: StoreCategory[]): StoreCategory[] => {
+        return categories.reduce((acc, category) => {
+            if (category.id === id) return acc;
+            const newChildren = removeCategory(id, category.children);
+            if (newChildren.length < category.children.length) {
+                acc.push({ ...category, children: newChildren });
+            } else {
+                acc.push(category);
+            }
+            return acc;
+        }, [] as StoreCategory[]);
+    };
+
+    const addCategoryToParent = (child: StoreCategory, parentId: string, categories: StoreCategory[]): StoreCategory[] => {
+        return categories.map(category => {
+            if (category.id === parentId) {
+                return { ...category, children: [...category.children, { ...child, parentId }] };
+            }
+            return { ...category, children: addCategoryToParent(child, parentId, category.children) };
+        });
+    };
+
     const uncategorized = useMemo(() => {
         const assignedRaw = new Set<string>();
-        storeCategories.forEach(sc => {
-            sc.rawCategories.forEach(rc => assignedRaw.add(rc));
-        });
+        const collectAssigned = (categories: StoreCategory[]) => {
+            categories.forEach(sc => {
+                sc.rawCategories.forEach(rc => assignedRaw.add(rc));
+                collectAssigned(sc.children);
+            });
+        }
+        collectAssigned(storeCategories);
         return allRawCategories.filter(rc => !assignedRaw.has(rc));
     }, [allRawCategories, storeCategories]);
 
@@ -128,54 +185,72 @@ export default function AdminCategoriesPage() {
             id: `cat-${Date.now()}`,
             name: newCategoryName,
             rawCategories: [],
-            children: []
+            children: [],
+            parentId: null,
         };
         setStoreCategories(prev => [...prev, newCategory]);
         setNewCategoryName('');
     };
 
     const handleDeleteStoreCategory = (categoryId: string) => {
-        setStoreCategories(prev => prev.filter(sc => sc.id !== categoryId));
+         setStoreCategories(prev => {
+            const collectRawCategories = (catId: string, categories: StoreCategory[]): string[] => {
+                const category = findCategory(catId, categories);
+                if (!category) return [];
+                let rawCats = [...category.rawCategories];
+                category.children.forEach(child => {
+                    rawCats = [...rawCats, ...collectRawCategories(child.id, categories)];
+                });
+                return rawCats;
+            };
+            const allRaw = collectRawCategories(categoryId, prev);
+            return removeCategory(categoryId, prev);
+        });
     };
 
     const handleRemoveRawCategory = (storeCategoryId: string, rawCategory: string) => {
-        setStoreCategories(prev =>
-          prev.map(sc => {
-            if (sc.id === storeCategoryId) {
-              return {
-                ...sc,
-                rawCategories: sc.rawCategories.filter(rc => rc !== rawCategory),
-              };
-            }
-            return sc;
-          })
-        );
+        const remover = (categories: StoreCategory[]): StoreCategory[] => {
+            return categories.map(sc => {
+                if (sc.id === storeCategoryId) {
+                    return {
+                        ...sc,
+                        rawCategories: sc.rawCategories.filter(rc => rc !== rawCategory),
+                    };
+                }
+                return { ...sc, children: remover(sc.children) };
+            });
+        };
+        setStoreCategories(prev => remover(prev));
       };
 
     const handleDragStart = (event: DragStartEvent) => {
-        setActiveId(event.active.id as string);
+        setActiveId(event.active.id);
     };
 
     const handleAddRawToStoreCategory = useCallback((categoryId: string, rawCategory: string) => {
-        setStoreCategories(prev => {
-            // First, remove the rawCategory from any store category it might be in.
-            const categoriesWithoutRaw = prev.map(sc => ({
+        const removeRawFromAll = (categories: StoreCategory[]): StoreCategory[] => {
+            return categories.map(sc => ({
                 ...sc,
                 rawCategories: sc.rawCategories.filter(rc => rc !== rawCategory),
+                children: removeRawFromAll(sc.children),
             }));
-    
-            // Then, add the rawCategory to the target store category.
-            const newStoreCategories = categoriesWithoutRaw.map(sc => {
+        };
+
+        const addRawToTarget = (categories: StoreCategory[]): StoreCategory[] => {
+             return categories.map(sc => {
                 if (sc.id === categoryId) {
-                    // Avoid adding duplicates if it somehow still exists.
                     if (!sc.rawCategories.includes(rawCategory)) {
-                        return { ...sc, rawCategories: [...sc.rawCategories, rawCategory] };
+                         return { ...sc, rawCategories: [...sc.rawCategories, rawCategory] };
                     }
                 }
-                return sc;
+                return { ...sc, children: addRawToTarget(sc.children) };
             });
-    
-            return newStoreCategories;
+        }
+        
+        setStoreCategories(prev => {
+            const withoutRaw = removeRawFromAll(prev);
+            const withRaw = addRawToTarget(withoutRaw);
+            return withRaw;
         });
     }, []);
 
@@ -183,7 +258,7 @@ export default function AdminCategoriesPage() {
         setActiveId(null);
         const { active, over } = event;
     
-        if (!over) return;
+        if (!over || active.id === over.id) return;
     
         const activeIsRaw = active.id.toString().startsWith('raw-');
         const overIsStoreCategoryDroppable = over.data.current?.type === 'store-category-droppable';
@@ -199,20 +274,48 @@ export default function AdminCategoriesPage() {
         }
 
         const activeIsStore = active.data.current?.type === 'store-category';
-        const overIsStore = over.data.current?.type === 'store-category';
+        const overIsStore = over.data.current?.type === 'store-category' || over.data.current?.type === 'store-category-droppable';
 
-        // Handle reordering store categories
-        if (activeIsStore && overIsStore && active.id !== over.id) {
-            setStoreCategories((items) => {
-                const oldIndex = items.findIndex(item => item.id === active.id);
-                const newIndex = items.findIndex(item => item.id === over.id);
-                return arrayMove(items, oldIndex, newIndex);
+        if(activeIsStore && overIsStore) {
+            setStoreCategories(prev => {
+                const activeCategory = findCategory(active.id as string, prev);
+                if (!activeCategory) return prev;
+                
+                // Remove from old position
+                let newTree = removeCategory(active.id as string, prev);
+                
+                const overId = over.id as string;
+                const isOverContainer = over.data.current?.isContainer;
+
+                if (isOverContainer) {
+                    // Dropped inside another category, make it a child
+                    return addCategoryToParent(activeCategory, overId, newTree);
+                } else {
+                    // Reordering at the same level
+                    const overCategory = findCategory(overId, prev);
+                    if (overCategory?.parentId) {
+                         const parentCategory = findCategory(overCategory.parentId, newTree);
+                         if(parentCategory) {
+                             // This is complex, for now, let's just handle root reordering
+                         }
+                    } else {
+                         // Reorder root categories
+                         const oldIndex = prev.findIndex(c => c.id === active.id);
+                         const newIndex = prev.findIndex(c => c.id === over.id);
+                         return arrayMove(prev, oldIndex, newIndex);
+                    }
+                }
+                
+                return prev;
             });
         }
     };
     
-    const activeRawCategory = activeId && activeId.startsWith('raw-') ? activeId.replace('raw-','') : null;
-    const activeStoreCategory = activeId && storeCategories.find(c => c.id === activeId);
+    const activeRawCategory = activeId && typeof activeId === 'string' && activeId.startsWith('raw-') ? activeId.replace('raw-','') : null;
+    const activeStoreCategory = activeId ? findCategory(activeId as string, storeCategories) : null;
+    
+    // Only render top-level categories in the SortableContext
+    const topLevelCategories = storeCategories.filter(c => !c.parentId);
 
     return (
         <DndContext onDragStart={handleDragStart} onDragEnd={handleDragEnd} collisionDetection={closestCenter}>
@@ -251,14 +354,15 @@ export default function AdminCategoriesPage() {
                                 <Button onClick={handleAddCategory}><PlusCircle className="mr-2 h-4 w-4"/> Add Category</Button>
                              </div>
 
-                             <SortableContext items={storeCategories.map(c => c.id)} strategy={verticalListSortingStrategy}>
-                                {storeCategories.map(cat => (
-                                    <StoreCategoryItem 
-                                        key={cat.id} 
-                                        category={cat} 
-                                        onDelete={handleDeleteStoreCategory}
-                                        onRemoveRawCategory={handleRemoveRawCategory} 
-                                    />
+                             <SortableContext items={topLevelCategories.map(c => c.id)} strategy={verticalListSortingStrategy}>
+                                {topLevelCategories.map(cat => (
+                                    <div key={cat.id} className="mb-2">
+                                        <StoreCategoryItem 
+                                            category={cat} 
+                                            onDelete={handleDeleteStoreCategory}
+                                            onRemoveRawCategory={handleRemoveRawCategory} 
+                                        />
+                                    </div>
                                 ))}
                             </SortableContext>
                         </CardContent>
@@ -267,8 +371,10 @@ export default function AdminCategoriesPage() {
             </div>
             <DragOverlay>
                 {activeRawCategory ? <div className="flex cursor-grabbing items-center rounded-md border bg-card p-3 shadow-lg"><GripVertical className="mr-2 h-5 w-5 text-muted-foreground" /> {activeRawCategory}</div> : null}
-                {activeStoreCategory ? <div className="flex cursor-grabbing items-center rounded-lg border bg-secondary/80 p-4 shadow-lg backdrop-blur-sm"><GripVertical className="mr-2 h-5 w-5 text-muted-foreground" /> {activeStoreCategory.name}</div> : null}
+                {activeStoreCategory ? <StoreCategoryItem category={activeStoreCategory} onDelete={()=>{}} onRemoveRawCategory={()=>{}} isOverlay /> : null}
             </DragOverlay>
         </DndContext>
     );
 }
+
+    
