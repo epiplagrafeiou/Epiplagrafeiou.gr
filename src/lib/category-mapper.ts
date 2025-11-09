@@ -1,13 +1,10 @@
-
-
 // A simple mapping from supplier category to your store's standard category.
 // We can add more rules here as needed.
 const categoryMap: { [key: string]: string } = {
   // Example: 'Supplier Category': 'Your Store Category'
   'Καφετιέρες': 'Coffee Machines',
   'Μικροσυσκευές': 'Small Appliances',
-  'Ραφιέρες Τοίχου': 'Ραφιέρες',
-  'Ραφιέρες/Ράφια Τοίχου': 'Ραφιέρες',
+  'Ραφιέρες/Ράφια Τοίχου': 'Ραφιέρες Τοίχου',
 };
 
 // This function takes a raw category from the XML and returns the standardized one.
