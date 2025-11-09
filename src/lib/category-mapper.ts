@@ -1,4 +1,5 @@
 
+
 // A simple mapping from supplier category to your store's standard category.
 // We can add more rules here as needed.
 const categoryMap: { [key: string]: string } = {
@@ -14,13 +15,16 @@ const categoryMap: { [key: string]: string } = {
 export function mapCategory(rawCategory: string): string {
     if (!rawCategory) return 'Uncategorized';
 
-    // Check for a direct match first (e.g., "Καφετιέρες")
-    if (categoryMap[rawCategory]) {
-        return categoryMap[rawCategory];
+    // First, remove any parenthetical parts. e.g., "Βιβλιοθήκες (σε “Έπιπλα Εσωτερικού”)" -> "Βιβλιοθήκες"
+    const cleanedCategory = rawCategory.replace(/\s*\(.*\)\s*/g, '').trim();
+
+    // Check for a direct match in our map with the cleaned category
+    if (categoryMap[cleanedCategory]) {
+        return categoryMap[cleanedCategory];
     }
     
     // Handle hierarchical categories (e.g., "Μικροσυσκευές > Καφετιέρες")
-    const parts = rawCategory.split(' > ').map(part => part.trim());
+    const parts = cleanedCategory.split(' > ').map(part => part.trim());
     const mappedParts = parts.map(part => categoryMap[part] || part);
     
     return mappedParts.join(' > ');
