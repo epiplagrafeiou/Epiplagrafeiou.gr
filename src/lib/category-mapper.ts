@@ -9,6 +9,7 @@ const categoryMap: { [key: string]: string } = {
   'Οροφής Φωτιστικά': 'Φωτιστικά Οροφής',
   'Διακοσμητικοί Καθρέπτες': 'Καθρέπτες',
   'Κεριά LED': 'Κεριά',
+  'Δέντρο ή Δάσος φέτος τα Χριστούγεννα ? Μεγάλο το δίλημμα > Χριστουγεννιάτικα Δέντρα !': 'Χριστουγεννιάτικα Δέντρα',
 };
 
 // This function takes a raw category from the XML and returns the standardized one.
