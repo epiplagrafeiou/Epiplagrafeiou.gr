@@ -1,24 +1,14 @@
-import type { SVGProps } from "react";
+import Image from 'next/image';
 
-export function Logo(props: SVGProps<SVGSVGElement>) {
+export function Logo({ className }: { className?: string }) {
   return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 200 40"
-      width="200"
-      height="40"
-      {...props}
-    >
-      <text
-        x="10"
-        y="28"
-        fontFamily="Inter, sans-serif"
-        fontSize="24"
-        fontWeight="bold"
-        fill="currentColor"
-      >
-        Epipla Graphiou
-      </text>
-    </svg>
+    <Image
+      src="https://i.postimg.cc/59LDxYRr/EpiplaGRAFEIOU.GR-removebg-preview2.png"
+      alt="Epipla Graphiou Logo"
+      width={160}
+      height={32}
+      className={className}
+      priority
+    />
   );
 }

@@ -39,6 +39,12 @@ const nextConfig: NextConfig = {
         hostname: 'www.b2bportal.gr',
         port: '',
         pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'i.postimg.cc',
+        port: '',
+        pathname: '/**',
       }
     ],
   },

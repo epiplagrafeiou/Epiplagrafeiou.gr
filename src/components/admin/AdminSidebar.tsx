@@ -36,7 +36,7 @@ export default function AdminSidebar() {
     <>
       <SidebarHeader>
         <Link href="/">
-          <Logo className="h-7 w-auto text-sidebar-foreground" />
+          <Logo />
         </Link>
       </SidebarHeader>
       <SidebarContent>

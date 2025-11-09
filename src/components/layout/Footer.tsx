@@ -8,7 +8,7 @@ export default function Footer() {
       <div className="container mx-auto px-4 py-8">
         <div className="flex flex-col items-center justify-between gap-6 md:flex-row">
           <div className="flex flex-col items-center gap-2 md:items-start">
-            <Logo className="h-6 w-auto text-foreground" />
+            <Logo />
             <p className="text-sm text-muted-foreground">
               © {new Date().getFullYear()} Epipla Graphiou. All rights reserved.
             </p>

@@ -103,7 +103,7 @@ export default function Header() {
       <div className="container mx-auto flex h-16 items-center justify-between px-4">
         <div className="flex items-center gap-6">
           <Link href="/" className="flex items-center gap-2">
-            <Logo className="h-6 w-auto text-foreground" />
+            <Logo />
           </Link>
           <nav className="hidden items-center gap-4 md:flex">
              <DropdownMenu>
@@ -165,7 +165,7 @@ export default function Header() {
                   <div className="border-b p-4">
                     <SheetClose asChild>
                       <Link href="/" className="flex items-center gap-2">
-                        <Logo className="h-6 w-auto text-foreground" />
+                        <Logo />
                       </Link>
                     </SheetClose>
                   </div>
