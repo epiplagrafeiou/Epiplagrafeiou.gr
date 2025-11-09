@@ -1,3 +1,4 @@
+
 import { Logo } from '@/components/icons/Logo';
 import { Github, Twitter, Linkedin } from 'lucide-react';
 import Link from 'next/link';
@@ -7,11 +8,14 @@ export default function Footer() {
     <footer className="border-t bg-secondary">
       <div className="container mx-auto px-4 py-8">
         <div className="flex flex-col items-center justify-between gap-6 md:flex-row">
-          <div className="flex flex-col items-center gap-2 md:items-start">
+          <div className="flex flex-col items-center gap-2 text-center md:items-start md:text-left">
             <Logo />
             <p className="text-sm text-muted-foreground">
               © {new Date().getFullYear()} Epipla Graphiou. All rights reserved.
             </p>
+            <Link href="/admin" className="text-sm text-muted-foreground hover:text-foreground">
+                Admin Panel
+            </Link>
           </div>
           <div className="flex items-center gap-4">
             <Link href="#" aria-label="Twitter">
