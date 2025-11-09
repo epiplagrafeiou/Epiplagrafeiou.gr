@@ -1,8 +1,7 @@
 'use client';
 import Link from 'next/link';
-import { ShoppingBag, Search, Menu, ChevronDown } from 'lucide-react';
+import { ShoppingBag, Search, User, Menu, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Logo } from '@/components/icons/Logo';
 import { useCart } from '@/lib/cart-context';
 import {
@@ -11,7 +10,6 @@ import {
   SheetTrigger,
   SheetClose,
 } from '@/components/ui/sheet';
-import { useState } from 'react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -24,10 +22,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useProducts } from '@/lib/products-context';
 import { createSlug } from '@/lib/utils';
-
-const navLinks = [
-  { href: '/admin', label: 'Admin Panel' },
-];
+import { LoginDialog } from './LoginDialog';
 
 interface CategoryNode {
   name: string;
@@ -92,53 +87,84 @@ function CategorySubMenu({ nodes }: { nodes: CategoryNode[] }) {
   );
 }
 
+const topNavLinks = [
+    { href: '/category/karekles-grafeiou', label: 'Καρέκλες Γραφείου', isDropdown: true },
+    { href: '/category/grafeia', label: 'Γραφεία' },
+    { href: '/category/antallaktika', label: 'Ανταλλακτικά' },
+    { href: '/category/rafieres-kai-bibliothikes', label: 'Ραφιέρες και Βιβλιοθήκες' },
+    { href: '/category/syrtarieres', label: 'Συρταριέρες' },
+]
+
+const bottomNavLinks = [
+    { href: '/category/aksesouar-grafeiou', label: 'Αξεσουάρ Γραφείου' },
+    { href: '/category/antallaktika', label: 'Ανταλλακτικά' },
+    { href: '/contact', label: 'Επικοινωνία' },
+]
+
 export default function Header() {
   const { itemCount } = useCart();
   const { allCategories } = useProducts();
-
   const categoryTree = buildCategoryTree(allCategories);
 
   return (
     <header className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur-sm">
-      <div className="container mx-auto flex h-16 items-center justify-between px-4">
+      <div className="container mx-auto flex h-28 items-center justify-between px-4">
         <div className="flex items-center gap-6">
           <Link href="/" className="flex items-center gap-2">
             <Logo />
           </Link>
-          <nav className="hidden items-center gap-4 md:flex">
-             <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="group flex items-center gap-1 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground">
-                  Shop by Category
-                  <ChevronDown className="h-4 w-4 transition-transform duration-200 group-data-[state=open]:rotate-180" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="start">
-                <DropdownMenuItem asChild>
-                   <Link href="/products">All Products</Link>
-                </DropdownMenuItem>
-                <CategorySubMenu nodes={categoryTree} />
-              </DropdownMenuContent>
-            </DropdownMenu>
-            {navLinks.map((link) => (
-              <Link
-                key={link.href}
-                href={link.href}
-                className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
-              >
-                {link.label}
-              </Link>
-            ))}
-          </nav>
+        </div>
+
+        <div className="hidden flex-col items-start gap-2 md:flex">
+             <nav className="flex items-center gap-4">
+                <Link href="/" className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground">Αρχική</Link>
+                {topNavLinks.map((link) => {
+                    if (link.isDropdown) {
+                        return (
+                             <DropdownMenu key={link.href}>
+                                <DropdownMenuTrigger asChild>
+                                    <Button variant="ghost" className="group flex items-center gap-1 p-0 text-sm font-medium text-muted-foreground transition-colors hover:bg-transparent hover:text-foreground">
+                                    {link.label}
+                                    <ChevronDown className="h-4 w-4 transition-transform duration-200 group-data-[state=open]:rotate-180" />
+                                    </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="start">
+                                    <DropdownMenuItem asChild>
+                                    <Link href="/products">All Products</Link>
+                                    </DropdownMenuItem>
+                                    <CategorySubMenu nodes={categoryTree} />
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+                        )
+                    }
+                    return (
+                        <Link key={link.href} href={link.href} className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground">
+                            {link.label}
+                        </Link>
+                    )
+                })}
+             </nav>
+             <nav className="flex items-center gap-4">
+                {bottomNavLinks.map((link) => (
+                     <Link key={link.href} href={link.href} className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground">
+                        {link.label}
+                    </Link>
+                ))}
+             </nav>
         </div>
 
         <div className="flex items-center gap-4">
-          <div className="hidden w-64 items-center gap-2 md:flex">
-            <Input type="search" placeholder="Search products..." className="h-9" />
-            <Button variant="ghost" size="icon" className="h-9 w-9">
-              <Search className="h-4 w-4" />
+          <Button variant="ghost" size="icon" className="hidden md:flex">
+              <Search className="h-5 w-5" />
+              <span className="sr-only">Search</span>
+          </Button>
+          
+          <LoginDialog>
+            <Button variant="ghost" size="icon" className="hidden md:flex">
+                <User className="h-5 w-5" />
+                <span className="sr-only">Login</span>
             </Button>
-          </div>
+          </LoginDialog>
 
           <Button asChild variant="ghost" size="icon">
             <Link href="/cart">
@@ -170,20 +196,12 @@ export default function Header() {
                     </SheetClose>
                   </div>
                   <nav className="flex flex-col gap-4 p-4">
-                    <SheetClose asChild>
-                      <Link href="/products" className="text-lg font-medium text-foreground">
-                        Products
-                      </Link>
-                    </SheetClose>
-                    {navLinks.map((link) => (
-                      <SheetClose asChild key={link.href}>
-                        <Link
-                          href={link.href}
-                          className="text-lg font-medium text-foreground"
-                        >
-                          {link.label}
-                        </Link>
-                      </SheetClose>
+                    <SheetClose asChild><Link href="/" className="text-lg font-medium text-foreground">Αρχική</Link></SheetClose>
+                    {topNavLinks.map((link) => (
+                      <SheetClose asChild key={link.href}><Link href={link.href} className="text-lg font-medium text-foreground">{link.label}</Link></SheetClose>
+                    ))}
+                     {bottomNavLinks.map((link) => (
+                      <SheetClose asChild key={link.href}><Link href={link.href} className="text-lg font-medium text-foreground">{link.label}</Link></SheetClose>
                     ))}
                   </nav>
                 </div>
