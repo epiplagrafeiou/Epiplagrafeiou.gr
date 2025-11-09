@@ -107,15 +107,18 @@ const StoreCategoryItem = ({
                 {category.children.length === 0 && category.rawCategories.length === 0 && <p className="text-xs text-muted-foreground py-2">Drag raw categories or other categories here</p>}
                 
                 {/* Render children recursively */}
-                {category.children.map(child => (
-                     <div key={child.id} className="mt-2">
-                        <StoreCategoryItem 
-                            category={child} 
-                            onDelete={onDelete} 
-                            onRemoveRawCategory={onRemoveRawCategory}
-                        />
-                     </div>
-                ))}
+                {category.children.length > 0 && (
+                  <div className="mt-2 space-y-2">
+                      {category.children.map(child => (
+                          <StoreCategoryItem 
+                              key={child.id}
+                              category={child} 
+                              onDelete={onDelete} 
+                              onRemoveRawCategory={onRemoveRawCategory}
+                          />
+                      ))}
+                  </div>
+                )}
             </div>
         </div>
     )
@@ -147,13 +150,12 @@ export default function AdminCategoriesPage() {
 
     const removeCategory = (id: string, categories: StoreCategory[]): StoreCategory[] => {
         return categories.reduce((acc, category) => {
-            if (category.id === id) return acc;
+            if (category.id === id) return acc; // Skip adding the category to be deleted
+            
+            // Recurse on children
             const newChildren = removeCategory(id, category.children);
-            if (newChildren.length < category.children.length) {
-                acc.push({ ...category, children: newChildren });
-            } else {
-                acc.push(category);
-            }
+            acc.push({ ...category, children: newChildren });
+            
             return acc;
         }, [] as StoreCategory[]);
     };
@@ -161,8 +163,10 @@ export default function AdminCategoriesPage() {
     const addCategoryToParent = (child: StoreCategory, parentId: string, categories: StoreCategory[]): StoreCategory[] => {
         return categories.map(category => {
             if (category.id === parentId) {
+                // Add child to this category
                 return { ...category, children: [...category.children, { ...child, parentId }] };
             }
+            // Recurse to find parent in children
             return { ...category, children: addCategoryToParent(child, parentId, category.children) };
         });
     };
@@ -193,19 +197,7 @@ export default function AdminCategoriesPage() {
     };
 
     const handleDeleteStoreCategory = (categoryId: string) => {
-         setStoreCategories(prev => {
-            const collectRawCategories = (catId: string, categories: StoreCategory[]): string[] => {
-                const category = findCategory(catId, categories);
-                if (!category) return [];
-                let rawCats = [...category.rawCategories];
-                category.children.forEach(child => {
-                    rawCats = [...rawCats, ...collectRawCategories(child.id, categories)];
-                });
-                return rawCats;
-            };
-            const allRaw = collectRawCategories(categoryId, prev);
-            return removeCategory(categoryId, prev);
-        });
+         setStoreCategories(prev => removeCategory(categoryId, prev));
     };
 
     const handleRemoveRawCategory = (storeCategoryId: string, rawCategory: string) => {
@@ -228,30 +220,25 @@ export default function AdminCategoriesPage() {
     };
 
     const handleAddRawToStoreCategory = useCallback((categoryId: string, rawCategory: string) => {
-        const removeRawFromAll = (categories: StoreCategory[]): StoreCategory[] => {
-            return categories.map(sc => ({
-                ...sc,
-                rawCategories: sc.rawCategories.filter(rc => rc !== rawCategory),
-                children: removeRawFromAll(sc.children),
-            }));
-        };
-
+        // This function now just adds the raw category to the target store category.
+        // It no longer removes it from other categories, allowing for proper merging.
         const addRawToTarget = (categories: StoreCategory[]): StoreCategory[] => {
              return categories.map(sc => {
                 if (sc.id === categoryId) {
+                    // Check for duplicates before adding
                     if (!sc.rawCategories.includes(rawCategory)) {
                          return { ...sc, rawCategories: [...sc.rawCategories, rawCategory] };
                     }
                 }
-                return { ...sc, children: addRawToTarget(sc.children) };
+                // Recurse through children
+                if (sc.children.length > 0) {
+                    return { ...sc, children: addRawToTarget(sc.children) };
+                }
+                return sc;
             });
         }
         
-        setStoreCategories(prev => {
-            const withoutRaw = removeRawFromAll(prev);
-            const withRaw = addRawToTarget(withoutRaw);
-            return withRaw;
-        });
+        setStoreCategories(prev => addRawToTarget(prev));
     }, []);
 
     const handleDragEnd = (event: DragEndEvent) => {
@@ -281,32 +268,43 @@ export default function AdminCategoriesPage() {
                 const activeCategory = findCategory(active.id as string, prev);
                 if (!activeCategory) return prev;
                 
-                // Remove from old position
+                // 1. Remove the active category from its current position in the tree.
                 let newTree = removeCategory(active.id as string, prev);
                 
                 const overId = over.id as string;
                 const isOverContainer = over.data.current?.isContainer;
 
+                // 2. Add the active category to its new position.
                 if (isOverContainer) {
-                    // Dropped inside another category, make it a child
+                    // Dropped inside another category to become a child.
                     return addCategoryToParent(activeCategory, overId, newTree);
                 } else {
-                    // Reordering at the same level
-                    const overCategory = findCategory(overId, prev);
-                    if (overCategory?.parentId) {
-                         const parentCategory = findCategory(overCategory.parentId, newTree);
-                         if(parentCategory) {
-                             // This is complex, for now, let's just handle root reordering
-                         }
-                    } else {
+                     // Reordering at the same level (root or within the same parent).
+                     const oldIndex = (findCategory(overId, prev)?.parentId ? 
+                        findCategory(findCategory(overId, prev)!.parentId!, newTree)!.children : 
+                        newTree).findIndex(c => c.id === active.id)
+
+                     const newIndex = (findCategory(overId, prev)?.parentId ? 
+                        findCategory(findCategory(overId, prev)!.parentId!, newTree)!.children :
+                        newTree).findIndex(c => c.id === over.id);
+
+                     if(findCategory(overId, prev)?.parentId){
+                        // This logic is complex, for now we will just re-parent it to root
+                        const parentId = findCategory(overId, prev)?.parentId;
+                        if(parentId){
+                            let parent = findCategory(parentId, newTree);
+                            if(parent){
+                                parent.children = arrayMove(parent.children, oldIndex, newIndex);
+                                return [...newTree];
+                            }
+                        }
+                     } else {
                          // Reorder root categories
-                         const oldIndex = prev.findIndex(c => c.id === active.id);
-                         const newIndex = prev.findIndex(c => c.id === over.id);
-                         return arrayMove(prev, oldIndex, newIndex);
-                    }
+                         return arrayMove(newTree, oldIndex, newIndex);
+                     }
                 }
                 
-                return prev;
+                return newTree;
             });
         }
     };
@@ -355,15 +353,16 @@ export default function AdminCategoriesPage() {
                              </div>
 
                              <SortableContext items={topLevelCategories.map(c => c.id)} strategy={verticalListSortingStrategy}>
-                                {topLevelCategories.map(cat => (
-                                    <div key={cat.id} className="mb-2">
-                                        <StoreCategoryItem 
-                                            category={cat} 
-                                            onDelete={handleDeleteStoreCategory}
-                                            onRemoveRawCategory={handleRemoveRawCategory} 
-                                        />
-                                    </div>
-                                ))}
+                                <div className="space-y-2">
+                                  {topLevelCategories.map(cat => (
+                                      <StoreCategoryItem 
+                                          key={cat.id}
+                                          category={cat} 
+                                          onDelete={handleDeleteStoreCategory}
+                                          onRemoveRawCategory={handleRemoveRawCategory} 
+                                      />
+                                  ))}
+                                </div>
                             </SortableContext>
                         </CardContent>
                     </Card>
@@ -376,5 +375,7 @@ export default function AdminCategoriesPage() {
         </DndContext>
     );
 }
+
+    
 
     
