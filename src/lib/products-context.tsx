@@ -100,7 +100,7 @@ export const ProductsProvider = ({ children }: { children: React.ReactNode }) =>
        productBatchData.forEach(item => {
          const permissionError = new FirestorePermissionError({
            path: item.path,
-           operation: 'create',
+           operation: 'create', // This will cover create/update due to merge:true
            requestResourceData: item.data,
          });
          errorEmitter.emit('permission-error', permissionError);
@@ -184,3 +184,5 @@ export const useProducts = () => {
   }
   return context;
 };
+
+    

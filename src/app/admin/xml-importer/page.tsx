@@ -99,8 +99,8 @@ export default function XmlImporterPage() {
     addProducts(productsToAdd);
     
     toast({
-        title: "Products Added!",
-        description: `${productsToAdd.length} products have been added to your store.`
+        title: "Products Added/Updated!",
+        description: `${productsToAdd.length} products have been synced to your store.`
     });
   }
 
@@ -331,7 +331,7 @@ export default function XmlImporterPage() {
                     </TableBody>
                     </Table>
                     <div className="flex justify-end mt-4">
-                        <Button onClick={handleAddToStore} disabled={filteredProducts.length === 0}>Add {filteredProducts.length} Products to Store</Button>
+                        <Button onClick={handleAddToStore} disabled={filteredProducts.length === 0}>Add/Update {filteredProducts.length} Products</Button>
                     </div>
                 </CardContent>
                 </Card>
@@ -341,3 +341,5 @@ export default function XmlImporterPage() {
     </div>
   );
 }
+
+    

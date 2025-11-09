@@ -10,21 +10,22 @@ const parsers: { [key: string]: (url: string) => Promise<XmlProduct[]> } = {
   'nordic designs': megapapParser,
   'milano furnishings': megapapParser,
   'office solutions inc.': megapapParser,
-  'b2bportal.gr': b2bportalParser,
   'b2b portal': b2bportalParser,
 };
 
 export async function syncProductsFromXml(url: string, supplierName: string): Promise<XmlProduct[]> {
+  // Try to find a specific parser for the supplier name
   const normalizedSupplierName = supplierName.toLowerCase();
-  const parser = parsers[normalizedSupplierName] || megapapParser;
+  
+  let parser = Object.keys(parsers).find(key => normalizedSupplierName.includes(key));
+  const parserFn = parser ? parsers[parser] : b2bportalParser; // Fallback to b2bportal or a generic one
 
-  if (!parser) {
-    // This case should ideally not be reached with the fallback, but it's good practice.
-    throw new Error(`No parser found for supplier: ${supplierName}`);
+  if (!parserFn) {
+    throw new Error(`No suitable parser found for supplier: ${supplierName}`);
   }
 
   try {
-    return await parser(url);
+    return await parserFn(url);
   } catch (error) {
     console.error(`Error syncing products for ${supplierName} from XML:`, error);
     if (error instanceof Error) {
@@ -35,3 +36,5 @@ export async function syncProductsFromXml(url: string, supplierName: string): Pr
     throw new Error('An unknown error occurred during XML sync.');
   }
 }
+
+    
