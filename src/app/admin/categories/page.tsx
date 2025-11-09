@@ -127,8 +127,23 @@ const StoreCategoryItem = ({
 export default function AdminCategoriesPage() {
     const { adminProducts } = useProducts();
     const [storeCategories, setStoreCategories] = useState<StoreCategory[]>([
-        { id: 'cat-1', name: 'Office Chairs', rawCategories: ['Καρέκλες Γραφείου', 'Gaming Chairs'], children: [], parentId: null },
-        { id: 'cat-2', name: 'Desks', rawCategories: ['Γραφεία'], children: [], parentId: null },
+        { id: 'cat-1', name: 'Καρέκλες Γραφείου', rawCategories: ['Καρέκλες Γραφείου', 'Gaming Chairs'], children: [], parentId: null },
+        { id: 'cat-2', name: 'Γραφεία', rawCategories: ['Γραφεία'], children: [], parentId: null },
+        { id: 'cat-3', name: 'Βιβλιοθήκες', rawCategories: ['Βιβλιοθήκες'], children: [], parentId: null },
+        { id: 'cat-4', name: 'Ραφιέρες Τοίχου', rawCategories: ['Ραφιέρες Τοίχου', 'Ραφιέρες/Ράφια Τοίχου'], children: [], parentId: null },
+        { id: 'cat-5', name: 'Φωτιστικά Οροφής', rawCategories: ['Φωτιστικά Οροφής', 'Οροφής Φωτιστικά'], children: [], parentId: null },
+        { id: 'cat-6', name: 'Διακοσμητικοί Καθρέπτες', rawCategories: ['Καθρέπτες', 'Διακοσμητικοί Καθρέπτες'], children: [], parentId: null },
+        { id: 'cat-7', name: 'Διακόσμηση & Ατμόσφαιρα', rawCategories: ['Μαξιλάρια Διακοσμητικά'], children: [], parentId: null },
+        { 
+            id: 'cat-8', 
+            name: 'Κεριά', 
+            rawCategories: ['Κεριά'], 
+            children: [
+                { id: 'cat-8-1', name: 'Κεριά LED', rawCategories: ['Κεριά LED'], children: [], parentId: 'cat-8' }
+            ], 
+            parentId: null 
+        },
+
     ]);
     const [newCategoryName, setNewCategoryName] = useState('');
     const [activeId, setActiveId] = useState<UniqueIdentifier | null>(null);
@@ -220,8 +235,6 @@ export default function AdminCategoriesPage() {
     };
 
     const handleAddRawToStoreCategory = useCallback((categoryId: string, rawCategory: string) => {
-        // This function now just adds the raw category to the target store category.
-        // It no longer removes it from other categories, allowing for proper merging.
         const addRawToTarget = (categories: StoreCategory[]): StoreCategory[] => {
              return categories.map(sc => {
                 if (sc.id === categoryId) {
@@ -238,7 +251,25 @@ export default function AdminCategoriesPage() {
             });
         }
         
-        setStoreCategories(prev => addRawToTarget(prev));
+        // This function now removes the raw category from any other store category it might be in.
+        const removeRawFromOthers = (categories: StoreCategory[], currentCategoryId: string, rawCatToRemove: string): StoreCategory[] => {
+             return categories.map(sc => {
+                const newChildren = sc.children.length > 0 ? removeRawFromOthers(sc.children, currentCategoryId, rawCatToRemove) : [];
+                if (sc.id !== currentCategoryId && sc.rawCategories.includes(rawCatToRemove)) {
+                    return {
+                        ...sc,
+                        rawCategories: sc.rawCategories.filter(rc => rc !== rawCatToRemove),
+                        children: newChildren,
+                    };
+                }
+                return { ...sc, children: newChildren };
+            });
+        }
+
+        setStoreCategories(prev => {
+            const treeWithoutRaw = removeRawFromOthers(prev, categoryId, rawCategory);
+            return addRawToTarget(treeWithoutRaw);
+        });
     }, []);
 
     const handleDragEnd = (event: DragEndEvent) => {
@@ -265,7 +296,13 @@ export default function AdminCategoriesPage() {
 
         if(activeIsStore && overIsStore) {
             setStoreCategories(prev => {
-                const activeCategory = findCategory(active.id as string, prev);
+                let activeCategory = findCategory(active.id as string, prev);
+                
+                // Ensure we have the latest version of the category without children if we're moving it
+                if (activeCategory) {
+                    activeCategory = {...activeCategory, children: []};
+                }
+
                 if (!activeCategory) return prev;
                 
                 // 1. Remove the active category from its current position in the tree.
@@ -280,28 +317,36 @@ export default function AdminCategoriesPage() {
                     return addCategoryToParent(activeCategory, overId, newTree);
                 } else {
                      // Reordering at the same level (root or within the same parent).
-                     const oldIndex = (findCategory(overId, prev)?.parentId ? 
-                        findCategory(findCategory(overId, prev)!.parentId!, newTree)!.children : 
-                        newTree).findIndex(c => c.id === active.id)
-
-                     const newIndex = (findCategory(overId, prev)?.parentId ? 
-                        findCategory(findCategory(overId, prev)!.parentId!, newTree)!.children :
-                        newTree).findIndex(c => c.id === over.id);
-
-                     if(findCategory(overId, prev)?.parentId){
-                        // This logic is complex, for now we will just re-parent it to root
-                        const parentId = findCategory(overId, prev)?.parentId;
-                        if(parentId){
-                            let parent = findCategory(parentId, newTree);
-                            if(parent){
-                                parent.children = arrayMove(parent.children, oldIndex, newIndex);
-                                return [...newTree];
-                            }
-                        }
-                     } else {
-                         // Reorder root categories
+                     const oldParentId = findCategory(active.id as string, prev)?.parentId;
+                     const newParentId = findCategory(overId, prev)?.parentId;
+                     
+                     // Root level reordering
+                     if(!oldParentId && !newParentId) {
+                         const oldIndex = prev.findIndex(c => c.id === active.id);
+                         const newIndex = prev.findIndex(c => c.id === overId);
                          return arrayMove(newTree, oldIndex, newIndex);
                      }
+                     
+                     // Reordering within the same parent
+                     if(oldParentId && oldParentId === newParentId){
+                         let parent = findCategory(oldParentId, newTree);
+                         if(parent){
+                             const oldIndex = parent.children.findIndex(c => c.id === active.id);
+                             const newIndex = parent.children.findIndex(c => c.id === over.id);
+                             parent.children = arrayMove(parent.children, oldIndex, newIndex);
+                             // Need to find a way to update the parent in the newTree immutably
+                             const updateParent = (categories: StoreCategory[]): StoreCategory[] => {
+                                 return categories.map(cat => {
+                                     if(cat.id === parent?.id) return parent as StoreCategory;
+                                     return {...cat, children: updateParent(cat.children)};
+                                 })
+                             }
+                             return updateParent(newTree);
+                         }
+                     }
+                     
+                     // Default to moving to root if logic is complex
+                     newTree.push({...activeCategory, parentId: null});
                 }
                 
                 return newTree;
@@ -310,7 +355,7 @@ export default function AdminCategoriesPage() {
     };
     
     const activeRawCategory = activeId && typeof activeId === 'string' && activeId.startsWith('raw-') ? activeId.replace('raw-','') : null;
-    const activeStoreCategory = activeId ? findCategory(activeId as string, storeCategories) : null;
+    const activeStoreCategoryData = activeId && (activeId as string).startsWith('cat-') ? findCategory(activeId as string, storeCategories) : null;
     
     // Only render top-level categories in the SortableContext
     const topLevelCategories = storeCategories.filter(c => !c.parentId);
@@ -370,12 +415,8 @@ export default function AdminCategoriesPage() {
             </div>
             <DragOverlay>
                 {activeRawCategory ? <div className="flex cursor-grabbing items-center rounded-md border bg-card p-3 shadow-lg"><GripVertical className="mr-2 h-5 w-5 text-muted-foreground" /> {activeRawCategory}</div> : null}
-                {activeStoreCategory ? <StoreCategoryItem category={activeStoreCategory} onDelete={()=>{}} onRemoveRawCategory={()=>{}} isOverlay /> : null}
+                {activeStoreCategoryData ? <StoreCategoryItem category={activeStoreCategoryData} onDelete={()=>{}} onRemoveRawCategory={()=>{}} isOverlay /> : null}
             </DragOverlay>
         </DndContext>
     );
 }
-
-    
-
-    
