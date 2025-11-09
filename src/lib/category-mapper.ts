@@ -10,6 +10,7 @@ const categoryMap: { [key: string]: string } = {
   'Διακοσμητικοί Καθρέπτες': 'Καθρέπτες',
   'Κεριά LED': 'Κεριά',
   'Δέντρο ή Δάσος φέτος τα Χριστούγεννα ? Μεγάλο το δίλημμα > Χριστουγεννιάτικα Δέντρα !': 'Χριστουγεννιάτικα Δέντρα',
+  'Δέντρο ή Δάσος φέτος τα Χριστούγεννα ? Μεγάλο το δίλημμα > Βάσεις Χριστουγεννιάτικων Δέντρων': 'Βάσεις Χριστουγεννιάτικων Δέντρων',
 };
 
 // This function takes a raw category from the XML and returns the standardized one.
@@ -17,7 +18,13 @@ const categoryMap: { [key: string]: string } = {
 export function mapCategory(rawCategory: string): string {
     if (!rawCategory) return 'Uncategorized';
 
-    // First, remove any parenthetical parts. e.g., "Βιβλιοθήκες (σε “Έπιπλα Εσωτερικού”)" -> "Βιβλιοθήκες"
+    // First, check for a direct match for the full raw category string.
+    // This is useful for very specific, long category names.
+    if (categoryMap[rawCategory]) {
+        return categoryMap[rawCategory];
+    }
+    
+    // Then, remove any parenthetical parts. e.g., "Βιβλιοθήκες (σε “Έπιπλα Εσωτερικού”)" -> "Βιβλιοθήκες"
     const cleanedCategory = rawCategory.replace(/\s*\(.*\)\s*/g, '').trim();
 
     // Check for a direct match in our map with the cleaned category
