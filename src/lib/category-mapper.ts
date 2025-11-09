@@ -4,7 +4,8 @@ const categoryMap: { [key: string]: string } = {
   // Example: 'Supplier Category': 'Your Store Category'
   'Καφετιέρες': 'Coffee Machines',
   'Μικροσυσκευές': 'Small Appliances',
-  'Ραφιέρες/Ράφια Τοίχου': 'Ραφιέρες Τοίχου',
+  'Ραφιέρες/Ράφια Τοίχου': 'Ραφιέρες',
+  'Ραφιέρες Τοίχου': 'Ραφιέρες',
 };
 
 // This function takes a raw category from the XML and returns the standardized one.
