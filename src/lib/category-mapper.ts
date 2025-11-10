@@ -37,6 +37,7 @@ const categoryMap: { [key: string]: string } = {
   'Σαλόνι > Καναπέδες': 'Καναπές Κρεβάτι',
   'Έπιπλα εσωτερικού χώρου > Βιβλιοθήκες': 'Βιβλιοθήκες',
   'Σαλόνι > Βιβλιοθήκες': 'Βιβλιοθήκες',
+  'Έπιπλα εσωτερικού χώρου > Ντουλάπες ρούχων': 'Ντουλάπες',
 };
 
 // This function takes a raw category from the XML and returns the standardized one.
