@@ -20,15 +20,15 @@ export default function AddToCartButton({ product, quantity = 1, ...props }: Add
   const handleAddToCart = () => {
     addToCart(product, quantity);
     toast({
-      title: 'Added to cart!',
-      description: `${product.name} has been added to your cart.`,
+      title: 'Προστέθηκε στο καλάθι!',
+      description: `Το προϊόν '${product.name}' προστέθηκε στο καλάθι σας.`,
     });
   };
 
   if (!isInStock) {
     return (
       <Button disabled {...props}>
-        Out of Stock
+        Εξαντλημένο
       </Button>
     )
   }
@@ -36,7 +36,8 @@ export default function AddToCartButton({ product, quantity = 1, ...props }: Add
   return (
     <Button onClick={handleAddToCart} {...props} className="bg-accent text-accent-foreground hover:bg-accent/90">
       <ShoppingCart className="mr-2 h-4 w-4" />
-      Add to Cart
+      Προσθήκη στο καλάθι
     </Button>
   );
 }
+
