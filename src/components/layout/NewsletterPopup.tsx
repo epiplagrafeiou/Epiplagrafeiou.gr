@@ -77,13 +77,13 @@ export default function NewsletterPopup() {
         <form onSubmit={handleSubmit} className="flex flex-col gap-4 pt-6">
           <Input
             type="email"
-            placeholder="Email address"
+            placeholder="Διεύθυνση email"
             required
             className="h-12 rounded-full px-4 text-left"
           />
            <Input
             type="text"
-            placeholder="First name"
+            placeholder="Όνομα"
             required
             className="h-12 rounded-full px-4 text-left"
           />
