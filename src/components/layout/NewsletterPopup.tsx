@@ -5,7 +5,6 @@ import { useEffect, useState } from 'react';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { X } from 'lucide-react';
 import { Logo } from '@/components/icons/Logo';
 
 const NEWSLETTER_POPUP_DISMISSED_KEY = 'newsletter_popup_dismissed';
@@ -40,18 +39,11 @@ export default function NewsletterPopup() {
   return (
     <Dialog open={isOpen} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-md p-8 text-center">
-        <button
-            onClick={() => handleOpenChange(false)}
-            className="absolute right-4 top-4 h-8 w-8 rounded-full bg-yellow-400 text-black flex items-center justify-center transition-opacity hover:opacity-80"
-        >
-            <X className="h-5 w-5" />
-            <span className="sr-only">Close</span>
-        </button>
         
         <div className="flex flex-col items-center">
           <Logo className="mb-4" />
 
-          <h2 className="text-2xl font-bold">Καλωσήρθες 🙌</h2>
+          <h2 className="text-2xl font-bold">Καλωσήρθες 🎉</h2>
           <p className="mt-1 text-3xl font-bold">Μόλις κέρδισες έκπτωση -5%</p>
           <p className="mt-2 text-muted-foreground">
             Κανε εγγραφή στο newsletter μας για να πάρεις τον κωδικό
@@ -63,13 +55,13 @@ export default function NewsletterPopup() {
             type="email"
             placeholder="Email address"
             required
-            className="h-12 text-center"
+            className="h-12 text-center rounded-full"
           />
            <Input
             type="text"
             placeholder="First name"
             required
-            className="h-12 text-center"
+            className="h-12 text-center rounded-full"
           />
           <Button type="submit" className="h-12 bg-black text-white hover:bg-gray-800 text-lg font-bold">
             Αγαπάω να γλιτώνω χρήματα !
