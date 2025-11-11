@@ -89,7 +89,7 @@ export const ProductsProvider = ({ children }: { children: React.ReactNode }) =>
       id: 'manual-pelmata',
       name: 'Σέτ 5τμχ Πέλματα Για Καρέκλα Γραφείου',
       slug: createSlug('Σέτ 5τμχ Πέλματα Για Καρέκλα Γραφείου'),
-      price: 6.20,
+      price: 12.99,
       description: 'Πέλματα, κάντε τις καρέκλες σας σταθερές αντικαθιστώντας εύκολα τις ρόδες με τα πέλματα.',
       imageId: 'https://www.zougris.gr/content/images/thumbs/0008499.jpeg',
       category: 'Ανταλλακτικά',
