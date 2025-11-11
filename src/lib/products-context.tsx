@@ -72,6 +72,18 @@ export const ProductsProvider = ({ children }: { children: React.ReactNode }) =>
       images: ['https://www.zougris.gr/content/images/thumbs/0004662.jpeg'],
       stock: 350,
       supplierId: 'manual',
+    },
+    {
+      id: '01.0942',
+      name: 'ΠΟΔΙ Φ62εκ. ΧΡΩΜΙΟΥ ΓΙΑ ΚΑΡΕΚΛΑ ΓΡΑΦΕΙΟΥ',
+      slug: createSlug('ΠΟΔΙ Φ62εκ. ΧΡΩΜΙΟΥ ΓΙΑ ΚΑΡΕΚΛΑ ΓΡΑΦΕΙΟΥ'),
+      price: 24.18,
+      description: 'Πόδι χρωμίου Φ62εκ. για απόλυτη ανθεκτικότητα στο βάρος.',
+      imageId: 'https://www.zougris.gr/content/images/thumbs/0010615.jpeg',
+      category: 'Ανταλλακτικά',
+      images: ['https://www.zougris.gr/content/images/thumbs/0010615.jpeg', 'https://www.zougris.gr/content/images/thumbs/0010616.jpeg'],
+      stock: 98,
+      supplierId: 'manual',
     }
   ];
 
