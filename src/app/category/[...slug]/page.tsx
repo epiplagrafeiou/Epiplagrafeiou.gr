@@ -5,6 +5,7 @@ import { ProductCard } from '@/components/products/ProductCard';
 import { useProducts, type Product } from '@/lib/products-context';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { useParams, notFound } from 'next/navigation';
 import { createSlug } from '@/lib/utils';
 import Link from 'next/link';
@@ -14,6 +15,12 @@ import type { Metadata } from 'next';
 type Props = {
   params: { slug: string[] }
 }
+
+const featuredCategories = [
+    { name: 'Γραφεία', href: '/category/grafeia' },
+    { name: 'Καρέκλες Γραφείου', href: '/category/karekles-grafeiou' },
+    { name: 'Βιβλιοθήκες', href: '/category/bibliothikes' },
+]
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const slugPath = params.slug.join('/');
@@ -133,6 +140,19 @@ export default function CategoryPage() {
             <p className="text-muted-foreground mt-2">There are no products in this category yet.</p>
         </div>
       )}
+
+      <div className="mt-16 border-t pt-12">
+        <h2 className="text-center text-2xl font-bold mb-8">Εξερευνήστε Επίσης</h2>
+        <div className="flex justify-center gap-4">
+            {featuredCategories.map(cat => (
+                <Button key={cat.href} asChild variant="outline">
+                    <Link href={cat.href}>{cat.name}</Link>
+                </Button>
+            ))}
+        </div>
+      </div>
     </div>
   );
 }
+
+    

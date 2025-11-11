@@ -60,6 +60,16 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   }
 }
 
+const relatedCategoryMap: { [key: string]: string[] } = {
+  'καρέκλες': ['γραφεία', 'αξεσουάρ'],
+  'καρέκλα': ['γραφεία', 'αξεσουάρ'],
+  'chairs': ['desks', 'αξεσουάρ'],
+  'chair': ['desks', 'αξεσουάρ'],
+  'γραφεία': ['καρέκλες', 'συρταριέρες', 'βιβλιοθήκες'],
+  'γραφείο': ['καρέκλες', 'συρταριέρες', 'βιβλιοθήκες'],
+  'desk': ['καρέκλες', 'συρταριέρες', 'βιβλιοθήκες'],
+};
+
 
 export default function ProductDetailPage() {
   const { products, isLoaded } = useProducts();
@@ -209,9 +219,43 @@ export default function ProductDetailPage() {
     notFound();
   }
 
-  const relatedProducts = products
-    .filter((p) => p.category === product.category && p.id !== product.id)
-    .slice(0, 4);
+  const relatedProducts = useMemo(() => {
+    if (!product) return [];
+
+    const productKeywords = product.category.toLowerCase().split(' > ').pop()?.split(' ') || [];
+    let relatedCategoryKeywords: string[] = [];
+
+    for (const keyword of productKeywords) {
+      if (relatedCategoryMap[keyword]) {
+        relatedCategoryKeywords.push(...relatedCategoryMap[keyword]);
+      }
+    }
+
+    // Add products from the same category as a fallback
+    relatedCategoryKeywords.push(product.category.toLowerCase().split(' > ').pop() || '');
+    
+    relatedCategoryKeywords = Array.from(new Set(relatedCategoryKeywords)); // Make unique
+
+    const candidates = products
+      .filter(p => {
+        if (p.id === product.id) return false;
+        const pCategoryLower = p.category.toLowerCase();
+        return relatedCategoryKeywords.some(keyword => pCategoryLower.includes(keyword));
+      })
+      // Shuffle and take 4
+      .sort(() => 0.5 - Math.random())
+      .slice(0, 4);
+
+      if (candidates.length < 4) {
+          const fallback = products
+              .filter(p => p.category === product.category && p.id !== product.id)
+              .sort(() => 0.5 - Math.random())
+              .slice(0, 4 - candidates.length);
+          return [...candidates, ...fallback];
+      }
+
+    return candidates;
+  }, [product, products]);
 
   return (
     <div className="container mx-auto px-4 py-12">
@@ -357,3 +401,5 @@ export default function ProductDetailPage() {
     </div>
   );
 }
+
+    
