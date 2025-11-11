@@ -79,13 +79,13 @@ export default function NewsletterPopup() {
             type="email"
             placeholder="Email address"
             required
-            className="h-12 text-center rounded-full"
+            className="h-12 rounded-full px-4"
           />
            <Input
             type="text"
             placeholder="First name"
             required
-            className="h-12 text-center rounded-full"
+            className="h-12 rounded-full px-4"
           />
           <Button type="submit" className="h-12 bg-accent text-accent-foreground hover:bg-accent/90 text-lg font-bold">
             Αγαπάω να γλιτώνω χρήματα !
