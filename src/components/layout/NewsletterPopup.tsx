@@ -1,10 +1,12 @@
+
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Mail } from 'lucide-react';
+import { X } from 'lucide-react';
+import { Logo } from '@/components/icons/Logo';
 
 const NEWSLETTER_POPUP_DISMISSED_KEY = 'newsletter_popup_dismissed';
 
@@ -16,7 +18,7 @@ export default function NewsletterPopup() {
     if (!dismissed) {
       const timer = setTimeout(() => {
         setIsOpen(true);
-      }, 10000); // 10 seconds
+      }, 5000); // 5 seconds
 
       return () => clearTimeout(timer);
     }
@@ -37,27 +39,51 @@ export default function NewsletterPopup() {
 
   return (
     <Dialog open={isOpen} onOpenChange={handleOpenChange}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-2xl">
-            <Mail className="h-8 w-8 text-accent" />
-            Get 5% Off!
-          </DialogTitle>
-          <DialogDescription className="pt-2">
-            Join our newsletter and get a 5% discount on your first order. Plus, get updates on new arrivals and special offers.
-          </DialogDescription>
-        </DialogHeader>
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4 pt-4">
+      <DialogContent className="sm:max-w-md p-8 text-center">
+        <button
+            onClick={() => handleOpenChange(false)}
+            className="absolute right-4 top-4 h-8 w-8 rounded-full bg-yellow-400 text-black flex items-center justify-center transition-opacity hover:opacity-80"
+        >
+            <X className="h-5 w-5" />
+            <span className="sr-only">Close</span>
+        </button>
+        
+        <div className="flex flex-col items-center">
+          <Logo className="mb-4" />
+
+          <h2 className="text-2xl font-bold">Καλωσήρθες 🙌</h2>
+          <p className="mt-1 text-3xl font-bold">Μόλις κέρδισες έκπτωση -5%</p>
+          <p className="mt-2 text-muted-foreground">
+            Κανε εγγραφή στο newsletter μας για να πάρεις τον κωδικό
+          </p>
+        </div>
+
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4 pt-6">
           <Input
             type="email"
-            placeholder="Enter your email"
+            placeholder="Email address"
             required
-            className="h-11"
+            className="h-12 text-center"
           />
-          <Button type="submit" className="bg-accent text-accent-foreground hover:bg-accent/90">
-            Subscribe & Get Discount
+           <Input
+            type="text"
+            placeholder="First name"
+            required
+            className="h-12 text-center"
+          />
+          <Button type="submit" className="h-12 bg-black text-white hover:bg-gray-800 text-lg font-bold">
+            Αγαπάω να γλιτώνω χρήματα !
           </Button>
         </form>
+
+        <Button variant="link" size="sm" className="mt-2 text-muted-foreground" onClick={() => handleOpenChange(false)}>
+            Προτιμώ να πληρώσω όλο το ποσό
+        </Button>
+        
+        <p className="mt-4 text-xs text-muted-foreground px-4">
+            *Η προσφορά ισχύει μόνο για νέους χρήστες. Με την παροχή του email σας δέχεστε να λαμβάνετε μηνύματα από το epiplagrafeiou.gr
+        </p>
+
       </DialogContent>
     </Dialog>
   );
