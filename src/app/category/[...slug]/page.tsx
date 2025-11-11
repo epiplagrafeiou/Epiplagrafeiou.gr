@@ -40,8 +40,34 @@ export default function CategoryPage() {
     };
   });
 
+  const breadcrumbSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+        {
+            '@type': 'ListItem',
+            position: 1,
+            name: 'Home',
+            item: typeof window !== 'undefined' ? window.location.origin : '',
+        },
+        {
+            '@type': 'ListItem',
+            position: 2,
+            name: 'Products',
+            item: typeof window !== 'undefined' ? `${window.location.origin}/products` : '',
+        },
+        ...breadcrumbs.map((crumb, index) => ({
+            '@type': 'ListItem',
+            position: index + 3,
+            name: crumb.name,
+            item: typeof window !== 'undefined' ? `${window.location.origin}${crumb.href}` : '',
+        }))
+    ],
+  };
+
   return (
     <div className="container mx-auto px-4 py-8">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }} />
       <div className="mb-6 flex items-center space-x-2 text-sm text-muted-foreground">
         <Link href="/" className="hover:text-foreground">Home</Link>
         <span>/</span>
