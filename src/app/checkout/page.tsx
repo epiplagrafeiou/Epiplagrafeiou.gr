@@ -30,13 +30,14 @@ import { Separator } from '@/components/ui/separator';
 import { CreditCard } from 'lucide-react';
 
 const checkoutSchema = z.object({
-  email: z.string().email(),
-  firstName: z.string().min(1, 'First name is required'),
-  lastName: z.string().min(1, 'Last name is required'),
-  address: z.string().min(1, 'Address is required'),
-  city: z.string().min(1, 'City is required'),
-  postalCode: z.string().min(1, 'Postal code is required'),
-  country: z.string().min(1, 'Country is required'),
+  email: z.string().email({ message: 'Το email δεν είναι έγκυρο.' }),
+  phone: z.string().min(1, 'Το τηλέφωνο είναι απαραίτητο.'),
+  firstName: z.string().min(1, 'Το όνομα είναι απαραίτητο.'),
+  lastName: z.string().min(1, 'Το επώνυμο είναι απαραίτητο.'),
+  address: z.string().min(1, 'Η διεύθυνση είναι απαραίτητη.'),
+  city: z.string().min(1, 'Η πόλη είναι απαραίτητη.'),
+  postalCode: z.string().min(1, 'Ο ταχυδρομικός κώδικας είναι απαραίτητος.'),
+  country: z.string().min(1, 'Η χώρα είναι απαραίτητη.'),
   paymentMethod: z.enum(['card', 'applepay', 'googlepay', 'klarna', 'iris']).default('card'),
   cardName: z.string().optional(),
   cardNumber: z.string().optional(),
@@ -48,8 +49,8 @@ const checkoutSchema = z.object({
     }
     return true;
 }, {
-    message: "Card details are required when paying by card",
-    path: ["cardName"], // you can pick any of the card fields for the error to attach to
+    message: "Τα στοιχεία της κάρτας είναι απαραίτητα για πληρωμή με κάρτα.",
+    path: ["cardName"],
 });
 
 
@@ -146,20 +147,33 @@ export default function CheckoutPage() {
             <h1 className="font-headline text-3xl font-bold">Checkout</h1>
                 <Card>
                     <CardHeader><CardTitle>Στοιχεία Επικοινωνίας</CardTitle></CardHeader>
-                    <CardContent>
-                    <FormField
-                        control={form.control}
-                        name="email"
-                        render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>Email</FormLabel>
-                            <FormControl>
-                            <Input placeholder="you@example.com" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                        </FormItem>
-                        )}
-                    />
+                    <CardContent className="space-y-4">
+                        <FormField
+                            control={form.control}
+                            name="email"
+                            render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Email</FormLabel>
+                                <FormControl>
+                                <Input placeholder="you@example.com" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                            )}
+                        />
+                        <FormField
+                            control={form.control}
+                            name="phone"
+                            render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Τηλέφωνο</FormLabel>
+                                <FormControl>
+                                <Input placeholder="69..." {...field} />
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                            )}
+                        />
                     </CardContent>
                 </Card>
 
@@ -268,5 +282,3 @@ export default function CheckoutPage() {
     </div>
   );
 }
-
-    
