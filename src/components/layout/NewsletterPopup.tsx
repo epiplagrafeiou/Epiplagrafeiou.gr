@@ -2,7 +2,7 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Logo } from '@/components/icons/Logo';
@@ -62,30 +62,30 @@ export default function NewsletterPopup() {
 
   return (
     <Dialog open={isOpen} onOpenChange={handleOpenChange}>
-      <DialogContent className="sm:max-w-md p-8 text-center" onPointerDownOutside={(e) => e.preventDefault()}>
-        
-        <div className="flex flex-col items-center">
-          <Logo className="mb-4" />
-
-          <h2 className="text-2xl font-bold">Καλωσήρθες 🎉</h2>
-          <p className="mt-1 text-3xl font-bold">Μόλις κέρδισες έκπτωση -5%</p>
-          <p className="mt-2 text-muted-foreground">
-            Κανε εγγραφή στο newsletter μας για να πάρεις τον κωδικό
-          </p>
-        </div>
+      <DialogContent className="sm:max-w-md p-8 text-center">
+        <DialogHeader>
+            <div className="flex flex-col items-center">
+                <Logo className="mb-4" />
+                <DialogTitle className="text-2xl font-bold">Καλωσήρθες 🎉</DialogTitle>
+                <DialogDescription className="mt-1 text-3xl font-bold !text-foreground">Μόλις κέρδισες έκπτωση -5%</DialogDescription>
+                <p className="mt-2 text-muted-foreground">
+                    Κανε εγγραφή στο newsletter μας για να πάρεις τον κωδικό
+                </p>
+            </div>
+        </DialogHeader>
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-4 pt-6">
           <Input
             type="email"
             placeholder="Email address"
             required
-            className="h-12 rounded-full px-4"
+            className="h-12 rounded-full px-4 text-left"
           />
            <Input
             type="text"
             placeholder="First name"
             required
-            className="h-12 rounded-full px-4"
+            className="h-12 rounded-full px-4 text-left"
           />
           <Button type="submit" className="h-12 bg-accent text-accent-foreground hover:bg-accent/90 text-lg font-bold">
             Αγαπάω να γλιτώνω χρήματα !
