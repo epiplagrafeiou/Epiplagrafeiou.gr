@@ -65,7 +65,7 @@ export default function CheckoutPage() {
   const form = useForm<CheckoutFormValues>({
     resolver: zodResolver(checkoutSchema),
     defaultValues: {
-      country: 'Greece',
+      country: 'Ελλάδα',
       paymentMethod: 'card',
     },
   });
@@ -88,7 +88,7 @@ export default function CheckoutPage() {
             <div className="lg:order-2">
             <Card>
                 <CardHeader>
-                <CardTitle>Your Order</CardTitle>
+                <CardTitle>Η Παραγγελία Σας</CardTitle>
                 </CardHeader>
                 <CardContent>
                 <div className="space-y-4">
@@ -122,21 +122,21 @@ export default function CheckoutPage() {
                 <Separator className="my-6" />
                 <div className="space-y-2">
                     <div className="flex justify-between">
-                    <span className="text-muted-foreground">Subtotal</span>
+                    <span className="text-muted-foreground">Υποσύνολο</span>
                     <span>{formatCurrency(totalAmount)}</span>
                     </div>
                     <div className="flex justify-between">
-                    <span className="text-muted-foreground">Shipping</span>
-                    <span>{totalShipping > 0 ? formatCurrency(totalShipping) : 'Free'}</span>
+                    <span className="text-muted-foreground">Μεταφορικά</span>
+                    <span>{totalShipping > 0 ? formatCurrency(totalShipping) : 'Δωρεάν'}</span>
                     </div>
                     <Separator className="my-2" />
                     <div className="flex justify-between text-lg font-bold">
-                    <span>Total</span>
+                    <span>Σύνολο</span>
                     <span>{formatCurrency(total)}</span>
                     </div>
                 </div>
                 <Button type="submit" size="lg" className="w-full mt-6 bg-accent text-accent-foreground hover:bg-accent/90">
-                    Pay {formatCurrency(total)}
+                    Πληρωμή {formatCurrency(total)}
                 </Button>
                 </CardContent>
             </Card>
@@ -145,7 +145,7 @@ export default function CheckoutPage() {
             <div className="lg:order-1 space-y-8">
             <h1 className="font-headline text-3xl font-bold">Checkout</h1>
                 <Card>
-                    <CardHeader><CardTitle>Contact Information</CardTitle></CardHeader>
+                    <CardHeader><CardTitle>Στοιχεία Επικοινωνίας</CardTitle></CardHeader>
                     <CardContent>
                     <FormField
                         control={form.control}
@@ -164,35 +164,35 @@ export default function CheckoutPage() {
                 </Card>
 
                 <Card>
-                    <CardHeader><CardTitle>Shipping Address</CardTitle></CardHeader>
+                    <CardHeader><CardTitle>Διεύθυνση Αποστολής</CardTitle></CardHeader>
                     <CardContent className="space-y-4">
                     <div className="grid grid-cols-2 gap-4">
                         <FormField name="firstName" render={({ field }) => (
-                        <FormItem><FormLabel>First Name</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                        <FormItem><FormLabel>Όνομα</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
                         )} />
                         <FormField name="lastName" render={({ field }) => (
-                        <FormItem><FormLabel>Last Name</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                        <FormItem><FormLabel>Επώνυμο</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
                         )} />
                     </div>
                     <FormField name="address" render={({ field }) => (
-                        <FormItem><FormLabel>Address</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                        <FormItem><FormLabel>Διεύθυνση</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
                     )} />
                     <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
                         <FormField name="city" render={({ field }) => (
-                        <FormItem><FormLabel>City</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                        <FormItem><FormLabel>Πόλη</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
                         )} />
                         <FormField name="postalCode" render={({ field }) => (
-                        <FormItem><FormLabel>Postal Code</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                        <FormItem><FormLabel>Ταχυδρομικός Κώδικας</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
                         )} />
                         <FormField name="country" render={({ field }) => (
-                        <FormItem><FormLabel>Country</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                        <FormItem><FormLabel>Χώρα</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
                         )} />
                     </div>
                     </CardContent>
                 </Card>
 
                 <Card>
-                    <CardHeader><CardTitle>Payment</CardTitle></CardHeader>
+                    <CardHeader><CardTitle>Πληρωμή</CardTitle></CardHeader>
                     <CardContent className="space-y-6">
                         <FormField
                         control={form.control}
@@ -213,21 +213,21 @@ export default function CheckoutPage() {
                                         <div className="flex items-center gap-4">
                                             <RadioGroupItem value="card" id="card" />
                                             <CreditCard className="h-6 w-6" />
-                                            <span>Credit/Debit Card</span>
+                                            <span>Πιστωτική/Χρεωστική Κάρτα</span>
                                         </div>
                                     </div>
                                 </Label>
                                 {selectedPaymentMethod === 'card' && (
                                     <div className="p-4 space-y-4">
                                         <FormField name="cardName" render={({ field }) => (
-                                            <FormItem><FormLabel>Cardholder Name</FormLabel><FormControl><Input placeholder="Name on card" {...field} /></FormControl><FormMessage /></FormItem>
+                                            <FormItem><FormLabel>Όνομα Κατόχου</FormLabel><FormControl><Input placeholder="Όνομα στην κάρτα" {...field} /></FormControl><FormMessage /></FormItem>
                                         )} />
                                         <FormField name="cardNumber" render={({ field }) => (
-                                            <FormItem><FormLabel>Card Number</FormLabel><FormControl><Input placeholder="0000 0000 0000 0000" {...field} /></FormControl><FormMessage /></FormItem>
+                                            <FormItem><FormLabel>Αριθμός Κάρτας</FormLabel><FormControl><Input placeholder="0000 0000 0000 0000" {...field} /></FormControl><FormMessage /></FormItem>
                                         )} />
                                         <div className="grid grid-cols-2 gap-4">
                                             <FormField name="cardExpiry" render={({ field }) => (
-                                                <FormItem><FormLabel>Expiry (MM/YY)</FormLabel><FormControl><Input placeholder="MM/YY" {...field} /></FormControl><FormMessage /></FormItem>
+                                                <FormItem><FormLabel>Λήξη (MM/YY)</FormLabel><FormControl><Input placeholder="MM/YY" {...field} /></FormControl><FormMessage /></FormItem>
                                             )} />
                                             <FormField name="cardCVC" render={({ field }) => (
                                                 <FormItem><FormLabel>CVC</FormLabel><FormControl><Input placeholder="123" {...field} /></FormControl><FormMessage /></FormItem>
