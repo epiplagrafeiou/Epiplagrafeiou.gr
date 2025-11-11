@@ -19,6 +19,7 @@ import {
   type CarouselApi,
 } from "@/components/ui/carousel"
 import { Card, CardContent } from "@/components/ui/card"
+import { Truck, Award, Star } from 'lucide-react';
 
 
 export default function ProductDetailPage() {
@@ -202,6 +203,20 @@ export default function ProductDetailPage() {
           />
           <div className="mt-8">
             <AddToCartButton product={product} size="lg" />
+          </div>
+          <div className="mt-6 space-y-3 text-sm text-muted-foreground">
+            <div className="flex items-center gap-3">
+              <Truck className="h-5 w-5 flex-shrink-0 text-primary" />
+              <span>Δωρεάν μεταφορικά για παραγγελίες άνω των 150€</span>
+            </div>
+            <div className="flex items-center gap-3">
+              <Award className="h-5 w-5 flex-shrink-0 text-primary" />
+              <span>60 χρόνια εμπειρίας, η σφραγίδα της σιγουριάς μας</span>
+            </div>
+            <div className="flex items-center gap-3">
+              <Star className="h-5 w-5 flex-shrink-0 text-primary" />
+              <span>4.9/5 Αξιολόγηση από 86+ κριτικές</span>
+            </div>
           </div>
         </div>
       </div>
