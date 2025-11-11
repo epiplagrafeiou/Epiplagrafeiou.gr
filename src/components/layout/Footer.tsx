@@ -14,9 +14,14 @@ export default function Footer() {
             <p className="text-sm text-muted-foreground">
               © {new Date().getFullYear()} Epipla Graphiou. All rights reserved.
             </p>
-            <Link href="/admin" className="text-sm text-muted-foreground hover:text-foreground">
-                Admin Panel
-            </Link>
+            <div className="flex flex-col space-y-2">
+                <Link href="/privacy-policy" className="text-sm text-muted-foreground hover:text-foreground">
+                    Πολιτική απορρήτου
+                </Link>
+                <Link href="/admin" className="text-sm text-muted-foreground hover:text-foreground">
+                    Admin Panel
+                </Link>
+            </div>
           </div>
 
           <div className="md:col-span-2">
