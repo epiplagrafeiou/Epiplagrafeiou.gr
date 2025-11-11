@@ -65,7 +65,7 @@ export const ProductsProvider = ({ children }: { children: React.ReactNode }) =>
       id: '11.2213',
       name: 'ΑΜΟΡΤΙΣΕΡ ΜΑΥΡΟ ΚΑΡ.ΓΡΑΦΕΙΟΥ 26/35εκ.',
       slug: createSlug('ΑΜΟΡΤΙΣΕΡ ΜΑΥΡΟ ΚΑΡ.ΓΡΑΦΕΙΟΥ 26/35εκ.'),
-      price: 8.56,
+      price: 18.99,
       description: 'Αμορτισέρ μαύρο για καρέκλες γραφείου 26/35εκ.',
       imageId: 'https://www.zougris.gr/content/images/thumbs/0004662.jpeg',
       category: 'Ανταλλακτικά Για Καρέκλες Γραφείου',
