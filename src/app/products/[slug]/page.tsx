@@ -19,7 +19,7 @@ import {
   type CarouselApi,
 } from "@/components/ui/carousel"
 import { Card, CardContent } from "@/components/ui/card"
-import { Truck, Award, Star } from 'lucide-react';
+import { Truck, Award, Star, ShieldCheck } from 'lucide-react';
 
 
 export default function ProductDetailPage() {
@@ -218,6 +218,10 @@ export default function ProductDetailPage() {
               <span>4.9/5 Αξιολόγηση από 86+ κριτικές</span>
             </div>
           </div>
+           <div className="mt-6 flex items-center gap-2 text-xs text-muted-foreground">
+              <ShieldCheck className="h-4 w-4 text-green-600" />
+              <span>Ασφαλείς Πληρωμές SSL</span>
+            </div>
         </div>
       </div>
 
