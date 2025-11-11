@@ -18,6 +18,9 @@ export default function Footer() {
                 <Link href="/privacy-policy" className="text-sm text-muted-foreground hover:text-foreground">
                     Πολιτική απορρήτου
                 </Link>
+                <Link href="/refund-policy" className="text-sm text-muted-foreground hover:text-foreground">
+                    Πολιτική επιστροφής χρημάτων
+                </Link>
                 <Link href="/admin" className="text-sm text-muted-foreground hover:text-foreground">
                     Admin Panel
                 </Link>
