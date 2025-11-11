@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/carousel"
 import { Card, CardContent } from "@/components/ui/card"
 import { Truck, Award, Star, ShieldCheck } from 'lucide-react';
+import { PaymentIcons } from '@/components/icons/PaymentIcons';
 
 
 export default function ProductDetailPage() {
@@ -221,6 +222,9 @@ export default function ProductDetailPage() {
            <div className="mt-6 flex items-center gap-2 text-xs text-muted-foreground">
               <ShieldCheck className="h-4 w-4 text-green-600" />
               <span>Ασφαλείς Πληρωμές SSL</span>
+            </div>
+            <div className="mt-4">
+                <PaymentIcons />
             </div>
         </div>
       </div>

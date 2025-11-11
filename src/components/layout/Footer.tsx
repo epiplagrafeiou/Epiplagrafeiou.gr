@@ -2,6 +2,7 @@
 import { Logo } from '@/components/icons/Logo';
 import { Mail, MapPin, Phone } from 'lucide-react';
 import Link from 'next/link';
+import { PaymentIcons } from '@/components/icons/PaymentIcons';
 
 export default function Footer() {
   return (
@@ -14,12 +15,15 @@ export default function Footer() {
             <p className="text-sm text-muted-foreground">
               © {new Date().getFullYear()} Epipla Graphiou. All rights reserved.
             </p>
-            <div className="flex flex-col space-y-2">
+             <div className="flex flex-col space-y-2">
                 <Link href="/privacy-policy" className="text-sm text-muted-foreground hover:text-foreground">
                     Πολιτική απορρήτου
                 </Link>
                 <Link href="/refund-policy" className="text-sm text-muted-foreground hover:text-foreground">
                     Πολιτική επιστροφής χρημάτων
+                </Link>
+                <Link href="/terms-of-service" className="text-sm text-muted-foreground hover:text-foreground">
+                    Όροι παροχής υπηρεσιών
                 </Link>
                 <Link href="/admin" className="text-sm text-muted-foreground hover:text-foreground">
                     Admin Panel
@@ -46,6 +50,9 @@ export default function Footer() {
                  <p>ΑΦΜ: EL047290419</p>
             </div>
           </div>
+        </div>
+         <div className="mt-12 flex flex-col items-center justify-center border-t pt-8">
+            <PaymentIcons />
         </div>
       </div>
     </footer>
