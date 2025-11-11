@@ -4,7 +4,7 @@
 import { createContext, useContext, useMemo } from 'react';
 import { createSlug } from './utils';
 import { useCollection } from '@/firebase/firestore/use-collection';
-import { collection, writeBatch, doc } from 'firebase/firestore';
+import { collection, writeBatch, doc, updateDoc } from 'firebase/firestore';
 import { useFirestore, useMemoFirebase, FirestorePermissionError, errorEmitter } from '@/firebase';
 import { PlaceHolderImages } from './placeholder-images';
 
@@ -25,8 +25,9 @@ interface ProductsContextType {
   products: Product[];
   adminProducts: Product[];
   addProducts: (
-    newProducts: Omit<Product, 'slug' | 'imageId' | 'id' | 'supplierId'>[] & { id: string; supplierId: string, images: string[], mainImage: string | null }[],
+    newProducts: (Partial<Omit<Product, 'slug' | 'imageId'>> & { id: string; supplierId: string; images: string[]; mainImage?: string | null; name: string; price: number; category: string; description: string; stock: number })[]
   ) => void;
+  updateProduct: (product: Product) => void;
   deleteProducts: (productIds: string[]) => void;
   isLoaded: boolean;
   categories: string[];
@@ -107,6 +108,21 @@ export const ProductsProvider = ({ children }: { children: React.ReactNode }) =>
        });
     });
   };
+  
+  const updateProduct = async (product: Product) => {
+    if (!firestore) return;
+    const productRef = doc(firestore, 'products', product.id);
+    const { id, ...productData } = product;
+
+    updateDoc(productRef, productData).catch(error => {
+        const permissionError = new FirestorePermissionError({
+            path: productRef.path,
+            operation: 'update',
+            requestResourceData: productData,
+        });
+        errorEmitter.emit('permission-error', permissionError);
+    });
+  };
 
   const deleteProducts = async (productIds: string[]) => {
     if (!firestore) return;
@@ -166,6 +182,7 @@ export const ProductsProvider = ({ children }: { children: React.ReactNode }) =>
         products: allProducts.filter(p => (p.stock ?? 0) > 0),
         adminProducts: allProducts,
         addProducts,
+        updateProduct,
         deleteProducts,
         isLoaded: !isLoading,
         categories: categories,
@@ -184,5 +201,3 @@ export const useProducts = () => {
   }
   return context;
 };
-
-    

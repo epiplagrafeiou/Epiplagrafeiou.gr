@@ -18,8 +18,8 @@ import {
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { PlusCircle, Trash2 } from 'lucide-react';
-import { formatCurrency } from '@/lib/utils';
+import { PlusCircle, Trash2, Pencil } from 'lucide-react';
+import { formatCurrency, createSlug } from '@/lib/utils';
 import Image from 'next/image';
 import { useProducts, type Product } from '@/lib/products-context';
 import { useSuppliers } from '@/lib/suppliers-context';
@@ -33,10 +33,11 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from '@/hooks/use-toast';
+import { ProductForm } from '@/components/admin/ProductForm';
 
 const ProductsTable = ({
     products,
@@ -44,12 +45,14 @@ const ProductsTable = ({
     onSelectProduct,
     onSelectAll,
     areAllSelected,
+    onEdit,
 }:{
     products: Product[];
     selectedProducts: Set<string>;
     onSelectProduct: (productId: string, checked: boolean) => void;
     onSelectAll: (checked: boolean) => void;
     areAllSelected: boolean;
+    onEdit: (product: Product) => void;
 }) => (
     <Table>
         <TableHeader>
@@ -66,6 +69,7 @@ const ProductsTable = ({
             <TableHead>Category</TableHead>
             <TableHead>Stock</TableHead>
             <TableHead className="text-right">Price</TableHead>
+            <TableHead className="w-[80px] text-right">Actions</TableHead>
         </TableRow>
         </TableHeader>
         <TableBody>
@@ -96,6 +100,11 @@ const ProductsTable = ({
                 </Badge>
                 </TableCell>
                 <TableCell className="text-right">{formatCurrency(product.price)}</TableCell>
+                <TableCell className="text-right">
+                    <Button variant="ghost" size="icon" onClick={() => onEdit(product)}>
+                        <Pencil className="h-4 w-4" />
+                    </Button>
+                </TableCell>
             </TableRow>
             )}
         )}
@@ -105,17 +114,21 @@ const ProductsTable = ({
 
 
 export default function AdminProductsPage() {
-  const { adminProducts, deleteProducts } = useProducts();
+  const { adminProducts, deleteProducts, addProducts, updateProduct } = useProducts();
   const { suppliers } = useSuppliers();
   const { toast } = useToast();
   const [selectedProducts, setSelectedProducts] = useState<Set<string>>(new Set());
   const [activeTab, setActiveTab] = useState('all');
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
 
   const productsBySupplier = useMemo(() => {
     const map: Record<string, Product[]> = {};
     suppliers.forEach(supplier => {
         map[supplier.id] = adminProducts.filter(p => p.supplierId === supplier.id);
     });
+    // Add a category for manually added products
+    map['manual'] = adminProducts.filter(p => !suppliers.some(s => s.id === p.supplierId));
     return map;
   }, [adminProducts, suppliers]);
 
@@ -165,7 +178,48 @@ export default function AdminProductsPage() {
     setSelectedProducts(new Set());
   }
 
+  const handleOpenForm = (product: Product | null = null) => {
+    setEditingProduct(product);
+    setIsFormOpen(true);
+  }
+
+  const handleSaveProduct = (data: any) => {
+    if (editingProduct) {
+        // Update existing product
+        const updatedProduct = {
+            ...editingProduct,
+            ...data,
+            slug: createSlug(data.name),
+            price: parseFloat(data.price),
+            stock: parseInt(data.stock, 10),
+            imageId: data.images[0] || '',
+        };
+        updateProduct(updatedProduct);
+        toast({ title: "Product Updated", description: `${data.name} has been updated.` });
+    } else {
+        // Add new product
+        const newProduct = {
+            ...data,
+            id: `manual-${Date.now()}`,
+            supplierId: 'manual', // Or some other identifier
+            slug: createSlug(data.name),
+            price: parseFloat(data.price),
+            stock: parseInt(data.stock, 10),
+            imageId: data.images[0] || '',
+        }
+        addProducts([newProduct]);
+        toast({ title: "Product Added", description: `${data.name} has been added to your store.` });
+    }
+    setIsFormOpen(false);
+    setEditingProduct(null);
+  }
+
+
   const currentSelectionAreAll = selectedProducts.size === displayedProducts.length && displayedProducts.length > 0;
+  
+  const manualSupplier = { id: 'manual', name: 'Manual' };
+  const allSuppliersForTabs = [...suppliers, manualSupplier];
+
 
   return (
     <div className="p-8 pt-6">
@@ -194,17 +248,34 @@ export default function AdminProductsPage() {
                     </AlertDialogContent>
                  </AlertDialog>
             )}
-            <Button>
-                <PlusCircle className="mr-2 h-4 w-4" />
-                Add Product
-            </Button>
+             <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
+                <DialogTrigger asChild>
+                    <Button onClick={() => handleOpenForm()}>
+                        <PlusCircle className="mr-2 h-4 w-4" />
+                        Add Product
+                    </Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-2xl">
+                    <DialogHeader>
+                        <DialogTitle>{editingProduct ? 'Edit Product' : 'Add New Product'}</DialogTitle>
+                        <DialogDescription>
+                            {editingProduct ? `Update details for ${editingProduct.name}` : 'Fill in the details for the new product.'}
+                        </DialogDescription>
+                    </DialogHeader>
+                    <ProductForm
+                        product={editingProduct}
+                        onSave={handleSaveProduct}
+                        onCancel={() => setIsFormOpen(false)}
+                    />
+                </DialogContent>
+            </Dialog>
         </div>
       </div>
 
       <Tabs value={activeTab} onValueChange={handleTabChange} className="mt-6">
         <TabsList>
             <TabsTrigger value="all">All Products</TabsTrigger>
-            {suppliers.map(supplier => (
+            {allSuppliersForTabs.map(supplier => (
                 <TabsTrigger key={supplier.id} value={supplier.id}>{supplier.name}</TabsTrigger>
             ))}
         </TabsList>
@@ -221,20 +292,24 @@ export default function AdminProductsPage() {
                         onSelectProduct={handleSelectProduct}
                         onSelectAll={handleSelectAll}
                         areAllSelected={currentSelectionAreAll}
+                        onEdit={handleOpenForm}
                     />
                 </CardContent>
             </Card>
         </TabsContent>
-        {suppliers.map(supplier => (
+        {allSuppliersForTabs.map(supplier => (
             <TabsContent key={supplier.id} value={supplier.id}>
                 <Card>
                     <CardHeader>
                         <div className="flex items-center justify-between">
                             <div>
                                 <CardTitle>{supplier.name} ({productsBySupplier[supplier.id]?.length || 0})</CardTitle>
-                                <CardDescription>Products imported from {supplier.name}.</CardDescription>
+                                <CardDescription>
+                                    {supplier.id === 'manual' ? 'Manually added products.' : `Products imported from ${supplier.name}.`}
+                                </CardDescription>
                             </div>
-                            <AlertDialog>
+                           {supplier.id !== 'manual' && (
+                             <AlertDialog>
                                 <AlertDialogTrigger asChild>
                                     <Button variant="destructive">
                                         <Trash2 className="mr-2 h-4 w-4" />
@@ -254,6 +329,7 @@ export default function AdminProductsPage() {
                                     </AlertDialogFooter>
                                 </AlertDialogContent>
                             </AlertDialog>
+                           )}
                         </div>
                     </CardHeader>
                     <CardContent>
@@ -263,6 +339,7 @@ export default function AdminProductsPage() {
                             onSelectProduct={handleSelectProduct}
                             onSelectAll={handleSelectAll}
                             areAllSelected={currentSelectionAreAll}
+                            onEdit={handleOpenForm}
                         />
                     </CardContent>
                 </Card>
