@@ -13,6 +13,7 @@ export interface Product {
   name: string;
   slug: string;
   price: number;
+  originalPrice?: number;
   description: string;
   imageId: string; // This is now the URL of the main image
   category: string;
@@ -51,7 +52,8 @@ export const ProductsProvider = ({ children }: { children: React.ReactNode }) =>
       id: 'manual-001',
       name: 'Σετ 5τμχ Ρόδες Για Καρέκλα Γραφείου',
       slug: createSlug('Σετ 5τμχ Ρόδες Για Καρέκλα Γραφείου'),
-      price: 6.20,
+      price: 12.99,
+      originalPrice: 13.99,
       description: 'Ρόδες σετ 5 τεμαχίων για καρέκλες γραφείου.',
       imageId: 'https://www.zougris.gr/content/images/thumbs/0008329.jpeg',
       category: 'Ανταλλακτικά',

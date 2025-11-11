@@ -185,9 +185,16 @@ export default function ProductDetailPage() {
           <h1 className="font-headline text-3xl font-bold lg:text-4xl">
             {product.name}
           </h1>
-          <p className="mt-4 text-3xl font-bold">
-            {formatCurrency(product.price)}
-          </p>
+          <div className="mt-4 flex items-baseline gap-2">
+            <p className="text-3xl font-bold">
+              {formatCurrency(product.price)}
+            </p>
+            {product.originalPrice && product.originalPrice > product.price && (
+              <p className="text-xl text-muted-foreground line-through">
+                {formatCurrency(product.originalPrice)}
+              </p>
+            )}
+          </div>
           <Separator className="my-6" />
           <div
             className="prose prose-sm max-w-none text-muted-foreground"

@@ -1,3 +1,4 @@
+
 'use client';
 
 import Image from 'next/image';
@@ -73,9 +74,16 @@ export function ProductCard({ product }: ProductCardProps) {
       </Link>
 
       <CardFooter className="mt-auto flex items-center justify-between p-4 pt-0">
-        <p className="text-xl font-bold text-foreground">
-          {formatCurrency(product.price)}
-        </p>
+        <div className="flex items-baseline gap-2">
+          <p className="text-xl font-bold text-foreground">
+            {formatCurrency(product.price)}
+          </p>
+          {product.originalPrice && product.originalPrice > product.price && (
+            <p className="text-sm text-muted-foreground line-through">
+              {formatCurrency(product.originalPrice)}
+            </p>
+          )}
+        </div>
         <AddToCartButton product={product} />
       </CardFooter>
     </Card>
