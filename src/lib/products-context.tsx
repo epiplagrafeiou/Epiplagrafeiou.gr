@@ -101,7 +101,7 @@ export const ProductsProvider = ({ children }: { children: React.ReactNode }) =>
       id: 'manual-pro-wheels',
       name: 'Σετ 5τμχ Ρόδες Pro 63χιλ. Ελαστικής Πολυουρεθάνης Για Καρέκλα Γραφείου',
       slug: createSlug('Σετ 5τμχ Ρόδες Pro 63χιλ. Ελαστικής Πολυουρεθάνης Για Καρέκλα Γραφείου'),
-      price: 17.98,
+      price: 28.99,
       description: 'Ρόδες Pro σετ 5 τεμαχίων για καρέκλες γραφείου.Από ελαστική πολυουρεθάνη για ομαλότερη κύλιση χωρίς να αφήνει σημάδια στο δάπεδο.Κατάλληλες για καρέκλες με πείρο 11 χιλιοστών.',
       imageId: 'https://www.zougris.gr/content/images/thumbs/0010300.jpeg',
       category: 'Ανταλλακτικά',
