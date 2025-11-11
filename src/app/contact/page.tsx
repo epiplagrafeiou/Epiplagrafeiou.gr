@@ -7,6 +7,35 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Mail, MapPin, Phone } from "lucide-react";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion"
+
+const faqItems = [
+    {
+        question: "Ποιο είναι το κόστος αποστολής;",
+        answer: "Για παραγγελίες άνω των 150€, η αποστολή είναι δωρεάν σε όλη την Ελλάδα. Για παραγγελίες κάτω από 150€, το κόστος μεταφορικών υπολογίζεται στο ταμείο ανάλογα με την περιοχή και το βάρος της παραγγελίας."
+    },
+    {
+        question: "Πόσος χρόνος χρειάζεται για την παράδοση;",
+        answer: "Οι περισσότερες παραγγελίες παραδίδονται εντός 3-7 εργάσιμων ημερών. Για δυσπρόσιτες περιοχές ή προϊόντα με ειδική παραγγελία, ο χρόνος μπορεί να διαφέρει. Θα λάβετε ενημέρωση με τον αριθμό παρακολούθησης μόλις η παραγγελία σας αποσταλεί."
+    },
+    {
+        question: "Ποια είναι η πολιτική επιστροφών σας;",
+        answer: "Έχετε το δικαίωμα να επιστρέψετε οποιοδήποτε προϊόν εντός 14 ημερών από την παραλαβή του, εφόσον βρίσκεται στην αρχική του, κλειστή συσκευασία. Για περισσότερες λεπτομέρειες, παρακαλούμε διαβάστε την Πολιτική Επιστροφής Χρημάτων μας."
+    },
+    {
+        question: "Τα προϊόντα έρχονται συναρμολογημένα;",
+        answer: "Τα περισσότερα έπιπλα γραφείου παραδίδονται ασυναρμολόγητα σε επίπεδη συσκευασία για ασφαλέστερη μεταφορά. Περιλαμβάνουν αναλυτικές οδηγίες συναρμολόγησης. Για ορισμένα προϊόντα, ενδέχεται να προσφέρεται υπηρεσία συναρμολόγησης με επιπλέον χρέωση."
+    },
+     {
+        question: "Ποιοι τρόποι πληρωμής είναι αποδεκτοί;",
+        answer: "Δεχόμαστε πληρωμές μέσω πιστωτικών και χρεωστικών καρτών (Visa, Mastercard, Maestro, American Express), PayPal, Apple Pay, Google Pay, Klarna και IRIS. Όλες οι συναλλαγές είναι 100% ασφαλείς μέσω κρυπτογράφησης SSL."
+    }
+]
 
 export default function ContactPage() {
   return (
@@ -77,8 +106,22 @@ export default function ContactPage() {
                  <p className="text-sm">ΑΦΜ: EL047290419</p>
             </div>
         </div>
-
       </div>
+      
+      <div className="mt-16 border-t pt-12">
+        <h2 className="text-center text-3xl font-bold mb-8">Συχνές Ερωτήσεις</h2>
+        <Accordion type="single" collapsible className="w-full max-w-3xl mx-auto">
+            {faqItems.map((item, index) => (
+              <AccordionItem key={index} value={`item-${index}`}>
+                <AccordionTrigger className="text-lg text-left">{item.question}</AccordionTrigger>
+                <AccordionContent className="text-base text-muted-foreground">
+                  {item.answer}
+                </AccordionContent>
+              </AccordionItem>
+            ))}
+        </Accordion>
+      </div>
+
     </div>
   );
 }
