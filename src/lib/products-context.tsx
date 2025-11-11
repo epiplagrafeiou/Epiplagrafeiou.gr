@@ -45,7 +45,27 @@ export const ProductsProvider = ({ children }: { children: React.ReactNode }) =>
   }, [firestore]);
 
   const { data: fetchedProducts, isLoading } = useCollection<Omit<Product, 'id'>>(productsQuery);
-  const products = useMemo(() => fetchedProducts || [], [fetchedProducts]);
+
+  const initialManualProducts: Product[] = [
+    {
+      id: 'manual-001',
+      name: 'Σετ 5τμχ Ρόδες Για Καρέκλα Γραφείου',
+      slug: createSlug('Σετ 5τμχ Ρόδες Για Καρέκλα Γραφείου'),
+      price: 6.20,
+      description: 'Ρόδες σετ 5 τεμαχίων για καρέκλες γραφείου.',
+      imageId: 'https://www.zougris.gr/content/images/thumbs/0008329.jpeg',
+      category: 'Ανταλλακτικά',
+      images: ['https://www.zougris.gr/content/images/thumbs/0008329.jpeg'],
+      stock: 177,
+      supplierId: 'manual',
+    }
+  ];
+
+  const products = useMemo(() => {
+    const combined = [...initialManualProducts, ...(fetchedProducts || [])];
+    const uniqueProducts = Array.from(new Map(combined.map(p => [p.id, p])).values());
+    return uniqueProducts;
+  }, [fetchedProducts]);
   
   const resolveImageUrl = (idOrUrl: string | undefined): string => {
     if (!idOrUrl) return '';
