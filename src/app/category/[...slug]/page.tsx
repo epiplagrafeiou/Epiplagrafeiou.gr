@@ -1,12 +1,32 @@
+
 'use client';
 
 import { ProductCard } from '@/components/products/ProductCard';
-import { useProducts } from '@/lib/products-context';
+import { useProducts, type Product } from '@/lib/products-context';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { useParams, notFound } from 'next/navigation';
 import { createSlug } from '@/lib/utils';
 import Link from 'next/link';
+import type { Metadata } from 'next';
+
+
+type Props = {
+  params: { slug: string[] }
+}
+
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const slugPath = params.slug.join('/');
+  const pageTitle = params.slug[params.slug.length - 1].replace(/-/g, ' ');
+
+  return {
+    title: `${pageTitle} - Epipla Graphiou AI eShop`,
+    description: `Browse products in the ${pageTitle} category.`,
+    alternates: {
+      canonical: `/category/${slugPath}`,
+    },
+  }
+}
 
 export default function CategoryPage() {
   const { products, isLoaded, allCategories } = useProducts();

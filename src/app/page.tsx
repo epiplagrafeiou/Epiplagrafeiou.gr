@@ -9,7 +9,6 @@ import { useProducts } from '@/lib/products-context';
 import { createSlug } from '@/lib/utils';
 import { Armchair, Briefcase, Files, Library, Monitor, Wrench } from 'lucide-react';
 
-
 const mainCategories = [
     { name: 'Καρέκλες', slug: 'karekles-grafeiou', Icon: Armchair },
     { name: 'Γραφεία', slug: 'grafeia', Icon: Briefcase },

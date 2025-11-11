@@ -6,7 +6,7 @@ import { formatCurrency, cn, createSlug } from '@/lib/utils';
 import AddToCartButton from '@/components/products/AddToCartButton';
 import { Separator } from '@/components/ui/separator';
 import { ProductCard } from '@/components/products/ProductCard';
-import { useProducts } from '@/lib/products-context';
+import { useProducts, type Product } from '@/lib/products-context';
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import Link from 'next/link';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -21,6 +21,44 @@ import {
 import { Card, CardContent } from "@/components/ui/card"
 import { Truck, Award, Star, ShieldCheck } from 'lucide-react';
 import { PaymentIcons } from '@/components/icons/PaymentIcons';
+import type { Metadata } from 'next';
+
+// Note: This is a client component, so generateMetadata won't work directly here.
+// In a real app, you might fetch data in a parent server component and pass it down,
+// allowing you to use generateMetadata in that parent.
+// For this prototype, we'll manage metadata directly on the page, but it won't be as optimal for SEO
+// as server-side metadata generation. We can add a placeholder generateMetadata for now.
+
+type Props = {
+  params: { slug: string }
+}
+
+// This function would ideally fetch data on the server.
+// Since useProducts is a client hook, we can't use it here.
+// This is a placeholder for a real server-side data fetching implementation.
+async function getProductForMetadata(slug: string): Promise<Product | undefined> {
+  // In a real app, you'd fetch from your DB here, e.g.:
+  // const products = await db.products.findMany();
+  // For now, we return a mock structure.
+  return undefined;
+}
+
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const slug = params.slug;
+  // In a real app, you'd fetch the specific product here.
+  // const product = await getProductForMetadata(slug);
+  // if (!product) {
+  //   return { title: 'Product not found' }
+  // }
+  
+  return {
+    title: `${slug.replace(/-/g, ' ')} - Epipla Graphiou AI eShop`,
+    description: `Details for product ${slug}`,
+    alternates: {
+      canonical: `/products/${slug}`,
+    },
+  }
+}
 
 
 export default function ProductDetailPage() {
