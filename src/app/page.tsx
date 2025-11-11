@@ -6,6 +6,19 @@ import { Button } from '@/components/ui/button';
 import { ProductCard } from '@/components/products/ProductCard';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { useProducts } from '@/lib/products-context';
+import { createSlug } from '@/lib/utils';
+import { Armchair, Briefcase, Files, Library, Monitor, Wrench } from 'lucide-react';
+
+
+const mainCategories = [
+    { name: 'Καρέκλες', slug: 'karekles-grafeiou', Icon: Armchair },
+    { name: 'Γραφεία', slug: 'grafeia', Icon: Briefcase },
+    { name: 'Συρταριέρες', slug: 'syrtarieres', Icon: Files },
+    { name: 'Ραφιέρες', slug: 'rafieres-kai-bibliothikes', Icon: Library },
+    { name: 'Αξεσουάρ', slug: 'aksesouar-grafeiou', Icon: Monitor },
+    { name: 'Ανταλλακτικά', slug: 'antallaktika-gia-karekles-grafeiou', Icon: Wrench },
+]
+
 
 export default function Home() {
   const { products } = useProducts();
@@ -37,6 +50,24 @@ export default function Home() {
           <Button asChild className="mt-8 bg-accent text-accent-foreground hover:bg-accent/90" size="lg">
             <Link href="/products">Shop Now</Link>
           </Button>
+        </div>
+      </section>
+
+      <section className="py-16">
+        <div className="container mx-auto px-4 text-center">
+          <h2 className="mb-12 font-headline text-3xl font-bold">
+            Διάλεξε Κατηγορία
+          </h2>
+          <div className="flex flex-wrap items-center justify-center gap-8 md:gap-12">
+            {mainCategories.map(({ name, slug, Icon }) => (
+              <Link href={`/category/${slug}`} key={name} className="group flex flex-col items-center gap-3 transition-transform duration-200 hover:-translate-y-2">
+                <div className="flex h-28 w-28 items-center justify-center rounded-full bg-secondary transition-colors group-hover:bg-primary/10">
+                  <Icon className="h-12 w-12 text-muted-foreground transition-colors group-hover:text-primary" />
+                </div>
+                <span className="font-medium text-foreground">{name}</span>
+              </Link>
+            ))}
+          </div>
         </div>
       </section>
 
