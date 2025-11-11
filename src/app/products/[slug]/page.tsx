@@ -232,7 +232,7 @@ export default function ProductDetailPage() {
       {relatedProducts.length > 0 && (
         <section className="mt-16">
           <h2 className="mb-8 font-headline text-2xl font-bold">
-            You Might Also Like
+            Μπορεί επίσης να σας αρέσουν
           </h2>
           <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-4">
             {relatedProducts.map((p) => (
