@@ -253,7 +253,7 @@ export default function ProductDetailPage() {
 
   }, [product, products]);
 
-  const pointsEarned = Math.floor(product.price);
+  const pointsEarned = Math.floor(product.price * 5);
 
   return (
     <div className="container mx-auto px-4 py-12">

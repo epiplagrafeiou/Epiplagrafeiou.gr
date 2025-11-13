@@ -64,7 +64,7 @@ const CheckoutForm = () => {
 
   const totalShipping = totalAmount >= FREE_SHIPPING_THRESHOLD ? 0 : SHIPPING_COST;
   const total = totalAmount + totalShipping;
-  const pointsEarned = Math.floor(totalAmount);
+  const pointsEarned = Math.floor(totalAmount * 5);
 
   const onSubmit = async (data: CheckoutFormValues) => {
     if (!stripe || !elements) {

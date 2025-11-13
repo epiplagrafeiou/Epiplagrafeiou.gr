@@ -66,7 +66,7 @@ export default function CartPage() {
 
   const totalShipping = totalAmount >= FREE_SHIPPING_THRESHOLD || totalAmount === 0 ? 0 : SHIPPING_COST;
   const total = totalAmount + totalShipping;
-  const pointsEarned = Math.floor(totalAmount);
+  const pointsEarned = Math.floor(totalAmount * 5);
 
   if (cartItems.length === 0) {
     return (
