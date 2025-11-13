@@ -40,17 +40,13 @@ export function ProductCard({ product }: ProductCardProps) {
     setCurrentImage(primaryImageSrc);
   };
   
-  const handleActionClick = (e: React.MouseEvent, action: 'cart' | 'favorite') => {
+  const handleActionClick = (e: React.MouseEvent, action: 'favorite') => {
     e.preventDefault();
     e.stopPropagation();
-    if (action === 'cart') {
-      // This is now handled by AddToCartButton
-    } else {
-       toast({
-        title: 'Added to Favorites!',
-        description: `${product.name} has been added to your favorites.`,
+    toast({
+      title: 'Added to Favorites!',
+      description: `${product.name} has been added to your favorites.`,
     });
-    }
   }
 
   const productCategory = product.category.split(' > ').pop();
@@ -85,27 +81,10 @@ export function ProductCard({ product }: ProductCardProps) {
             <div className="mt-2 flex items-center justify-between">
                 <PriceDisplay price={product.price} />
             </div>
-
-            {product.images && product.images.length > 1 && (
-              <div className="mt-4 flex flex-wrap gap-2">
-                {product.images.slice(0, 5).map((img, index) => (
-                   <div key={index} className="relative h-8 w-8 rounded-full border">
-                     <Image
-                       src={img}
-                       alt={`${product.name} variant ${index + 1}`}
-                       fill
-                       className="rounded-full object-cover"
-                       onMouseOver={() => setCurrentImage(img)}
-                     />
-                   </div>
-                ))}
-              </div>
-            )}
             
             <div className="mt-auto flex items-end justify-between pt-4">
-                <div />
+                <AddToCartButton product={product} />
                 <div className="flex items-center gap-2">
-                    <AddToCartButton product={product} />
                     <Button
                         variant="secondary"
                         size="icon"
