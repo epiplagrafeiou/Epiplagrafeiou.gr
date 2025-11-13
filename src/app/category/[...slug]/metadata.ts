@@ -1,6 +1,4 @@
 import type { Metadata } from 'next';
-import { getProducts } from '@/lib/user-actions';
-import { createSlug } from '@/lib/utils';
 
 type Props = {
   params: { slug: string | string[] };
