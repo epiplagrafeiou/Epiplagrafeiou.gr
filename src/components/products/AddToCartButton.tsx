@@ -17,7 +17,9 @@ export default function AddToCartButton({ product, quantity = 1, ...props }: Add
   const { toast } = useToast();
   const isInStock = (product.stock ?? 0) > 0;
 
-  const handleAddToCart = () => {
+  const handleAddToCart = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
     addToCart(product, quantity);
     toast({
       title: 'Προστέθηκε στο καλάθι!',
@@ -27,22 +29,16 @@ export default function AddToCartButton({ product, quantity = 1, ...props }: Add
 
   if (!isInStock) {
     return (
-      <Button disabled variant="outline" size="sm">
+      <Button disabled variant="outline" size="sm" {...props}>
         Εξαντλημένο
       </Button>
     );
   }
 
   return (
-    <>
-      <Button onClick={handleAddToCart} {...props} className="hidden bg-accent text-accent-foreground hover:bg-accent/90 sm:inline-flex">
-        <ShoppingCart className="mr-2 h-4 w-4" />
-        Προσθήκη στο καλάθι
-      </Button>
-      <Button onClick={handleAddToCart} size="icon" {...props} className="inline-flex bg-accent text-accent-foreground hover:bg-accent/90 sm:hidden">
-        <ShoppingCart className="h-4 w-4" />
-        <span className="sr-only">Προσθήκη στο καλάθι</span>
-      </Button>
-    </>
+    <Button onClick={handleAddToCart} {...props} size="sm" className="bg-blue-600 text-white hover:bg-blue-700">
+      <ShoppingCart className="mr-2 h-4 w-4" />
+      Προσθήκη
+    </Button>
   );
 }

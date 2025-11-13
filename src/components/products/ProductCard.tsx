@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Heart, ShoppingBag } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { PriceDisplay } from './PriceDisplay';
+import AddToCartButton from './AddToCartButton';
 
 interface ProductCardProps {
   product: Product;
@@ -43,10 +44,7 @@ export function ProductCard({ product }: ProductCardProps) {
     e.preventDefault();
     e.stopPropagation();
     if (action === 'cart') {
-      toast({
-        title: 'Added to Cart!',
-        description: `${product.name} has been added to your cart.`,
-      });
+      // This is now handled by AddToCartButton
     } else {
        toast({
         title: 'Added to Favorites!',
@@ -64,7 +62,7 @@ export function ProductCard({ product }: ProductCardProps) {
       onMouseLeave={handleMouseLeave}
     >
       <Link href={`/products/${product.slug}`} className="group flex h-full flex-col">
-        <div className="relative h-64 w-full bg-background">
+        <div className="relative h-64 w-full bg-white">
             {currentImage ? (
               <Image
                 src={currentImage}
@@ -91,19 +89,11 @@ export function ProductCard({ product }: ProductCardProps) {
             <div className="mt-auto flex items-end justify-between pt-4">
                 <div />
                 <div className="flex items-center gap-2">
+                    <AddToCartButton product={product} />
                     <Button
                         variant="secondary"
                         size="icon"
-                        className="h-9 w-9 rounded-full bg-blue-600 text-white shadow-md hover:bg-blue-700"
-                        onClick={(e) => handleActionClick(e, 'cart')}
-                        aria-label="Add to cart"
-                    >
-                        <ShoppingBag className="h-5 w-5" />
-                    </Button>
-                    <Button
-                        variant="secondary"
-                        size="icon"
-                        className="h-9 w-9 rounded-full bg-gray-200 text-gray-800 shadow-md hover:bg-gray-300"
+                        className="h-9 w-9 shrink-0 rounded-full bg-gray-200 text-gray-800 shadow-md hover:bg-gray-300"
                         onClick={(e) => handleActionClick(e, 'favorite')}
                         aria-label="Add to favorites"
                     >
