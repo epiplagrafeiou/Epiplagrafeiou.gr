@@ -1,3 +1,4 @@
+
 import Image from 'next/image';
 
 const paymentMethods = [
@@ -5,6 +6,7 @@ const paymentMethods = [
   { name: 'Mastercard', src: 'https://i.postimg.cc/qR8f2jB3/mastercard.png', width: 50, height: 32 },
   { name: 'Maestro', src: 'https://i.postimg.cc/Y0g0xCDJ/maestro.png', width: 50, height: 32 },
   { name: 'American Express', src: 'https://i.postimg.cc/PryM21xq/amex.png', width: 50, height: 32 },
+  { name: 'Stripe', src: 'https://i.postimg.cc/W4Yj227Q/5968382.png', width: 50, height: 32 },
   { name: 'PayPal', src: 'https://i.postimg.cc/RZB5sFhN/paypal.png', width: 50, height: 32 },
   { name: 'Apple Pay', src: 'https://i.postimg.cc/bN3wVz3D/apple-pay.png', width: 50, height: 32 },
   { name: 'Google Pay', src: 'https://i.postimg.cc/x15tXVr5/google-pay.png', width: 50, height: 32 },
