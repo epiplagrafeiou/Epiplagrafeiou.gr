@@ -64,7 +64,7 @@ export function ProductCard({ product }: ProductCardProps) {
       onMouseLeave={handleMouseLeave}
     >
       <Link href={`/products/${product.slug}`} className="group flex h-full flex-col">
-        <div className="relative h-64 w-full bg-secondary/30">
+        <div className="relative h-64 w-full bg-background">
             {currentImage ? (
               <Image
                 src={currentImage}
