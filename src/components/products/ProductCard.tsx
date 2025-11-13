@@ -82,9 +82,8 @@ export function ProductCard({ product }: ProductCardProps) {
             <div className="mt-2 flex items-center justify-between">
                 <PriceDisplay price={product.price} />
             </div>
-            <div className="mt-1 text-xs font-medium text-green-600 flex items-center gap-1">
-              <Award className="h-3 w-3" />
-              Κερδίζεις {pointsEarned} πόντους
+            <div className="mt-1 text-xs text-blue-600">
+              {pointsEarned} πόντους ανταμοιβής
             </div>
             
             <div className="mt-auto flex items-end justify-between pt-4">
