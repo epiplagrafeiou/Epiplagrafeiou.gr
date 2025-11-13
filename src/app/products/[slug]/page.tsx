@@ -215,7 +215,6 @@ export default function ProductDetailPage() {
     // This is a heuristic. We can make it smarter.
     // e.g., if the last word is a color, remove it.
     // For now, let's try removing the last 1-2 words if they seem like variations.
-    // A more robust approach might involve NLP or pre-defined product groups.
     if (words.length > 3) {
       return words.slice(0, words.length - 2).join(' ');
     }
@@ -253,6 +252,8 @@ export default function ProductDetailPage() {
                 .slice(0, 4);
 
   }, [product, products]);
+
+  const pointsEarned = Math.floor(product.price);
 
   return (
     <div className="container mx-auto px-4 py-12">
@@ -351,6 +352,10 @@ export default function ProductDetailPage() {
               </p>
             )}
           </div>
+          <div className="mt-2 text-sm font-medium text-green-600 flex items-center gap-1">
+              <Award className="h-4 w-4" />
+              Κερδίζεις {pointsEarned} πόντους με αυτή την αγορά!
+          </div>
           <Separator className="my-6" />
           <div
             className="prose prose-sm max-w-none text-muted-foreground"
@@ -398,5 +403,3 @@ export default function ProductDetailPage() {
     </div>
   );
 }
-
-    

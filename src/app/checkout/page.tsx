@@ -28,6 +28,7 @@ import { Separator } from '@/components/ui/separator';
 import { loadStripe, StripeElementsOptions } from '@stripe/stripe-js';
 import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import { useToast } from '@/hooks/use-toast';
+import { Award } from 'lucide-react';
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || '');
 
@@ -63,6 +64,7 @@ const CheckoutForm = () => {
 
   const totalShipping = totalAmount >= FREE_SHIPPING_THRESHOLD ? 0 : SHIPPING_COST;
   const total = totalAmount + totalShipping;
+  const pointsEarned = Math.floor(totalAmount);
 
   const onSubmit = async (data: CheckoutFormValues) => {
     if (!stripe || !elements) {
@@ -113,7 +115,7 @@ const CheckoutForm = () => {
       }
 
       if (paymentIntent?.status === 'succeeded') {
-        toast({ title: 'Επιτυχία!', description: 'Η πληρωμή σας ολοκληρώθηκε με επιτυχία.' });
+        toast({ title: 'Επιτυχία!', description: `Η πληρωμή σας ολοκληρώθηκε. Κερδίσατε ${pointsEarned} πόντους!` });
         clearCart();
         // Redirect to a thank you page
       }
@@ -159,6 +161,12 @@ const CheckoutForm = () => {
               <div className="space-y-2">
                 <div className="flex justify-between"><span className="text-muted-foreground">Υποσύνολο</span><span>{formatCurrency(totalAmount)}</span></div>
                 <div className="flex justify-between"><span className="text-muted-foreground">Μεταφορικά</span><span>{totalShipping > 0 ? formatCurrency(totalShipping) : 'Δωρεάν'}</span></div>
+                <div className="flex justify-between text-sm">
+                  <span className="flex items-center gap-2 text-muted-foreground">
+                    <Award className="h-4 w-4" /> Points Earned
+                  </span>
+                  <span className="font-medium">{pointsEarned}</span>
+                </div>
                 <Separator className="my-2" />
                 <div className="flex justify-between text-lg font-bold"><span>Σύνολο</span><span>{formatCurrency(total)}</span></div>
               </div>

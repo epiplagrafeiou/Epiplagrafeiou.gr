@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
 import { formatCurrency } from '@/lib/utils';
-import { Trash2, ShoppingBag } from 'lucide-react';
+import { Trash2, ShoppingBag, Award } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 
 const SHIPPING_COST = 10;
@@ -66,6 +66,7 @@ export default function CartPage() {
 
   const totalShipping = totalAmount >= FREE_SHIPPING_THRESHOLD || totalAmount === 0 ? 0 : SHIPPING_COST;
   const total = totalAmount + totalShipping;
+  const pointsEarned = Math.floor(totalAmount);
 
   if (cartItems.length === 0) {
     return (
@@ -102,6 +103,12 @@ export default function CartPage() {
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Shipping</span>
                 <span>{totalShipping > 0 ? formatCurrency(totalShipping) : 'Free'}</span>
+              </div>
+               <div className="flex justify-between text-sm">
+                <span className="flex items-center gap-2 text-muted-foreground">
+                  <Award className="h-4 w-4" /> Points Earned
+                </span>
+                <span className="font-medium">{pointsEarned}</span>
               </div>
               <Separator />
               <div className="flex justify-between font-bold">
