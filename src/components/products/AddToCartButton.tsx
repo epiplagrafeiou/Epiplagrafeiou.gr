@@ -27,17 +27,23 @@ export default function AddToCartButton({ product, quantity = 1, ...props }: Add
 
   if (!isInStock) {
     return (
-      <Button disabled {...props}>
-        Εξαντλημένο
+      <Button disabled {...props} size="icon" className="sm:hidden">
+        <ShoppingCart className="h-4 w-4" />
+        <span className="sr-only">Εξαντλημένο</span>
       </Button>
     )
   }
 
   return (
-    <Button onClick={handleAddToCart} {...props} className="bg-accent text-accent-foreground hover:bg-accent/90">
-      <ShoppingCart className="mr-2 h-4 w-4" />
-      Προσθήκη στο καλάθι
-    </Button>
+    <>
+        <Button onClick={handleAddToCart} {...props} className="hidden bg-accent text-accent-foreground hover:bg-accent/90 sm:inline-flex">
+            <ShoppingCart className="mr-2 h-4 w-4" />
+            Προσθήκη στο καλάθι
+        </Button>
+        <Button onClick={handleAddToCart} size="icon" {...props} className="inline-flex bg-accent text-accent-foreground hover:bg-accent/90 sm:hidden">
+            <ShoppingCart className="h-4 w-4" />
+            <span className="sr-only">Προσθήκη στο καλάθι</span>
+        </Button>
+    </>
   );
 }
-

@@ -56,6 +56,8 @@ export function ProductCard({ product }: ProductCardProps) {
     });
   }
 
+  const isInStock = (product.stock ?? 0) > 0;
+
   return (
     <Card
       className="flex flex-col overflow-hidden rounded-lg shadow-sm transition-shadow hover:shadow-lg"
@@ -106,7 +108,12 @@ export function ProductCard({ product }: ProductCardProps) {
             </p>
           )}
         </div>
-        <AddToCartButton product={product} />
+        
+        {isInStock ? (
+          <AddToCartButton product={product} />
+        ) : (
+          <Button disabled variant="outline" size="sm" className="sm:hidden">Εξαντλημένο</Button>
+        )}
       </CardFooter>
     </Card>
   );
