@@ -33,7 +33,7 @@ export default function Home() {
             alt={heroImage.description}
             width={1920}
             height={400} 
-            className="object-contain w-full h-auto max-h-[250px]"
+            className="object-contain w-full h-auto max-h-[400px]"
             priority
             data-ai-hint={heroImage.imageHint}
           />
