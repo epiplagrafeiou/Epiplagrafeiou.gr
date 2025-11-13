@@ -109,11 +109,7 @@ export function ProductCard({ product }: ProductCardProps) {
           )}
         </div>
         
-        {isInStock ? (
-          <AddToCartButton product={product} />
-        ) : (
-          <Button disabled variant="outline" size="sm" className="sm:hidden">Εξαντλημένο</Button>
-        )}
+        <AddToCartButton product={product} />
       </CardFooter>
     </Card>
   );
