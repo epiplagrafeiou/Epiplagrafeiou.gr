@@ -1,16 +1,14 @@
 
 'use client';
 
-import { useState } from 'react';
-import { useForm } from 'react-hook-form';
+import { useState, useEffect } from 'react';
+import { useForm, FormProvider } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useCart } from '@/lib/cart-context';
 import { formatCurrency } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import {
   Form,
   FormControl,
@@ -27,7 +25,11 @@ import {
 } from '@/components/ui/card';
 import Image from 'next/image';
 import { Separator } from '@/components/ui/separator';
-import { CreditCard } from 'lucide-react';
+import { loadStripe, StripeElementsOptions } from '@stripe/stripe-js';
+import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
+import { useToast } from '@/hooks/use-toast';
+
+const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || '');
 
 const checkoutSchema = z.object({
   email: z.string().email({ message: 'Το email δεν είναι έγκυρο.' }),
@@ -38,247 +40,199 @@ const checkoutSchema = z.object({
   city: z.string().min(1, 'Η πόλη είναι απαραίτητη.'),
   postalCode: z.string().min(1, 'Ο ταχυδρομικός κώδικας είναι απαραίτητος.'),
   country: z.string().min(1, 'Η χώρα είναι απαραίτητη.'),
-  paymentMethod: z.enum(['card', 'applepay', 'googlepay', 'klarna', 'iris']).default('card'),
-  cardName: z.string().optional(),
-  cardNumber: z.string().optional(),
-  cardExpiry: z.string().optional(),
-  cardCVC: z.string().optional(),
-}).refine(data => {
-    if (data.paymentMethod === 'card') {
-        return !!data.cardName && !!data.cardNumber && !!data.cardExpiry && !!data.cardCVC;
-    }
-    return true;
-}, {
-    message: "Τα στοιχεία της κάρτας είναι απαραίτητα για πληρωμή με κάρτα.",
-    path: ["cardName"],
 });
-
 
 type CheckoutFormValues = z.infer<typeof checkoutSchema>;
 
 const SHIPPING_COST = 10;
 const FREE_SHIPPING_THRESHOLD = 150;
 
-export default function CheckoutPage() {
+const CheckoutForm = () => {
   const { cartItems, totalAmount, clearCart } = useCart();
-  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState('card');
+  const { toast } = useToast();
+  const stripe = useStripe();
+  const elements = useElements();
+  const [isProcessing, setIsProcessing] = useState(false);
 
   const form = useForm<CheckoutFormValues>({
     resolver: zodResolver(checkoutSchema),
     defaultValues: {
       country: 'Ελλάδα',
-      paymentMethod: 'card',
     },
   });
 
   const totalShipping = totalAmount >= FREE_SHIPPING_THRESHOLD ? 0 : SHIPPING_COST;
   const total = totalAmount + totalShipping;
 
-  const onSubmit = (data: CheckoutFormValues) => {
-    console.log(data);
-    // Here you would process the payment
-    alert('Payment successful! (mock)');
-    clearCart();
-    // Redirect to a confirmation page
+  const onSubmit = async (data: CheckoutFormValues) => {
+    if (!stripe || !elements) {
+      toast({ variant: 'destructive', title: 'Σφάλμα', description: 'Το Stripe δεν έχει φορτωθεί σωστά.' });
+      return;
+    }
+
+    const cardElement = elements.getElement(CardElement);
+    if (!cardElement) {
+      toast({ variant: 'destructive', title: 'Σφάλμα', description: 'Το πεδίο της κάρτας δεν βρέθηκε.' });
+      return;
+    }
+
+    setIsProcessing(true);
+
+    try {
+      const res = await fetch('/api/create-payment-intent', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ amount: Math.round(total * 100) }), // Amount in cents
+      });
+
+      const { clientSecret, error: backendError } = await res.json();
+
+      if (backendError) {
+        throw new Error(backendError);
+      }
+
+      const { error: stripeError, paymentIntent } = await stripe.confirmCardPayment(clientSecret, {
+        payment_method: {
+          card: cardElement,
+          billing_details: {
+            name: `${data.firstName} ${data.lastName}`,
+            email: data.email,
+            phone: data.phone,
+            address: {
+              line1: data.address,
+              city: data.city,
+              postal_code: data.postalCode,
+              country: 'GR', // Assuming Greece
+            },
+          },
+        },
+      });
+
+      if (stripeError) {
+        throw stripeError;
+      }
+
+      if (paymentIntent?.status === 'succeeded') {
+        toast({ title: 'Επιτυχία!', description: 'Η πληρωμή σας ολοκληρώθηκε με επιτυχία.' });
+        clearCart();
+        // Redirect to a thank you page
+      }
+
+    } catch (error: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Η πληρωμή απέτυχε',
+        description: error.message || 'Παρουσιάστηκε ένα άγνωστο σφάλμα.',
+      });
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  return (
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="grid grid-cols-1 gap-x-12 gap-y-8 lg:grid-cols-2">
+        <div className="lg:order-2">
+          <Card>
+            <CardHeader>
+              <CardTitle>Η Παραγγελία Σας</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {cartItems.map((item) => {
+                  const image = item.imageId;
+                  return (
+                    <div key={item.id} className="flex items-center gap-4">
+                      <div className="relative h-16 w-16 flex-shrink-0 overflow-hidden rounded-md border">
+                        {image && <Image src={image} alt={item.name} fill className="object-cover" />}
+                        <span className="absolute -right-2 -top-2 flex h-6 w-6 items-center justify-center rounded-full bg-secondary text-sm font-medium">{item.quantity}</span>
+                      </div>
+                      <div className="flex-grow">
+                        <p className="font-medium">{item.name}</p>
+                      </div>
+                      <p className="font-medium">{formatCurrency(item.price * item.quantity)}</p>
+                    </div>
+                  );
+                })}
+              </div>
+              <Separator className="my-6" />
+              <div className="space-y-2">
+                <div className="flex justify-between"><span className="text-muted-foreground">Υποσύνολο</span><span>{formatCurrency(totalAmount)}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Μεταφορικά</span><span>{totalShipping > 0 ? formatCurrency(totalShipping) : 'Δωρεάν'}</span></div>
+                <Separator className="my-2" />
+                <div className="flex justify-between text-lg font-bold"><span>Σύνολο</span><span>{formatCurrency(total)}</span></div>
+              </div>
+              <Button type="submit" size="lg" className="w-full mt-6 bg-accent text-accent-foreground hover:bg-accent/90" disabled={isProcessing || !stripe}>
+                {isProcessing ? 'Επεξεργασία...' : `Πληρωμή ${formatCurrency(total)}`}
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+        <div className="lg:order-1 space-y-8">
+          <h1 className="font-headline text-3xl font-bold">Checkout</h1>
+          <Card>
+            <CardHeader><CardTitle>Στοιχεία Επικοινωνίας</CardTitle></CardHeader>
+            <CardContent className="space-y-4">
+              <FormField control={form.control} name="email" render={({ field }) => (<FormItem><FormLabel>Email</FormLabel><FormControl><Input placeholder="you@example.com" {...field} /></FormControl><FormMessage /></FormItem>)} />
+              <FormField control={form.control} name="phone" render={({ field }) => (<FormItem><FormLabel>Τηλέφωνο</FormLabel><FormControl><Input placeholder="69..." {...field} /></FormControl><FormMessage /></FormItem>)} />
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader><CardTitle>Διεύθυνση Αποστολής</CardTitle></CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <FormField name="firstName" render={({ field }) => (<FormItem><FormLabel>Όνομα</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
+                <FormField name="lastName" render={({ field }) => (<FormItem><FormLabel>Επώνυμο</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
+              </div>
+              <FormField name="address" render={({ field }) => (<FormItem><FormLabel>Διεύθυνση</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                <FormField name="city" render={({ field }) => (<FormItem><FormLabel>Πόλη</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
+                <FormField name="postalCode" render={({ field }) => (<FormItem><FormLabel>Ταχυδρομικός Κώδικας</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
+                <FormField name="country" render={({ field }) => (<FormItem><FormLabel>Χώρα</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader><CardTitle>Πληρωμή με Κάρτα</CardTitle></CardHeader>
+            <CardContent>
+                <CardElement options={{
+                    style: {
+                        base: {
+                            fontSize: '16px',
+                            color: '#424770',
+                            '::placeholder': {
+                                color: '#aab7c4',
+                            },
+                        },
+                        invalid: {
+                            color: '#9e2146',
+                        },
+                    },
+                }} className="p-3 border rounded-md" />
+            </CardContent>
+          </Card>
+        </div>
+      </form>
+    </Form>
+  );
+};
+
+export default function CheckoutPage() {
+  const [clientSecret, setClientSecret] = useState('');
+  const { totalAmount } = useCart();
+  const totalShipping = totalAmount >= FREE_SHIPPING_THRESHOLD ? 0 : SHIPPING_COST;
+  const total = totalAmount + totalShipping;
+
+  const options: StripeElementsOptions = {
+    // clientSecret is not needed here as we fetch it on submit
+    appearance: { theme: 'stripe' },
   };
 
   return (
     <div className="container mx-auto px-4 py-12">
-       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="grid grid-cols-1 gap-x-12 gap-y-8 lg:grid-cols-2">
-            <div className="lg:order-2">
-            <Card>
-                <CardHeader>
-                <CardTitle>Η Παραγγελία Σας</CardTitle>
-                </CardHeader>
-                <CardContent>
-                <div className="space-y-4">
-                    {cartItems.map((item) => {
-                    const image = item.imageId;
-                    return (
-                        <div key={item.id} className="flex items-center gap-4">
-                        <div className="relative h-16 w-16 flex-shrink-0 overflow-hidden rounded-md border">
-                            {image && (
-                            <Image
-                                src={image}
-                                alt={item.name}
-                                fill
-                                className="object-cover"
-                            />
-                            )}
-                            <span className="absolute -right-2 -top-2 flex h-6 w-6 items-center justify-center rounded-full bg-secondary text-sm font-medium">
-                            {item.quantity}
-                            </span>
-                        </div>
-                        <div className="flex-grow">
-                            <p className="font-medium">{item.name}</p>
-                        </div>
-                        <p className="font-medium">
-                            {formatCurrency(item.price * item.quantity)}
-                        </p>
-                        </div>
-                    );
-                    })}
-                </div>
-                <Separator className="my-6" />
-                <div className="space-y-2">
-                    <div className="flex justify-between">
-                    <span className="text-muted-foreground">Υποσύνολο</span>
-                    <span>{formatCurrency(totalAmount)}</span>
-                    </div>
-                    <div className="flex justify-between">
-                    <span className="text-muted-foreground">Μεταφορικά</span>
-                    <span>{totalShipping > 0 ? formatCurrency(totalShipping) : 'Δωρεάν'}</span>
-                    </div>
-                    <Separator className="my-2" />
-                    <div className="flex justify-between text-lg font-bold">
-                    <span>Σύνολο</span>
-                    <span>{formatCurrency(total)}</span>
-                    </div>
-                </div>
-                <Button type="submit" size="lg" className="w-full mt-6 bg-accent text-accent-foreground hover:bg-accent/90">
-                    Πληρωμή {formatCurrency(total)}
-                </Button>
-                </CardContent>
-            </Card>
-            </div>
-
-            <div className="lg:order-1 space-y-8">
-            <h1 className="font-headline text-3xl font-bold">Checkout</h1>
-                <Card>
-                    <CardHeader><CardTitle>Στοιχεία Επικοινωνίας</CardTitle></CardHeader>
-                    <CardContent className="space-y-4">
-                        <FormField
-                            control={form.control}
-                            name="email"
-                            render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Email</FormLabel>
-                                <FormControl>
-                                <Input placeholder="you@example.com" {...field} />
-                                </FormControl>
-                                <FormMessage />
-                            </FormItem>
-                            )}
-                        />
-                        <FormField
-                            control={form.control}
-                            name="phone"
-                            render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Τηλέφωνο</FormLabel>
-                                <FormControl>
-                                <Input placeholder="69..." {...field} />
-                                </FormControl>
-                                <FormMessage />
-                            </FormItem>
-                            )}
-                        />
-                    </CardContent>
-                </Card>
-
-                <Card>
-                    <CardHeader><CardTitle>Διεύθυνση Αποστολής</CardTitle></CardHeader>
-                    <CardContent className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                        <FormField name="firstName" render={({ field }) => (
-                        <FormItem><FormLabel>Όνομα</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-                        )} />
-                        <FormField name="lastName" render={({ field }) => (
-                        <FormItem><FormLabel>Επώνυμο</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-                        )} />
-                    </div>
-                    <FormField name="address" render={({ field }) => (
-                        <FormItem><FormLabel>Διεύθυνση</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-                    )} />
-                    <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-                        <FormField name="city" render={({ field }) => (
-                        <FormItem><FormLabel>Πόλη</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-                        )} />
-                        <FormField name="postalCode" render={({ field }) => (
-                        <FormItem><FormLabel>Ταχυδρομικός Κώδικας</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-                        )} />
-                        <FormField name="country" render={({ field }) => (
-                        <FormItem><FormLabel>Χώρα</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-                        )} />
-                    </div>
-                    </CardContent>
-                </Card>
-
-                <Card>
-                    <CardHeader><CardTitle>Πληρωμή</CardTitle></CardHeader>
-                    <CardContent className="space-y-6">
-                        <FormField
-                        control={form.control}
-                        name="paymentMethod"
-                        render={({ field }) => (
-                            <FormItem>
-                            <FormControl>
-                                <RadioGroup
-                                    onValueChange={(value) => {
-                                        field.onChange(value);
-                                        setSelectedPaymentMethod(value);
-                                    }}
-                                    defaultValue={field.value}
-                                    className="flex flex-col space-y-1"
-                                >
-                                <Label className="rounded-md border-2 border-primary bg-primary/10 p-4 has-[[data-state=checked]]:bg-primary has-[[data-state=checked]]:text-primary-foreground">
-                                    <div className="flex items-center justify-between">
-                                        <div className="flex items-center gap-4">
-                                            <RadioGroupItem value="card" id="card" />
-                                            <CreditCard className="h-6 w-6" />
-                                            <span>Πιστωτική/Χρεωστική Κάρτα</span>
-                                        </div>
-                                    </div>
-                                </Label>
-                                {selectedPaymentMethod === 'card' && (
-                                    <div className="p-4 space-y-4">
-                                        <FormField name="cardName" render={({ field }) => (
-                                            <FormItem><FormLabel>Όνομα Κατόχου</FormLabel><FormControl><Input placeholder="Όνομα στην κάρτα" {...field} /></FormControl><FormMessage /></FormItem>
-                                        )} />
-                                        <FormField name="cardNumber" render={({ field }) => (
-                                            <FormItem><FormLabel>Αριθμός Κάρτας</FormLabel><FormControl><Input placeholder="0000 0000 0000 0000" {...field} /></FormControl><FormMessage /></FormItem>
-                                        )} />
-                                        <div className="grid grid-cols-2 gap-4">
-                                            <FormField name="cardExpiry" render={({ field }) => (
-                                                <FormItem><FormLabel>Λήξη (MM/YY)</FormLabel><FormControl><Input placeholder="MM/YY" {...field} /></FormControl><FormMessage /></FormItem>
-                                            )} />
-                                            <FormField name="cardCVC" render={({ field }) => (
-                                                <FormItem><FormLabel>CVC</FormLabel><FormControl><Input placeholder="123" {...field} /></FormControl><FormMessage /></FormItem>
-                                            )} />
-                                        </div>
-                                    </div>
-                                )}
-                                
-                                <div className="grid grid-cols-2 gap-4 pt-4">
-                                    <Label className="flex items-center justify-center rounded-md border p-4 h-14 has-[[data-state=checked]]:border-primary">
-                                        <RadioGroupItem value="applepay" id="applepay" className="sr-only" />
-                                        <span>Apple Pay</span>
-                                    </Label>
-                                    <Label className="flex items-center justify-center rounded-md border p-4 h-14 has-[[data-state=checked]]:border-primary">
-                                        <RadioGroupItem value="googlepay" id="googlepay" className="sr-only" />
-                                        <span>Google Pay</span>
-                                    </Label>
-                                    <Label className="flex items-center justify-center rounded-md border p-4 h-14 has-[[data-state=checked]]:border-primary">
-                                        <RadioGroupItem value="klarna" id="klarna" className="sr-only" />
-                                        <span>Klarna</span>
-                                    </Label>
-                                    <Label className="flex items-center justify-center rounded-md border p-4 h-14 has-[[data-state=checked]]:border-primary">
-                                        <RadioGroupItem value="iris" id="iris" className="sr-only" />
-                                        <span>IRIS</span>
-                                    </Label>
-                                </div>
-                                </RadioGroup>
-                            </FormControl>
-                            <FormMessage />
-                            </FormItem>
-                        )}
-                        />
-                    </CardContent>
-                </Card>
-            </div>
-        </form>
-      </Form>
+      <Elements stripe={stripePromise} options={options}>
+        <CheckoutForm />
+      </Elements>
     </div>
   );
 }
