@@ -33,14 +33,14 @@ service cloud.firestore {
     }
 
     /**
-     * @description Allows a user to read and manage their own profile. Allows admins to read any profile.
+     * @description Allows a user to read and manage their own profile. Admins can read any profile.
      */
     match /users/{userId} {
       allow get: if isOwner(userId) || isAdmin();
       allow list: if false; // Explicitly prevent listing all users.
-      allow create: if isSelfCreation(userId);
-      allow update: if (isOwner(userId) || isAdmin()) && resource != null && request.resource.data.id == resource.data.id;
-      allow delete: if isExistingOwner(userId) || isAdmin();
+      allow create: if isOwner(userId);
+      allow update: if isOwner(userId) && isUpdatingOwnProfile(userId);
+      allow delete: if false; // Users should not be able to delete their own profiles.
     }
 
     /**
@@ -64,12 +64,11 @@ service cloud.firestore {
     return request.auth.uid == userId;
   }
 
-  function isExistingOwner(userId) {
-    return isOwner(userId) && resource != null;
-  }
-
-  function isSelfCreation(userId) {
-      return request.auth.uid == userId && request.resource.data.id == userId;
+  function isUpdatingOwnProfile(userId) {
+    // Users can only update their own profile, and cannot change their ID.
+    // They also cannot give themselves more points than allowed.
+    // For now, we only check the ID.
+    return request.resource.data.id == userId;
   }
 
   function isAdmin() {
