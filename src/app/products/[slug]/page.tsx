@@ -60,16 +60,6 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   }
 }
 
-const relatedCategoryMap: { [key: string]: string[] } = {
-  'καρέκλες': ['γραφεία', 'αξεσουάρ'],
-  'καρέκλα': ['γραφεία', 'αξεσουάρ'],
-  'chairs': ['desks', 'αξεσουάρ'],
-  'chair': ['desks', 'αξεσουάρ'],
-  'γραφεία': ['καρέκλες', 'συρταριέρες', 'βιβλιοθήκες'],
-  'γραφείο': ['καρέκλες', 'συρταριέρες', 'βιβλιοθήκες'],
-  'desk': ['καρέκλες', 'συρταριέρες', 'βιβλιοθήκες'],
-};
-
 
 export default function ProductDetailPage() {
   const { products, isLoaded } = useProducts();
@@ -218,43 +208,50 @@ export default function ProductDetailPage() {
   if (!product) {
     notFound();
   }
+  
+  const getBaseProductName = (name: string) => {
+    // Tries to find a common base name by removing color words or final descriptive words.
+    const words = name.split(' ');
+    // This is a heuristic. We can make it smarter.
+    // e.g., if the last word is a color, remove it.
+    // For now, let's try removing the last 1-2 words if they seem like variations.
+    // A more robust approach might involve NLP or pre-defined product groups.
+    if (words.length > 3) {
+      return words.slice(0, words.length - 2).join(' ');
+    }
+    return words.slice(0, words.length - 1).join(' ');
+  };
 
   const relatedProducts = useMemo(() => {
     if (!product) return [];
 
-    const productKeywords = product.category.toLowerCase().split(' > ').pop()?.split(' ') || [];
-    let relatedCategoryKeywords: string[] = [];
-
-    for (const keyword of productKeywords) {
-      if (relatedCategoryMap[keyword]) {
-        relatedCategoryKeywords.push(...relatedCategoryMap[keyword]);
-      }
-    }
-
-    // Add products from the same category as a fallback
-    relatedCategoryKeywords.push(product.category.toLowerCase().split(' > ').pop() || '');
+    const baseName = getBaseProductName(product.name);
     
-    relatedCategoryKeywords = Array.from(new Set(relatedCategoryKeywords)); // Make unique
+    // 1. Prioritize products with a similar base name (likely color/size variations)
+    let candidates = products.filter(p => 
+      p.id !== product.id && 
+      p.name.includes(baseName) &&
+      baseName.length > 5 // Avoid matching short common words
+    );
 
-    const candidates = products
-      .filter(p => {
-        if (p.id === product.id) return false;
-        const pCategoryLower = p.category.toLowerCase();
-        return relatedCategoryKeywords.some(keyword => pCategoryLower.includes(keyword));
-      })
-      // Shuffle and take 4
-      .sort(() => 0.5 - Math.random())
-      .slice(0, 4);
+    // 2. If not enough similar-named products, fall back to the same sub-category
+    if (candidates.length < 4) {
+      const productSubCategory = product.category.split(' > ').pop();
+      const sameCategoryProducts = products.filter(p => 
+        p.id !== product.id &&
+        !candidates.some(c => c.id === p.id) && // Exclude already found candidates
+        p.category.split(' > ').pop() === productSubCategory
+      );
+      candidates.push(...sameCategoryProducts);
+    }
+    
+    // Shuffle, remove duplicates and take the top 4
+    return Array.from(new Set(candidates.map(p => p.id)))
+                .map(id => products.find(p => p.id === id)!)
+                .filter(Boolean) // Make sure product is found
+                .sort(() => 0.5 - Math.random()) // Shuffle
+                .slice(0, 4);
 
-      if (candidates.length < 4) {
-          const fallback = products
-              .filter(p => p.category === product.category && p.id !== product.id)
-              .sort(() => 0.5 - Math.random())
-              .slice(0, 4 - candidates.length);
-          return [...candidates, ...fallback];
-      }
-
-    return candidates;
   }, [product, products]);
 
   return (
