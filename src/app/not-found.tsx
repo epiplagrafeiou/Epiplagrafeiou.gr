@@ -9,8 +9,8 @@ import Link from 'next/link';
 export default function NotFound() {
   const { products } = useProducts();
 
-  // Get 4 random products to suggest
-  const suggestedProducts = products.sort(() => 0.5 - Math.random()).slice(0, 4);
+  // Get first 4 products to suggest
+  const suggestedProducts = products.slice(0, 4);
 
   return (
     <div className="container mx-auto px-4 py-16 text-center">

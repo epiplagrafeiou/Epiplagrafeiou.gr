@@ -17,9 +17,8 @@ import {
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Rectangle } from 'recharts';
 import { DollarSign, ShoppingCart, Users, TrendingUp } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
-import { suppliers } from '@/lib/data';
-
-const chartData = suppliers.map(s => ({ month: s.name, desktop: s.profitability, mobile: Math.random() * 2000 + 1000 }));
+import { useSuppliers } from '@/lib/suppliers-context';
+import { useMemo } from 'react';
 
 const chartConfig = {
   desktop: {
@@ -33,6 +32,13 @@ const chartConfig = {
 };
 
 export default function AdminDashboard() {
+  const { suppliers } = useSuppliers();
+
+  const chartData = useMemo(() => {
+    return suppliers.map(s => ({ month: s.name, desktop: s.profitability, mobile: s.profitability * 0.75 }));
+  }, [suppliers]);
+
+
   return (
     <div className="flex-1 space-y-4 p-8 pt-6">
       <div className="flex items-center justify-between space-y-2">
