@@ -9,8 +9,6 @@ import { Button } from '@/components/ui/button';
 import { useParams, notFound } from 'next/navigation';
 import { createSlug } from '@/lib/utils';
 import Link from 'next/link';
-import type { Metadata } from 'next';
-
 
 type Props = {
   params: { slug: string[] }
@@ -21,19 +19,6 @@ const featuredCategories = [
     { name: 'Καρέκλες Γραφείου', href: '/category/karekles-grafeiou' },
     { name: 'Βιβλιοθήκες', href: '/category/bibliothikes' },
 ]
-
-export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const slugPath = params.slug.join('/');
-  const pageTitle = params.slug[params.slug.length - 1].replace(/-/g, ' ');
-
-  return {
-    title: `${pageTitle} - Epipla Graphiou AI eShop`,
-    description: `Browse products in the ${pageTitle} category.`,
-    alternates: {
-      canonical: `/category/${slugPath}`,
-    },
-  }
-}
 
 export default function CategoryPage() {
   const { products, isLoaded, allCategories } = useProducts();
@@ -154,5 +139,4 @@ export default function CategoryPage() {
     </div>
   );
 }
-
     
