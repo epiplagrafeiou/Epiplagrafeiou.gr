@@ -26,13 +26,14 @@ export default function Home() {
 
   return (
     <div className="flex flex-col">
-      <section className="relative w-full h-[400px]">
+      <section className="w-full flex justify-center bg-secondary">
         {heroImage && (
           <Image
             src={heroImage.imageUrl}
             alt={heroImage.description}
-            fill
-            className="object-cover w-full h-full"
+            width={1170}
+            height={195}
+            className="object-contain"
             priority
             data-ai-hint={heroImage.imageHint}
           />
