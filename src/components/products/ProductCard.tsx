@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { useState, useEffect } from 'react';
 import type { Product } from '@/lib/products-context';
 import { Button } from '@/components/ui/button';
-import { Heart } from 'lucide-react';
+import { Heart, Award } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { PriceDisplay } from './PriceDisplay';
 import AddToCartButton from './AddToCartButton';
@@ -50,6 +50,7 @@ export function ProductCard({ product }: ProductCardProps) {
   }
 
   const productCategory = product.category.split(' > ').pop();
+  const pointsEarned = Math.floor(product.price * 5);
 
   return (
     <div
@@ -80,6 +81,10 @@ export function ProductCard({ product }: ProductCardProps) {
 
             <div className="mt-2 flex items-center justify-between">
                 <PriceDisplay price={product.price} />
+            </div>
+            <div className="mt-1 text-xs font-medium text-green-600 flex items-center gap-1">
+              <Award className="h-3 w-3" />
+              Κερδίζεις {pointsEarned} πόντους
             </div>
             
             <div className="mt-auto flex items-end justify-between pt-4">
