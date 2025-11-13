@@ -1,10 +1,9 @@
-
 // This file is for server-side Firebase initialization only.
 // Do not import it in client-side components.
 
 import { initializeApp, getApps, getApp, cert } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
-import { firebaseConfig } from './config'; 
+import { firebaseConfig } from '@/firebase/config'; 
 
 // IMPORTANT: You need to download your service account key JSON file from the Firebase console
 // and place it in your project. For Vercel/Next.js, it's common to store this

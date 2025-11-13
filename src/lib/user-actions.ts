@@ -2,7 +2,7 @@
 'use server';
 
 import { doc, getDoc, updateDoc, increment, collection, getDocs } from "firebase/firestore";
-import { firestore } from "@/firebase/server-init"; // Assuming you have a server-side init
+import { firestore } from "@/lib/firebase-admin"; // Assuming you have a server-side init
 import { createSlug } from '@/lib/utils';
 import type { Product } from './products-context';
 
