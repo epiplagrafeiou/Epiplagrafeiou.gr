@@ -52,6 +52,7 @@ export default function Footer() {
           </div>
         </div>
          <div className="mt-12 flex flex-col items-center justify-center border-t pt-8">
+            <h3 className="mb-4 text-lg font-semibold">Τρόποι Πληρωμής</h3>
             <PaymentIcons />
         </div>
       </div>
