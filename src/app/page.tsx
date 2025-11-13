@@ -26,30 +26,18 @@ export default function Home() {
 
   return (
     <div className="flex flex-col">
-      <section className="relative h-[60vh] w-full text-white">
+      <section className="relative w-full">
         {heroImage && (
           <Image
             src={heroImage.imageUrl}
             alt={heroImage.description}
-            fill
-            className="object-cover"
+            width={1920}
+            height={400} 
+            className="object-cover w-full h-auto"
             priority
             data-ai-hint={heroImage.imageHint}
           />
         )}
-        <div className="absolute inset-0 bg-black/50" />
-        <div className="relative z-10 flex h-full flex-col items-center justify-center text-center">
-          <h1 className="font-headline text-4xl font-bold md:text-6xl">
-            Scandinavian Simplicity
-          </h1>
-          <p className="mt-4 max-w-2xl text-lg">
-            Discover timeless, high-quality office furniture designed to inspire
-            productivity and comfort.
-          </p>
-          <Button asChild className="mt-8 bg-accent text-accent-foreground hover:bg-accent/90" size="lg">
-            <Link href="/products">Shop Now</Link>
-          </Button>
-        </div>
       </section>
 
       <section className="py-16">
