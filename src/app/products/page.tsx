@@ -17,15 +17,6 @@ import { Separator } from '@/components/ui/separator';
 import { useProducts } from '@/lib/products-context';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import type { Metadata } from 'next';
-
-export const metadata: Metadata = {
-  title: 'Products - Epipla Graphiou AI eShop',
-  description: 'Browse all products from our collection.',
-  alternates: {
-    canonical: '/products',
-  },
-};
 
 const PRODUCTS_PER_PAGE = 24;
 
