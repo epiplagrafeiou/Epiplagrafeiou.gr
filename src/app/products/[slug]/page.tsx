@@ -3,18 +3,17 @@ import { notFound } from 'next/navigation';
 import { createSlug } from '@/lib/utils';
 import { ProductCard } from '@/components/products/ProductCard';
 import { getProducts } from '@/lib/user-actions';
-import { Skeleton } from '@/components/ui/skeleton';
 import { ProductView } from '@/components/products/ProductView';
 import type { Metadata } from 'next';
 
 type Props = {
-  params: { slug: string }
-}
+  params: { slug: string };
+};
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const products = await getProducts();
   const product = products.find((p) => createSlug(p.name) === params.slug);
-  
+
   if (!product) {
     return { title: 'Product Not Found' };
   }
@@ -26,18 +25,18 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       canonical: `/products/${params.slug}`,
     },
     openGraph: {
-        title: product.name,
-        description: product.description,
-        images: [
-            {
-                url: product.imageId,
-                width: 800,
-                height: 600,
-                alt: product.name,
-            },
-        ],
-        type: 'product',
-    }
+      title: product.name,
+      description: product.description,
+      images: [
+        {
+          url: product.imageId,
+          width: 800,
+          height: 600,
+          alt: product.name,
+        },
+      ],
+      type: 'product',
+    },
   };
 }
 
@@ -49,7 +48,7 @@ export default async function ProductDetailPage({ params }: Props) {
   if (!product) {
     notFound();
   }
-  
+
   const getBaseProductName = (name: string) => {
     const words = name.split(' ');
     if (words.length > 3) {
@@ -59,28 +58,32 @@ export default async function ProductDetailPage({ params }: Props) {
   };
 
   const baseName = getBaseProductName(product.name);
-    
-  let relatedProducts = allProducts.filter(p => 
-    p.id !== product.id && 
-    p.name.includes(baseName) &&
-    baseName.length > 5 
+
+  let relatedProducts = allProducts.filter(
+    (p) =>
+      p.id !== product.id &&
+      p.name.includes(baseName) &&
+      baseName.length > 5
   );
 
   if (relatedProducts.length < 4) {
     const productSubCategory = product.category.split(' > ').pop();
-    const sameCategoryProducts = allProducts.filter(p => 
-      p.id !== product.id &&
-      !relatedProducts.some(c => c.id === p.id) &&
-      p.category.split(' > ').pop() === productSubCategory
+    const sameCategoryProducts = allProducts.filter(
+      (p) =>
+        p.id !== product.id &&
+        !relatedProducts.some((c) => c.id === p.id) &&
+        p.category.split(' > ').pop() === productSubCategory
     );
     relatedProducts.push(...sameCategoryProducts);
   }
-  
-  const finalRelatedProducts = Array.from(new Set(relatedProducts.map(p => p.id)))
-              .map(id => allProducts.find(p => p.id === id)!)
-              .filter(Boolean)
-              .sort(() => 0.5 - Math.random())
-              .slice(0, 4);
+
+  const finalRelatedProducts = Array.from(
+    new Set(relatedProducts.map((p) => p.id))
+  )
+    .map((id) => allProducts.find((p) => p.id === id)!)
+    .filter(Boolean)
+    .sort(() => 0.5 - Math.random())
+    .slice(0, 4);
 
   return (
     <>
