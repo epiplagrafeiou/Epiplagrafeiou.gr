@@ -14,12 +14,16 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import AddToCartButton from './AddToCartButton';
+import { Button } from '@/components/ui/button';
+import { Heart } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 
 interface ProductCardProps {
   product: Product;
 }
 
 export function ProductCard({ product }: ProductCardProps) {
+  const { toast } = useToast();
   const primaryImageSrc =
     product.imageId && product.imageId.length > 0
       ? product.imageId
@@ -42,6 +46,15 @@ export function ProductCard({ product }: ProductCardProps) {
   const handleMouseLeave = () => {
     setCurrentImage(primaryImageSrc);
   };
+  
+  const handleAddToFavorites = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    toast({
+        title: 'Added to Favorites!',
+        description: `${product.name} has been added to your favorites.`,
+    });
+  }
 
   return (
     <Card
@@ -65,6 +78,15 @@ export function ProductCard({ product }: ProductCardProps) {
                 <span className="text-sm text-muted-foreground">No Image</span>
               </div>
             )}
+             <Button
+                variant="ghost"
+                size="icon"
+                className="absolute top-2 right-2 z-10 h-9 w-9 rounded-full bg-background/80 backdrop-blur-sm transition-colors hover:bg-background"
+                onClick={handleAddToFavorites}
+                aria-label="Add to favorites"
+             >
+                <Heart className="h-5 w-5 text-muted-foreground" />
+             </Button>
           </div>
         </CardHeader>
 
