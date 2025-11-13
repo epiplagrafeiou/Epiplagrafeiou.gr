@@ -2,9 +2,9 @@
   "placeholderImages": [
     {
       "id": "hero-background",
-      "description": "A bright and airy living room with modern furniture.",
-      "imageUrl": "https://images.unsplash.com/photo-1554995207-c18c203602cb?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw4fHxsaXZpbmclMjByb29tfGVufDB8fHx8MTc2MjQ2MDM4N3ww&ixlib=rb-4.1.0&q=80&w=1080",
-      "imageHint": "living room"
+      "description": "60 years of experience banner.",
+      "imageUrl": "https://i.postimg.cc/J7c9W4Yt/60-years-min.png",
+      "imageHint": "anniversary banner"
     }
   ]
 }
