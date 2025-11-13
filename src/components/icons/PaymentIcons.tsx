@@ -2,12 +2,11 @@
 import Image from 'next/image';
 
 const paymentMethods = [
-  { name: 'Visa', src: 'https://i.postimg.cc/L6Hj1fW9/visa.png', width: 50, height: 32 },
-  { name: 'Mastercard', src: 'https://i.postimg.cc/cJkZssmL/pngimg-com-mastercard-PNG15.png', width: 50, height: 32 },
-  { name: 'American Express', src: 'https://i.postimg.cc/PryM21xq/amex.png', width: 50, height: 32 },
   { name: 'PayPal', src: 'https://i.postimg.cc/0Qkdxbm6/15465746.png', width: 50, height: 32 },
   { name: 'Stripe', src: 'https://i.postimg.cc/yd1XBk9H/5968382.png', width: 50, height: 32 },
-    { name: 'Apple Pay', src: 'https://i.postimg.cc/63WLwyR5/apple-pay-og-twitter.jpg', width: 50, height: 32 },
+  { name: 'Apple Pay', src: 'https://i.postimg.cc/63WLwyR5/apple-pay-og-twitter.jpg', width: 50, height: 32 },
+  { name: 'Mastercard', src: 'https://i.postimg.cc/V6fB1dMd/free-mastercard-logo-icon-svg-download-png-2944982.webp', width: 50, height: 32 },
+  { name: 'Google Pay', src: 'https://i.postimg.cc/3R8C7dpw/google-pay-logo-1280x531.png', width: 50, height: 32 },
 ];
 
 export function PaymentIcons() {
