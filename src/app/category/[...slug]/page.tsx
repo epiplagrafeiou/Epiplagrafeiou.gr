@@ -1,4 +1,3 @@
-
 'use client';
 
 import { ProductCard } from '@/components/products/ProductCard';
@@ -36,7 +35,7 @@ export default function CategoryPage() {
     return productCategoryPath.startsWith(slugPath);
   });
   
-  const categoryParts = categoryPath ? categoryPath.split(' > ') : [];
+  const categoryParts = categoryPath ? categoryPath.split(' > ') : slugPath.split('/').map(s => s.replace(/-/g, ' '));
   let currentPath = '';
   const breadcrumbs = categoryParts.map((part, index) => {
     currentPath += `${currentPath ? '/' : ''}${createSlug(part)}`;
@@ -84,15 +83,15 @@ export default function CategoryPage() {
           <span key={index} className="flex items-center space-x-2">
             <span>/</span>
             {crumb.isLast ? (
-              <span className="text-foreground">{crumb.name}</span>
+              <span className="text-foreground capitalize">{crumb.name.replace(/-/g, ' ')}</span>
             ) : (
-              <Link href={crumb.href} className="hover:text-foreground">{crumb.name}</Link>
+              <Link href={crumb.href} className="hover:text-foreground capitalize">{crumb.name.replace(/-/g, ' ')}</Link>
             )}
           </span>
         ))}
       </div>
 
-      <h1 className="mb-8 text-3xl font-bold">{categoryParts[categoryParts.length - 1] || 'Products'}</h1>
+      <h1 className="mb-8 text-3xl font-bold capitalize">{categoryParts[categoryParts.length - 1]?.replace(/-/g, ' ') || 'Products'}</h1>
 
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
         {!isLoaded ? (
