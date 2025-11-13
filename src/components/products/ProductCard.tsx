@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { useState, useEffect } from 'react';
 import type { Product } from '@/lib/products-context';
 import { Button } from '@/components/ui/button';
-import { Heart, ShoppingBag } from 'lucide-react';
+import { Heart } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { PriceDisplay } from './PriceDisplay';
 import AddToCartButton from './AddToCartButton';
@@ -85,6 +85,22 @@ export function ProductCard({ product }: ProductCardProps) {
             <div className="mt-2 flex items-center justify-between">
                 <PriceDisplay price={product.price} />
             </div>
+
+            {product.images && product.images.length > 1 && (
+              <div className="mt-4 flex flex-wrap gap-2">
+                {product.images.slice(0, 5).map((img, index) => (
+                   <div key={index} className="relative h-8 w-8 rounded-full border">
+                     <Image
+                       src={img}
+                       alt={`${product.name} variant ${index + 1}`}
+                       fill
+                       className="rounded-full object-cover"
+                       onMouseOver={() => setCurrentImage(img)}
+                     />
+                   </div>
+                ))}
+              </div>
+            )}
             
             <div className="mt-auto flex items-end justify-between pt-4">
                 <div />
