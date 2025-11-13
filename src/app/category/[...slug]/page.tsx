@@ -10,10 +10,6 @@ import { useParams, notFound } from 'next/navigation';
 import { createSlug } from '@/lib/utils';
 import Link from 'next/link';
 
-type Props = {
-  params: { slug: string[] }
-}
-
 const featuredCategories = [
     { name: 'Γραφεία', href: '/category/grafeia' },
     { name: 'Καρέκλες Γραφείου', href: '/category/karekles-grafeiou' },
