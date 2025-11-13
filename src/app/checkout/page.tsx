@@ -29,6 +29,9 @@ import { loadStripe, StripeElementsOptions } from '@stripe/stripe-js';
 import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import { useToast } from '@/hooks/use-toast';
 import { Award } from 'lucide-react';
+import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
+import { doc, updateDoc, increment } from 'firebase/firestore';
+import { type UserProfile } from '@/lib/user-actions';
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || '');
 
@@ -54,21 +57,42 @@ const CheckoutForm = () => {
   const stripe = useStripe();
   const elements = useElements();
   const [isProcessing, setIsProcessing] = useState(false);
+  const { user } = useUser();
+  const firestore = useFirestore();
+
+  const userProfileRef = useMemoFirebase(() => {
+    if (!firestore || !user) return null;
+    return doc(firestore, 'users', user.uid);
+  }, [firestore, user]);
+
+  const { data: userProfile } = useDoc<UserProfile>(userProfileRef);
 
   const form = useForm<CheckoutFormValues>({
     resolver: zodResolver(checkoutSchema),
     defaultValues: {
       country: 'Ελλάδα',
+      email: user?.email || '',
     },
   });
+
+  useEffect(() => {
+    if (user) {
+        form.setValue('email', user.email || '');
+    }
+    if(userProfile) {
+        form.setValue('firstName', userProfile.name?.split(' ')[0] || '');
+        form.setValue('lastName', userProfile.name?.split(' ').slice(1).join(' ') || '');
+    }
+  }, [user, userProfile, form]);
+
 
   const totalShipping = totalAmount >= FREE_SHIPPING_THRESHOLD ? 0 : SHIPPING_COST;
   const total = totalAmount + totalShipping;
   const pointsEarned = Math.floor(totalAmount * 5);
 
   const onSubmit = async (data: CheckoutFormValues) => {
-    if (!stripe || !elements) {
-      toast({ variant: 'destructive', title: 'Σφάλμα', description: 'Το Stripe δεν έχει φορτωθεί σωστά.' });
+    if (!stripe || !elements || !user || !firestore) {
+      toast({ variant: 'destructive', title: 'Σφάλμα', description: 'Δεν είναι δυνατή η επεξεργασία της πληρωμής. Παρακαλώ συνδεθείτε και δοκιμάστε ξανά.' });
       return;
     }
 
@@ -115,6 +139,12 @@ const CheckoutForm = () => {
       }
 
       if (paymentIntent?.status === 'succeeded') {
+        // Update user points
+        const userRef = doc(firestore, 'users', user.uid);
+        await updateDoc(userRef, {
+            points: increment(pointsEarned)
+        });
+
         toast({ title: 'Επιτυχία!', description: `Η πληρωμή σας ολοκληρώθηκε. Κερδίσατε ${pointsEarned} πόντους!` });
         clearCart();
         // Redirect to a thank you page
@@ -161,9 +191,17 @@ const CheckoutForm = () => {
               <div className="space-y-2">
                 <div className="flex justify-between"><span className="text-muted-foreground">Υποσύνολο</span><span>{formatCurrency(totalAmount)}</span></div>
                 <div className="flex justify-between"><span className="text-muted-foreground">Μεταφορικά</span><span>{totalShipping > 0 ? formatCurrency(totalShipping) : 'Δωρεάν'}</span></div>
+                 {userProfile && (
+                    <div className="flex justify-between text-sm">
+                        <span className="flex items-center gap-2 text-muted-foreground">
+                        <Award className="h-4 w-4" /> Υπάρχοντες Πόντοι
+                        </span>
+                        <span className="font-medium">{userProfile.points}</span>
+                    </div>
+                 )}
                 <div className="flex justify-between text-sm">
                   <span className="flex items-center gap-2 text-muted-foreground">
-                    <Award className="h-4 w-4" /> Points Earned
+                    <Award className="h-4 w-4" /> Πόντοι που θα κερδίσετε
                   </span>
                   <span className="font-medium">{pointsEarned}</span>
                 </div>

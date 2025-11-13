@@ -1,6 +1,7 @@
+
 'use client';
 import Link from 'next/link';
-import { ShoppingBag, Search, User, Menu, ChevronDown } from 'lucide-react';
+import { ShoppingBag, Search, User, Menu, ChevronDown, Award } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Logo } from '@/components/icons/Logo';
 import { useCart } from '@/lib/cart-context';
@@ -18,11 +19,16 @@ import {
   DropdownMenuPortal,
   DropdownMenuSub,
   DropdownMenuSubContent,
-  DropdownMenuSubTrigger
+  DropdownMenuSubTrigger,
+  DropdownMenuSeparator
 } from '@/components/ui/dropdown-menu';
 import { useProducts } from '@/lib/products-context';
 import { createSlug } from '@/lib/utils';
 import { LoginDialog } from './LoginDialog';
+import { useUser, useAuth, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
+import { signOut } from 'firebase/auth';
+import { type UserProfile } from '@/lib/user-actions';
+import { doc } from 'firebase/firestore';
 
 interface CategoryNode {
   name: string;
@@ -101,6 +107,66 @@ const bottomNavLinks = [
     { href: '/contact', label: 'Επικοινωνία' },
 ]
 
+function UserButton() {
+    const auth = useAuth();
+    const firestore = useFirestore();
+    const { user, isUserLoading } = useUser();
+    
+    const userProfileRef = useMemoFirebase(() => {
+        if (!firestore || !user) return null;
+        return doc(firestore, "users", user.uid);
+    }, [firestore, user]);
+
+    const { data: userProfile } = useDoc<UserProfile>(userProfileRef);
+
+    const handleLogout = () => {
+        signOut(auth);
+    };
+
+    if (isUserLoading) {
+        return <Button variant="ghost" size="icon" className="hidden md:flex"><User className="h-5 w-5" /></Button>
+    }
+
+    if (!user || user.isAnonymous) {
+        return (
+            <LoginDialog>
+                <Button variant="ghost" size="icon" className="hidden md:flex">
+                    <User className="h-5 w-5" />
+                    <span className="sr-only">Login</span>
+                </Button>
+            </LoginDialog>
+        )
+    }
+
+    return (
+        <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="hidden md:flex">
+                    <User className="h-5 w-5 text-primary" />
+                </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+                <DropdownMenuItem disabled>
+                    <div className="flex flex-col">
+                       <span>{userProfile?.name}</span>
+                       <span className="text-xs text-muted-foreground">{user.email}</span>
+                    </div>
+                </DropdownMenuItem>
+                 <DropdownMenuItem disabled>
+                    <div className="flex items-center gap-2">
+                       <Award className="h-4 w-4" />
+                       <span>{userProfile?.points || 0} Πόντοι</span>
+                    </div>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={handleLogout}>
+                    Αποσύνδεση
+                </DropdownMenuItem>
+            </DropdownMenuContent>
+        </DropdownMenu>
+    )
+}
+
 export default function Header() {
   const { itemCount } = useCart();
   const { allCategories } = useProducts();
@@ -159,12 +225,7 @@ export default function Header() {
               <span className="sr-only">Search</span>
           </Button>
           
-          <LoginDialog>
-            <Button variant="ghost" size="icon" className="hidden md:flex">
-                <User className="h-5 w-5" />
-                <span className="sr-only">Login</span>
-            </Button>
-          </LoginDialog>
+          <UserButton />
 
           <Button asChild variant="ghost" size="icon">
             <Link href="/cart">
