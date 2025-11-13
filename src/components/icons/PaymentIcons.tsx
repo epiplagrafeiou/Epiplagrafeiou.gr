@@ -3,7 +3,7 @@ import Image from 'next/image';
 
 const paymentMethods = [
   { name: 'Visa', src: 'https://i.postimg.cc/L6Hj1fW9/visa.png', width: 50, height: 32 },
-  { name: 'Mastercard', src: 'https://i.postimg.cc/qR8f2jB3/mastercard.png', width: 50, height: 32 },
+  { name: 'Mastercard', src: 'https://i.postimg.cc/cJkZssmL/pngimg-com-mastercard-PNG15.png', width: 50, height: 32 },
   { name: 'Maestro', src: 'https://i.postimg.cc/Y0g0xCDJ/maestro.png', width: 50, height: 32 },
   { name: 'American Express', src: 'https://i.postimg.cc/PryM21xq/amex.png', width: 50, height: 32 },
   { name: 'Stripe', src: 'https://i.postimg.cc/W4Yj227Q/5968382.png', width: 50, height: 32 },
