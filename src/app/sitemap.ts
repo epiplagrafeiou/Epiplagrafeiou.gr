@@ -1,17 +1,9 @@
 import { MetadataRoute } from 'next'
-import { products } from '@/lib/data'; // Using static data for now
+import { getProducts } from '@/lib/user-actions'; // Using server action now
 import { createSlug } from '@/lib/utils';
 
-// This is a placeholder for fetching real data in a server environment.
-// In a real app, you would fetch products and categories from your database.
-const getProductsForSitemap = () => {
-  return products.map(p => ({
-      slug: p.slug,
-      updatedAt: new Date(),
-  }));
-};
-
-const getCategoriesForSitemap = () => {
+async function getCategoriesForSitemap() {
+    const products = await getProducts();
     const categoryPaths = new Set(products.map(p => p.category));
     const uniquePaths: { path: string, updatedAt: Date }[] = [];
 
@@ -29,17 +21,19 @@ const getCategoriesForSitemap = () => {
     return uniquePaths;
 }
 
-export default function sitemap(): MetadataRoute.Sitemap {
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = 'https://epiplagrafeiou.gr';
+  const products = await getProducts();
+  const categories = await getCategoriesForSitemap();
 
-  const productEntries: MetadataRoute.Sitemap = getProductsForSitemap().map(({ slug, updatedAt }) => ({
+  const productEntries: MetadataRoute.Sitemap = products.map(({ slug, id }) => ({
     url: `${baseUrl}/products/${slug}`,
-    lastModified: updatedAt,
+    lastModified: new Date(), // This should be the product's last updated date in a real app
     changeFrequency: 'weekly',
     priority: 0.8,
   }));
 
-  const categoryEntries: MetadataRoute.Sitemap = getCategoriesForSitemap().map(({ path, updatedAt }) => ({
+  const categoryEntries: MetadataRoute.Sitemap = categories.map(({ path, updatedAt }) => ({
     url: `${baseUrl}${path}`,
     lastModified: updatedAt,
     changeFrequency: 'weekly',
