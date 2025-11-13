@@ -33,7 +33,7 @@ export default function Home() {
             alt={heroImage.description}
             width={1920}
             height={400} 
-            className="object-cover w-full h-auto"
+            className="object-contain w-full h-auto max-h-[250px]"
             priority
             data-ai-hint={heroImage.imageHint}
           />
@@ -60,7 +60,7 @@ export default function Home() {
 
       <section className="py-16">
         <div className="container mx-auto px-4">
-          <h2 className="mb-8 text-center font-headline text-3xl font-bold">
+          <h2 className="mb-8 text-center font-headline text:3xl font-bold">
             Featured Products
           </h2>
           <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-4">
