@@ -2,7 +2,7 @@
 'use server';
 
 import { doc, getDoc, updateDoc, increment, collection, getDocs } from "firebase/firestore";
-import { firestore } from "@/lib/firebase-admin"; // Assuming you have a server-side init
+import { getDb } from "@/lib/firebase-admin";
 import { createSlug } from '@/lib/utils';
 import type { Product } from './products-context';
 
@@ -16,6 +16,7 @@ export interface UserProfile {
 // Server-side function to fetch all products.
 // This avoids using hooks and can be called from Server Components.
 export async function getProducts(): Promise<Product[]> {
+    const firestore = getDb();
     const productsCollection = collection(firestore, 'products');
     const snapshot = await getDocs(productsCollection);
     const products = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Product));
@@ -94,7 +95,7 @@ export async function addPointsToUser(userId: string, pointsToAdd: number) {
     if (!userId || !pointsToAdd) {
         throw new Error("User ID and points to add are required.");
     }
-
+    const firestore = getDb();
     const userRef = doc(firestore, "users", userId);
 
     try {
@@ -114,6 +115,7 @@ export async function addPointsToUser(userId: string, pointsToAdd: number) {
 export async function getUserProfile(userId: string): Promise<UserProfile | null> {
     if (!userId) return null;
     
+    const firestore = getDb();
     const userRef = doc(firestore, "users", userId);
     const docSnap = await getDoc(userRef);
 

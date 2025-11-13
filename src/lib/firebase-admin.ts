@@ -1,25 +1,48 @@
-// This file is for server-side Firebase initialization only.
-// Do not import it in client-side components.
+// Server-side Firebase Admin initialization
+// DO NOT USE ON THE CLIENT
 
-import { initializeApp, getApps, getApp, cert } from 'firebase-admin/app';
+import { initializeApp, getApps, cert } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
-import { firebaseConfig } from '@/firebase/config'; 
 
-// IMPORTANT: You need to download your service account key JSON file from the Firebase console
-// and place it in your project. For Vercel/Next.js, it's common to store this
-// as a base64-encoded environment variable.
+let firestore: FirebaseFirestore.Firestore;
 
-const serviceAccount = process.env.FIREBASE_SERVICE_ACCOUNT_KEY
-  ? JSON.parse(Buffer.from(process.env.FIREBASE_SERVICE_ACCOUNT_KEY, 'base64').toString('utf-8'))
-  : undefined;
-
-if (!getApps().length) {
-  initializeApp({
-    credential: serviceAccount ? cert(serviceAccount) : undefined,
-    databaseURL: `https://${firebaseConfig.projectId}.firebaseio.com`
-  });
+// Provide a safe way to check admin initialization errors
+let initError: Error | null = null;
+export function getFirebaseAdminInitError() {
+  return initError;
 }
 
-const firestore = getFirestore();
+export function getDb() {
+  if (firestore) return firestore;
 
-export { firestore };
+  try {
+    const rawKey = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
+
+    if (!rawKey) {
+      throw new Error(
+        "FIREBASE_SERVICE_ACCOUNT_KEY is missing. Please set it in your environment."
+      );
+    }
+
+    // Detect Base64 vs raw JSON automatically
+    const isBase64 = rawKey.trim().startsWith("{") === false;
+
+    const serviceAccount = isBase64
+      ? JSON.parse(Buffer.from(rawKey, "base64").toString("utf8"))
+      : JSON.parse(rawKey);
+
+    // Initialize Firebase Admin
+    if (!getApps().length) {
+      initializeApp({
+        credential: cert(serviceAccount),
+      });
+    }
+
+    firestore = getFirestore();
+    return firestore;
+  } catch (err: any) {
+    initError = err;
+    console.error("🔥 Firebase Admin initialization failed:", err.message);
+    throw err;
+  }
+}
