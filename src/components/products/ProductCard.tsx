@@ -5,18 +5,10 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
 import type { Product } from '@/lib/products-context';
-import { formatCurrency } from '@/lib/utils';
-import {
-  Card,
-  CardContent,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
-import AddToCartButton from './AddToCartButton';
 import { Button } from '@/components/ui/button';
-import { Heart } from 'lucide-react';
+import { Heart, ShoppingBag } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { PriceDisplay } from './PriceDisplay';
 
 interface ProductCardProps {
   product: Product;
@@ -47,32 +39,38 @@ export function ProductCard({ product }: ProductCardProps) {
     setCurrentImage(primaryImageSrc);
   };
   
-  const handleAddToFavorites = (e: React.MouseEvent) => {
+  const handleActionClick = (e: React.MouseEvent, action: 'cart' | 'favorite') => {
     e.preventDefault();
     e.stopPropagation();
-    toast({
+    if (action === 'cart') {
+      toast({
+        title: 'Added to Cart!',
+        description: `${product.name} has been added to your cart.`,
+      });
+    } else {
+       toast({
         title: 'Added to Favorites!',
         description: `${product.name} has been added to your favorites.`,
     });
+    }
   }
 
-  const isInStock = (product.stock ?? 0) > 0;
+  const productCategory = product.category.split(' > ').pop();
 
   return (
-    <Card
-      className="flex flex-col overflow-hidden rounded-lg shadow-sm transition-shadow hover:shadow-lg"
+    <div
+      className="flex h-full flex-col overflow-hidden rounded-lg"
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
     >
-      <Link href={`/products/${product.slug}`} className="group">
-        <CardHeader className="p-0">
-          <div className="relative h-64 w-full bg-white">
+      <Link href={`/products/${product.slug}`} className="group flex h-full flex-col">
+        <div className="relative h-64 w-full bg-secondary/30">
             {currentImage ? (
               <Image
                 src={currentImage}
                 alt={product.name}
                 fill
-                className="object-contain transition-transform duration-300 group-hover:scale-105"
+                className="object-contain transition-opacity duration-300"
                 sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
               />
             ) : (
@@ -80,37 +78,41 @@ export function ProductCard({ product }: ProductCardProps) {
                 <span className="text-sm text-muted-foreground">No Image</span>
               </div>
             )}
-             <Button
-                variant="ghost"
-                size="icon"
-                className="absolute top-2 right-2 z-10 h-9 w-9 rounded-full bg-background/80 backdrop-blur-sm transition-colors hover:bg-background"
-                onClick={handleAddToFavorites}
-                aria-label="Add to favorites"
-             >
-                <Heart className="h-5 w-5 text-muted-foreground" />
-             </Button>
-          </div>
-        </CardHeader>
-
-        <CardContent className="p-4">
-          <CardTitle className="text-lg font-medium">{product.name}</CardTitle>
-        </CardContent>
-      </Link>
-
-      <CardFooter className="mt-auto flex items-center justify-between p-4 pt-0">
-        <div className="flex items-baseline gap-2">
-          <p className="text-xl font-bold text-foreground">
-            {formatCurrency(product.price)}
-          </p>
-          {product.originalPrice && product.originalPrice > product.price && (
-            <p className="text-sm text-muted-foreground line-through">
-              {formatCurrency(product.originalPrice)}
-            </p>
-          )}
         </div>
-        
-        <AddToCartButton product={product} />
-      </CardFooter>
-    </Card>
+
+        <div className="flex flex-1 flex-col p-4">
+            <p className="text-sm font-semibold uppercase">{product.name}</p>
+            <p className="text-sm text-muted-foreground">{productCategory}</p>
+
+            <div className="mt-2 flex items-center justify-between">
+                <PriceDisplay price={product.price} />
+            </div>
+            
+            <div className="mt-auto flex items-end justify-between pt-4">
+                <div />
+                <div className="flex items-center gap-2">
+                    <Button
+                        variant="secondary"
+                        size="icon"
+                        className="h-9 w-9 rounded-full bg-blue-600 text-white shadow-md hover:bg-blue-700"
+                        onClick={(e) => handleActionClick(e, 'cart')}
+                        aria-label="Add to cart"
+                    >
+                        <ShoppingBag className="h-5 w-5" />
+                    </Button>
+                    <Button
+                        variant="secondary"
+                        size="icon"
+                        className="h-9 w-9 rounded-full bg-gray-200 text-gray-800 shadow-md hover:bg-gray-300"
+                        onClick={(e) => handleActionClick(e, 'favorite')}
+                        aria-label="Add to favorites"
+                    >
+                        <Heart className="h-5 w-5" />
+                    </Button>
+                </div>
+            </div>
+        </div>
+      </Link>
+    </div>
   );
 }
