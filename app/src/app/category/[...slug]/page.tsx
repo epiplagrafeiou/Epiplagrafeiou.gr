@@ -5,18 +5,18 @@ import { createSlug } from '@/lib/utils';
 
 type Props = { params: { slug: string[] } };
 
-export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const slugPath = Array.isArray(params.slug) ? params.slug.join('/') : params.slug || '';
-  const pageTitlePart = Array.isArray(params.slug) ? params.slug[params.slug.length - 1] : params.slug;
-  
-  function toTitleCase(str: string) {
-    if (!str) return '';
-    return str.replace(/-/g, ' ').replace(/\w\S*/g, (txt) => {
-        return txt.charAt(0).toUpperCase() + txt.substring(1).toLowerCase();
-    });
-  }
+function toTitleCase(str: string) {
+  if (!str) return '';
+  return str.replace(/-/g, ' ').replace(/\w\S*/g, (txt) => {
+      return txt.charAt(0).toUpperCase() + txt.substring(1).toLowerCase();
+  });
+}
 
-  const pageTitle = toTitleCase(pageTitlePart || '');
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const slugPath = Array.isArray(params.slug) ? params.slug.join('/') : (params.slug || '');
+  const pageTitlePart = Array.isArray(params.slug) ? params.slug[params.slug.length - 1] : (params.slug || '');
+  
+  const pageTitle = toTitleCase(pageTitlePart);
 
   return {
     title: `${pageTitle} - Epipla Graphiou AI eShop`,
@@ -33,7 +33,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
+
 export default function CategoryPage({ params }: Props) {
-  const slugPath = Array.isArray(params.slug) ? params.slug.join('/') : params.slug;
+  const slugPath = Array.isArray(params.slug) ? params.slug.join('/') : (params.slug || '');
   return <ClientCategory slug={slugPath} />;
 }
