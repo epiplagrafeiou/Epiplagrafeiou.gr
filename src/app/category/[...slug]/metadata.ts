@@ -1,6 +1,4 @@
 import type { Metadata } from 'next';
-import { createSlug } from '@/lib/utils';
-import { getProducts } from '@/lib/user-actions';
 
 type Props = {
   params: { slug: string | string[] };
@@ -14,16 +12,8 @@ function toTitleCase(str: string) {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const slugPath = Array.isArray(params.slug) ? params.slug.join('/') : params.slug;
-  
-  // Find the category display name from products
-  const products = await getProducts();
-  const categoryData = products.find(p => {
-    const pSlug = p.category.split(' > ').map(createSlug).join('/');
-    return pSlug === slugPath;
-  });
-
-  const lastPart = categoryData?.category.split(' > ').pop() || slugPath.split('/').pop() || '';
-  const pageTitle = toTitleCase(lastPart);
+  // Use the slug directly to generate the title, avoiding database calls during build.
+  const pageTitle = toTitleCase(slugPath.split('/').pop() || '');
 
   return {
     title: `${pageTitle} - Epipla Graphiou AI eShop`,
