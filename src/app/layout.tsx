@@ -3,8 +3,6 @@ import type { Metadata } from 'next';
 import './globals.css';
 import AppLayout from './AppLayout';
 import { CartProvider } from "@/lib/cart-context";
-import { Toaster } from "@/components/ui/toaster";
-import NewsletterPopup from "@/components/layout/NewsletterPopup";
 import { SuppliersProvider } from "@/lib/suppliers-context";
 import { ProductsProvider } from "@/lib/products-context";
 import { FirebaseClientProvider } from "@/firebase/client-provider";
@@ -65,8 +63,6 @@ export default function RootLayout({
             <ProductsProvider>
               <CartProvider>
                 <AppLayout>{children}</AppLayout>
-                <Toaster />
-                <NewsletterPopup />
               </CartProvider>
             </ProductsProvider>
           </SuppliersProvider>

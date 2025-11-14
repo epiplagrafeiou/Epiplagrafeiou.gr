@@ -2,7 +2,7 @@
 'use client';
 import Image from 'next/image';
 import { formatCurrency, cn, createSlug } from '@/lib/utils';
-import AddToCartButton from '@/components/products/AddToCartButton';
+import AddToCartButton from './AddToCartButton';
 import { Separator } from '@/components/ui/separator';
 import { Product } from '@/lib/products-context';
 import { useEffect, useState, useCallback, useMemo } from 'react';

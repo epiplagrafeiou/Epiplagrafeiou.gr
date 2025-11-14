@@ -2,12 +2,13 @@
 'use client';
 
 import { usePathname } from 'next/navigation';
-import Header from '@/components/layout/Header';
-import Footer from '@/components/layout/Footer';
-import TopBar from '@/components/layout/TopBar';
-import { ReactNode } from 'react';
+import Header from './Header';
+import Footer from './Footer';
+import TopBar from './TopBar';
+import { Toaster } from "@/components/ui/toaster";
+import NewsletterPopup from "@/components/layout/NewsletterPopup";
 
-export default function AppLayout({ children }: { children: ReactNode }) {
+export default function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const isAdminPage = pathname.startsWith('/admin');
 
@@ -19,6 +20,8 @@ export default function AppLayout({ children }: { children: ReactNode }) {
         {children}
       </main>
       {!isAdminPage && <Footer />}
+      <Toaster />
+      <NewsletterPopup />
     </div>
   );
 }
