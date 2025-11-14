@@ -1,6 +1,6 @@
 import { MetadataRoute } from 'next'
-import { getProducts } from 'lib/user-actions';
-import { createSlug } from 'lib/utils';
+import { getProducts } from '@/lib/user-actions';
+import { createSlug } from '@/lib/utils';
 
 async function getCategoriesForSitemap() {
     const products = await getProducts();

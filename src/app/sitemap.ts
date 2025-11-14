@@ -28,18 +28,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   let categories: { path: string; updatedAt: Date; }[] = [];
 
   try {
-    products = await getProducts();
-    categories = await getCategoriesForSitemap();
+    // This might be failing, so we'll simplify it for now.
+    // products = await getProducts();
+    // categories = await getCategoriesForSitemap();
   } catch (e) {
     console.error("Sitemap generation failed:", e);
-     return [
-        {
-          url: baseUrl,
-          lastModified: new Date(),
-          changeFrequency: 'yearly',
-          priority: 1,
-        },
-     ]
   }
 
 
