@@ -5,13 +5,13 @@ import { useState, useEffect } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Button } from 'components/ui/button';
-import { Input } from 'components/ui/input';
-import { Label } from 'components/ui/label';
-import { Textarea } from 'components/ui/textarea';
-import { DialogFooter } from 'components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { DialogFooter } from '@/components/ui/dialog';
 import { Trash2, PlusCircle } from 'lucide-react';
-import type { Product } from 'lib/products-context';
+import type { Product } from '@/lib/products-context';
 
 const productSchema = z.object({
   name: z.string().min(1, 'Name is required'),

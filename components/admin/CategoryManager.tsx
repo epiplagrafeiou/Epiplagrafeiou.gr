@@ -7,9 +7,9 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-} from 'components/ui/card';
-import { Button } from 'components/ui/button';
-import { useProducts } from 'lib/products-context';
+} from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { useProducts } from '@/lib/products-context';
 import { DndContext, useDraggable, useDroppable, closestCenter, DragEndEvent, DragOverlay, DragStartEvent, UniqueIdentifier } from '@dnd-kit/core';
 import {
   SortableContext,
@@ -19,7 +19,7 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { GripVertical, PlusCircle, Trash2 } from 'lucide-react';
-import { Input } from 'components/ui/input';
+import { Input } from '@/components/ui/input';
 
 const RawCategoryItem = ({ category }: { category: string }) => {
     const { attributes, listeners, setNodeRef } = useDraggable({

@@ -1,4 +1,3 @@
-
 import ClientCategory from './ClientCategory';
 
 type Props = { params: { slug: string[] } };

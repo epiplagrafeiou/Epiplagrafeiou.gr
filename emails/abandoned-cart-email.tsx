@@ -13,8 +13,8 @@ import {
   Column,
 } from '@react-email/components';
 import * as React from 'react';
-import { type CartItem } from 'lib/cart-context';
-import { formatCurrency } from 'lib/utils';
+import { type CartItem } from '@/lib/cart-context';
+import { formatCurrency } from '@/lib/utils';
 
 interface AbandonedCartEmailProps {
   customerFirstName: string;

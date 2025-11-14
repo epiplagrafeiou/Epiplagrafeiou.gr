@@ -8,7 +8,7 @@ import { Toaster } from "@/components/ui/toaster";
 import NewsletterPopup from "@/components/layout/NewsletterPopup";
 import { ReactNode } from 'react';
 
-export default function AppShell({ children }: { children: ReactNode }) {
+export default function AppLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const isAdminPage = pathname.startsWith('/admin');
 

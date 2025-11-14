@@ -1,10 +1,10 @@
 
 'use client';
 import Image from 'next/image';
-import { formatCurrency, cn, createSlug } from 'lib/utils';
+import { formatCurrency, cn, createSlug } from '@/lib/utils';
 import AddToCartButton from './AddToCartButton';
-import { Separator } from 'components/ui/separator';
-import { Product } from 'lib/products-context';
+import { Separator } from '@/components/ui/separator';
+import { Product } from '@/lib/products-context';
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import Link from 'next/link';
 import {
@@ -14,10 +14,10 @@ import {
   CarouselNext,
   CarouselPrevious,
   type CarouselApi,
-} from "components/ui/carousel"
-import { Card, CardContent } from "components/ui/card"
+} from "@/components/ui/carousel"
+import { Card, CardContent } from "@/components/ui/card"
 import { Truck, Award, Star, ShieldCheck } from 'lucide-react';
-import { PaymentIcons } from 'components/icons/PaymentIcons';
+import { PaymentIcons } from '@/components/icons/PaymentIcons';
 
 interface ProductViewProps {
     product: Product;
