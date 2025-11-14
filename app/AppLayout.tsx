@@ -11,13 +11,13 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const isAdminPage = pathname.startsWith('/admin');
 
   return (
-      <div className="flex min-h-screen flex-col">
-        {!isAdminPage && <TopBar />}
-        {!isAdminPage && <Header />}
-        <main className={`flex-grow ${isAdminPage ? '' : 'bg-white'}`}>
-          {children}
-        </main>
-        {!isAdminPage && <Footer />}
-      </div>
+    <div className="flex min-h-screen flex-col">
+      {!isAdminPage && <TopBar />}
+      {!isAdminPage && <Header />}
+      <main className={`flex-grow ${isAdminPage ? '' : 'bg-white'}`}>
+        {children}
+      </main>
+      {!isAdminPage && <Footer />}
+    </div>
   );
 }
