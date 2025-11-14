@@ -1,11 +1,10 @@
-
 import type { Metadata } from 'next';
 import './globals.css';
+import { FirebaseClientProvider } from '@/firebase/client-provider';
+import { SuppliersProvider } from '@/lib/suppliers-context';
+import { ProductsProvider } from '@/lib/products-context';
+import { CartProvider } from '@/lib/cart-context';
 import AppLayout from './AppLayout';
-import { CartProvider } from "@/lib/cart-context";
-import { SuppliersProvider } from "@/lib/suppliers-context";
-import { ProductsProvider } from "@/lib/products-context";
-import { FirebaseClientProvider } from "@/firebase/client-provider";
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://epiplagrafeiou.gr'),

@@ -1,8 +1,7 @@
-
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useForm, FormProvider } from 'react-hook-form';
+import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useCart } from '@/lib/cart-context';
@@ -264,7 +263,6 @@ const CheckoutForm = () => {
 };
 
 export default function CheckoutPage() {
-  const [clientSecret, setClientSecret] = useState('');
   const { totalAmount } = useCart();
   const totalShipping = totalAmount >= FREE_SHIPPING_THRESHOLD ? 0 : SHIPPING_COST;
   const total = totalAmount + totalShipping;

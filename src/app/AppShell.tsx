@@ -1,14 +1,14 @@
-
 'use client';
 
 import { usePathname } from 'next/navigation';
-import Header from './Header';
-import Footer from './Footer';
-import TopBar from './TopBar';
+import Header from '@/components/layout/Header';
+import Footer from '@/components/layout/Footer';
+import TopBar from '@/components/layout/TopBar';
 import { Toaster } from "@/components/ui/toaster";
 import NewsletterPopup from "@/components/layout/NewsletterPopup";
+import { ReactNode } from 'react';
 
-export default function AppLayout({ children }: { children: React.ReactNode }) {
+export default function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const isAdminPage = pathname.startsWith('/admin');
 

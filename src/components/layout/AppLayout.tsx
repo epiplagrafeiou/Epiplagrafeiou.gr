@@ -6,9 +6,8 @@ import Footer from '@/components/layout/Footer';
 import TopBar from '@/components/layout/TopBar';
 import { Toaster } from "@/components/ui/toaster";
 import NewsletterPopup from "@/components/layout/NewsletterPopup";
-import { ReactNode } from 'react';
 
-export default function AppLayout({ children }: { children: ReactNode }) {
+export default function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const isAdminPage = pathname.startsWith('/admin');
 

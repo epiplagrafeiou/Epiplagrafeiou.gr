@@ -1,12 +1,12 @@
 
 'use client';
 
-import { ProductCard } from 'components/products/ProductCard';
-import { useProducts, type Product } from 'lib/products-context';
-import { Skeleton } from 'components/ui/skeleton';
-import { Card, CardContent, CardFooter } from 'components/ui/card';
-import { Button } from 'components/ui/button';
-import { createSlug } from 'lib/utils';
+import { ProductCard } from '@/components/products/ProductCard';
+import { useProducts, type Product } from '@/lib/products-context';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Card, CardContent, CardFooter } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { createSlug } from '@/lib/utils';
 import Link from 'next/link';
 import { notFound, useParams } from 'next/navigation';
 
