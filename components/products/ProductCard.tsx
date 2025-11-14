@@ -4,10 +4,10 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
-import type { Product } from 'lib/products-context';
-import { Button } from 'components/ui/button';
+import type { Product } from '@/lib/products-context';
+import { Button } from '@/components/ui/button';
 import { Heart, Award } from 'lucide-react';
-import { useToast } from 'hooks/use-toast';
+import { useToast } from '@/hooks/use-toast';
 import { PriceDisplay } from './PriceDisplay';
 import AddToCartButton from './AddToCartButton';
 

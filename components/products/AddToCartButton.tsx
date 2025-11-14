@@ -1,11 +1,11 @@
 
 'use client';
 
-import { useCart } from 'lib/cart-context';
-import type { Product } from 'lib/products-context';
-import { Button, type ButtonProps } from 'components/ui/button';
+import { useCart } from '@/lib/cart-context';
+import type { Product } from '@/lib/products-context';
+import { Button, type ButtonProps } from '@/components/ui/button';
 import { ShoppingCart } from 'lucide-react';
-import { useToast } from 'hooks/use-toast';
+import { useToast } from '@/hooks/use-toast';
 
 interface AddToCartButtonProps extends ButtonProps {
   product: Product;

@@ -1,4 +1,3 @@
-
 "use client";
 
 import { createContext, useContext, useState, ReactNode, useEffect } from 'react';
@@ -20,7 +19,7 @@ interface CartContextType {
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
-export const CartProvider = ({ children }: { children: ReactNode }) => {
+export function CartProvider({ children }: { children: ReactNode }) {
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [isClient, setIsClient] = useState(false);
 
@@ -28,7 +27,12 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     setIsClient(true);
     const storedCart = localStorage.getItem('cart');
     if (storedCart) {
-      setCartItems(JSON.parse(storedCart));
+      try {
+        setCartItems(JSON.parse(storedCart));
+      } catch (e) {
+        console.error("Failed to parse cart from localStorage", e);
+        localStorage.removeItem('cart');
+      }
     }
   }, []);
 
