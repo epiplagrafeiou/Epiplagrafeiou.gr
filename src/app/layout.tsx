@@ -1,7 +1,6 @@
 
 import type { Metadata } from 'next';
 import './globals.css';
-import { Providers } from '../providers';
 import AppShell from './AppShell';
 
 export const metadata: Metadata = {
@@ -55,9 +54,7 @@ export default function RootLayout({
         />
       </head>
       <body className="font-body antialiased">
-        <Providers>
-          <AppShell>{children}</AppShell>
-        </Providers>
+        <AppShell>{children}</AppShell>
       </body>
     </html>
   );

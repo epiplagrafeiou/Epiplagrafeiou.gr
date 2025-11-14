@@ -1,7 +1,8 @@
+
 import type { Metadata } from 'next';
 import './globals.css';
-import { Providers } from './providers';
 import AppShell from './AppShell';
+import { Providers } from './providers';
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://epiplagrafeiou.gr'),
