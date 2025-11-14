@@ -5,14 +5,12 @@ import { usePathname } from 'next/navigation';
 import Header from './Header';
 import Footer from './Footer';
 import TopBar from './TopBar';
-import { Providers } from './providers';
 
-export function AppLayout({ children }: { children: React.ReactNode }) {
+export default function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const isAdminPage = pathname.startsWith('/admin');
 
   return (
-    <Providers>
       <div className="flex min-h-screen flex-col">
         {!isAdminPage && <TopBar />}
         {!isAdminPage && <Header />}
@@ -21,6 +19,5 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         </main>
         {!isAdminPage && <Footer />}
       </div>
-    </Providers>
   );
 }
