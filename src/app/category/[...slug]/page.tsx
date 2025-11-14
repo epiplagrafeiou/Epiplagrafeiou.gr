@@ -12,6 +12,7 @@ function toTitleCase(str: string) {
   });
 }
 
+// This is now a Server Component, responsible for metadata and rendering the client part.
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const slugPath = Array.isArray(params.slug) ? params.slug.join('/') : (params.slug || '');
   const pageTitlePart = Array.isArray(params.slug) ? params.slug[params.slug.length - 1] : (params.slug || '');
