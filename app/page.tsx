@@ -1,12 +1,11 @@
-
 'use client';
 import Image from 'next/image';
 import Link from 'next/link';
-import { Button } from '@/components/ui/button';
-import { ProductCard } from '@/components/products/ProductCard';
-import { PlaceHolderImages } from '@/lib/placeholder-images';
-import { useProducts } from '@/lib/products-context';
-import { createSlug } from '@/lib/utils';
+import { Button } from 'components/ui/button';
+import { ProductCard } from 'components/products/ProductCard';
+import { PlaceHolderImages } from 'lib/placeholder-images';
+import { useProducts } from 'lib/products-context';
+import { createSlug } from 'lib/utils';
 import { Armchair, Briefcase, Files, Library, Monitor, Wrench } from 'lucide-react';
 
 const mainCategories = [
