@@ -1,8 +1,6 @@
 import { MetadataRoute } from 'next'
 import { getProducts } from '@/lib/user-actions';
 import { createSlug } from '@/lib/utils';
-import { collection, getDocs } from 'firebase/firestore';
-import { getDb } from '@/lib/user-actions'; // Import a modified getDb
 
 async function getCategoriesForSitemap() {
     const products = await getProducts();
@@ -34,7 +32,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     categories = await getCategoriesForSitemap();
   } catch (e) {
     console.error("Sitemap generation failed:", e);
-    // Return a minimal sitemap on error to avoid breaking the build
      return [
         {
           url: baseUrl,
@@ -46,7 +43,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   }
 
 
-  const productEntries: MetadataRoute.Sitemap = products.map(({ slug, id }) => ({
+  const productEntries: MetadataRoute.Sitemap = products.map(({ slug }) => ({
     url: `${baseUrl}/products/${slug}`,
     lastModified: new Date(), 
     changeFrequency: 'weekly',

@@ -8,7 +8,7 @@ import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { createSlug } from '@/lib/utils';
 import Link from 'next/link';
-import { notFound } from 'next/navigation';
+import { notFound, useParams } from 'next/navigation';
 
 const featuredCategories = [
   { name: 'Γραφεία', href: '/category/grafeia' },
@@ -16,10 +16,12 @@ const featuredCategories = [
   { name: 'Βιβλιοθήκες', href: '/category/bibliothikes' },
 ];
 
-export default function ClientCategory({ slug }: { slug: string }) {
+export default function CategoryPage() {
   const { products, isLoaded, allCategories } = useProducts();
+  const params = useParams();
+  const slugParam = params?.slug;
 
-  const slugPath = slug;
+  const slugPath = Array.isArray(slugParam) ? slugParam.join('/') : (slugParam || '');
 
   const categoryPath = allCategories?.find((cat) => {
     const catSlug = cat.split(' > ').map(createSlug).join('/');

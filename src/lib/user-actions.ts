@@ -1,45 +1,14 @@
 
 'use server';
 
-import { doc, getDoc, updateDoc, increment, collection, getDocs } from "firebase/firestore";
-import { initializeApp, getApps, cert } from 'firebase-admin/app';
-import { getFirestore } from 'firebase-admin/firestore';
 import { createSlug } from '@/lib/utils';
 import type { Product } from './products-context';
 
-let firestore: FirebaseFirestore.Firestore;
-
-export function getDb() {
-  if (firestore) return firestore;
-  
-  // This is a workaround for environments where service account key isn't available
-  // It should be replaced with a proper secure way to fetch data on the server
-  if (getApps().length) {
-    firestore = getFirestore();
-  }
-  return firestore;
-}
-
-
-export interface UserProfile {
-    id: string;
-    email: string;
-    name: string;
-    points: number;
-}
-
-
+// This function is now simplified to only return static/manual products
+// for server-side generation tasks like sitemaps, avoiding problematic
+// server-side Firebase connections. The client-side will have the full list.
 export async function getProducts(): Promise<Product[]> {
     try {
-        const db = getDb();
-        if(!db) {
-             console.warn("Firestore not initialized for server action 'getProducts'. Returning empty array.");
-             return [];
-        }
-        const productsCollection = collection(db, 'products');
-        const snapshot = await getDocs(productsCollection);
-        const products = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Product));
-
         const initialManualProducts: Product[] = [
             {
             id: 'manual-001',
@@ -103,10 +72,7 @@ export async function getProducts(): Promise<Product[]> {
             supplierId: 'manual',
             }
         ];
-
-        const combined = [...initialManualProducts, ...products];
-        const uniqueProducts = Array.from(new Map(combined.map(p => [p.id, p])).values());
-        return uniqueProducts;
+        return initialManualProducts;
 
     } catch (e) {
         console.error("Could not fetch products for sitemap/server components", e);
@@ -114,43 +80,9 @@ export async function getProducts(): Promise<Product[]> {
     }
 }
 
-export async function addPointsToUser(userId: string, pointsToAdd: number) {
-    if (!userId || !pointsToAdd) {
-        throw new Error("User ID and points to add are required.");
-    }
-    const firestore = getDb();
-    if(!firestore) {
-        console.error("Firestore not available to add points");
-        return { success: false, error: "Firestore not available." };
-    }
-    const userRef = doc(firestore, "users", userId);
-
-    try {
-        await updateDoc(userRef, {
-            points: increment(pointsToAdd)
-        });
-        console.log(`Successfully added ${pointsToAdd} points to user ${userId}`);
-        return { success: true };
-    } catch (error) {
-        console.error("Error adding points:", error);
-        return { success: false, error: "Failed to update points." };
-    }
-}
-
-export async function getUserProfile(userId: string): Promise<UserProfile | null> {
-    if (!userId) return null;
-    
-    const firestore = getDb();
-     if(!firestore) {
-        console.error("Firestore not available to get user profile");
-        return null;
-    }
-    const userRef = doc(firestore, "users", userId);
-    const docSnap = await getDoc(userRef);
-
-    if (docSnap.exists()) {
-        return docSnap.data() as UserProfile;
-    } else {
-        return null;
-    }
+export interface UserProfile {
+    id: string;
+    email: string;
+    name: string;
+    points: number;
 }
