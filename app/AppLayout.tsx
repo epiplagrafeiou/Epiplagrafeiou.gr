@@ -5,6 +5,8 @@ import { usePathname } from 'next/navigation';
 import Header from './Header';
 import Footer from './Footer';
 import TopBar from './TopBar';
+import { Toaster } from "@/components/ui/toaster";
+import NewsletterPopup from "@/components/layout/NewsletterPopup";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -18,6 +20,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         {children}
       </main>
       {!isAdminPage && <Footer />}
+      <Toaster />
+      <NewsletterPopup />
     </div>
   );
 }

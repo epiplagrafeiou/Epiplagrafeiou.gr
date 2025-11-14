@@ -2,7 +2,12 @@
 import type { Metadata } from 'next';
 import './globals.css';
 import AppLayout from './AppLayout';
-import { Providers } from './providers';
+import { CartProvider } from "@/lib/cart-context";
+import { Toaster } from "@/components/ui/toaster";
+import NewsletterPopup from "@/components/layout/NewsletterPopup";
+import { SuppliersProvider } from "@/lib/suppliers-context";
+import { ProductsProvider } from "@/lib/products-context";
+import { FirebaseClientProvider } from "@/firebase/client-provider";
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://epiplagrafeiou.gr'),
@@ -55,9 +60,17 @@ export default function RootLayout({
         />
       </head>
       <body className="font-body antialiased">
-        <Providers>
-          <AppLayout>{children}</AppLayout>
-        </Providers>
+        <FirebaseClientProvider>
+          <SuppliersProvider>
+            <ProductsProvider>
+              <CartProvider>
+                <AppLayout>{children}</AppLayout>
+                <Toaster />
+                <NewsletterPopup />
+              </CartProvider>
+            </ProductsProvider>
+          </SuppliersProvider>
+        </FirebaseClientProvider>
       </body>
     </html>
   );
