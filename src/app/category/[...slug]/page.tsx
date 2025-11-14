@@ -13,7 +13,7 @@ const featuredCategories = [
     { name: 'Γραφεία', href: '/category/grafeia' },
     { name: 'Καρέκλες Γραφείου', href: '/category/karekles-grafeiou' },
     { name: 'Βιβλιοθήκες', href: '/category/bibliothikes' },
-]
+];
 
 export default function CategoryPage() {
   const { products, isLoaded, allCategories } = useProducts();
@@ -74,29 +74,40 @@ export default function CategoryPage() {
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }} />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
+      />
+
       <div className="mb-6 flex items-center space-x-2 text-sm text-muted-foreground">
         <Link href="/" className="hover:text-foreground">Home</Link>
         <span>/</span>
         <Link href="/products" className="hover:text-foreground">Products</Link>
-        {breadcrumbs.map((crumb, index) => (
-          <span key={index} className="flex items-center space-x-2">
+
+        {breadcrumbs.map((crumb, i) => (
+          <span key={i} className="flex items-center space-x-2">
             <span>/</span>
             {crumb.isLast ? (
-              <span className="text-foreground capitalize">{crumb.name.replace(/-/g, ' ')}</span>
+              <span className="text-foreground capitalize">
+                {crumb.name.replace(/-/g, ' ')}
+              </span>
             ) : (
-              <Link href={crumb.href} className="hover:text-foreground capitalize">{crumb.name.replace(/-/g, ' ')}</Link>
+              <Link href={crumb.href} className="hover:text-foreground capitalize">
+                {crumb.name.replace(/-/g, ' ')}
+              </Link>
             )}
           </span>
         ))}
       </div>
 
-      <h1 className="mb-8 text-3xl font-bold capitalize">{categoryParts[categoryParts.length - 1]?.replace(/-/g, ' ') || 'Products'}</h1>
+      <h1 className="mb-8 text-3xl font-bold capitalize">
+        {categoryParts[categoryParts.length - 1]?.replace(/-/g, ' ') || 'Products'}
+      </h1>
 
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
         {!isLoaded ? (
-          Array.from({ length: 12 }).map((_, index) => (
-            <Card key={index}>
+          Array.from({ length: 12 }).map((_, i) => (
+            <Card key={i}>
               <Skeleton className="h-64 w-full" />
               <CardContent className="p-4">
                 <Skeleton className="h-5 w-4/5" />
@@ -116,19 +127,21 @@ export default function CategoryPage() {
 
       {isLoaded && filteredProducts.length === 0 && (
         <div className="text-center col-span-full py-16">
-            <h2 className="text-xl font-semibold">No Products Found</h2>
-            <p className="text-muted-foreground mt-2">There are no products in this category yet.</p>
+          <h2 className="text-xl font-semibold">No Products Found</h2>
+          <p className="text-muted-foreground mt-2">
+            There are no products in this category yet.
+          </p>
         </div>
       )}
 
       <div className="mt-16 border-t pt-12">
         <h2 className="text-center text-2xl font-bold mb-8">Εξερευνήστε Επίσης</h2>
         <div className="flex justify-center gap-4">
-            {featuredCategories.map(cat => (
-                <Button key={cat.href} asChild variant="outline">
-                    <Link href={cat.href}>{cat.name}</Link>
-                </Button>
-            ))}
+          {featuredCategories.map(cat => (
+            <Button key={cat.href} asChild variant="outline">
+              <Link href={cat.href}>{cat.name}</Link>
+            </Button>
+          ))}
         </div>
       </div>
     </div>
