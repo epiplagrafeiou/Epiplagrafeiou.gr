@@ -5,15 +5,17 @@ type Props = {
 };
 
 function toTitleCase(str: string) {
+    if (!str) return '';
     return str.replace(/-/g, ' ').replace(/\w\S*/g, (txt) => {
         return txt.charAt(0).toUpperCase() + txt.substring(1).toLowerCase();
     });
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const slugPath = Array.isArray(params.slug) ? params.slug.join('/') : params.slug;
-  // Use the slug directly to generate the title, avoiding database calls during build.
-  const pageTitle = toTitleCase(slugPath.split('/').pop() || '');
+  const slugPath = Array.isArray(params.slug) ? params.slug.join('/') : (params.slug || '');
+  const pageTitlePart = Array.isArray(params.slug) ? params.slug[params.slug.length - 1] : (params.slug || '');
+  
+  const pageTitle = toTitleCase(pageTitlePart);
 
   return {
     title: `${pageTitle} - Epipla Graphiou AI eShop`,
