@@ -1,6 +1,8 @@
 import { MetadataRoute } from 'next'
-import { getProducts } from '@/lib/user-actions'; // Using server action now
+import { getProducts } from '@/lib/user-actions';
 import { createSlug } from '@/lib/utils';
+import { collection, getDocs } from 'firebase/firestore';
+import { getDb } from '@/lib/user-actions'; // Import a modified getDb
 
 async function getCategoriesForSitemap() {
     const products = await getProducts();
@@ -23,12 +25,30 @@ async function getCategoriesForSitemap() {
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = 'https://epiplagrafeiou.gr';
-  const products = await getProducts();
-  const categories = await getCategoriesForSitemap();
+  
+  let products: any[] = [];
+  let categories: { path: string; updatedAt: Date; }[] = [];
+
+  try {
+    products = await getProducts();
+    categories = await getCategoriesForSitemap();
+  } catch (e) {
+    console.error("Sitemap generation failed:", e);
+    // Return a minimal sitemap on error to avoid breaking the build
+     return [
+        {
+          url: baseUrl,
+          lastModified: new Date(),
+          changeFrequency: 'yearly',
+          priority: 1,
+        },
+     ]
+  }
+
 
   const productEntries: MetadataRoute.Sitemap = products.map(({ slug, id }) => ({
     url: `${baseUrl}/products/${slug}`,
-    lastModified: new Date(), // This should be the product's last updated date in a real app
+    lastModified: new Date(), 
     changeFrequency: 'weekly',
     priority: 0.8,
   }));
