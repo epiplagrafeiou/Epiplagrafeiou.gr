@@ -1,10 +1,9 @@
-
 'use client';
 
 import { createContext, useContext, ReactNode, useMemo } from 'react';
-import { useCollection } from 'firebase/firestore/use-collection';
+import { useCollection } from '@/firebase/firestore/use-collection';
 import { collection, addDoc, doc, updateDoc, deleteDoc } from 'firebase/firestore';
-import { useFirestore, useMemoFirebase, errorEmitter, FirestorePermissionError } from 'firebase';
+import { useFirestore, useMemoFirebase, errorEmitter, FirestorePermissionError } from '@/firebase';
 
 
 export type MarkupRule = {

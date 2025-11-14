@@ -1,11 +1,10 @@
-
 'use client';
 
 import { createContext, useContext, useMemo } from 'react';
 import { createSlug } from './utils';
-import { useCollection } from 'firebase/firestore/use-collection';
+import { useCollection } from '@/firebase/firestore/use-collection';
 import { collection, writeBatch, doc, updateDoc } from 'firebase/firestore';
-import { useFirestore, useMemoFirebase, FirestorePermissionError, errorEmitter } from 'firebase';
+import { useFirestore, useMemoFirebase, FirestorePermissionError, errorEmitter } from '@/firebase';
 import { PlaceHolderImages } from './placeholder-images';
 
 

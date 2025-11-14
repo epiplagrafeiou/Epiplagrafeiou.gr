@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState } from 'react';
@@ -34,6 +33,7 @@ export function LoginDialog({ children }: { children: React.ReactNode }) {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!auth) return;
     try {
       await signInWithEmailAndPassword(auth, loginEmail, loginPassword);
       toast({ title: 'Επιτυχής Σύνδεση!', description: 'Καλώς ήρθατε πίσω.' });
@@ -45,6 +45,7 @@ export function LoginDialog({ children }: { children: React.ReactNode }) {
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!auth || !firestore) return;
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, registerEmail, registerPassword);
       const user = userCredential.user;
