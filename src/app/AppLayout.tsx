@@ -3,10 +3,10 @@
 
 import { usePathname } from 'next/navigation';
 import Header from './Header';
-import Footer from './Footer';
+import Footer from '@/components/layout/Footer';
 import TopBar from './TopBar';
 
-export default function AppShell({ children }: { children: React.ReactNode }) {
+export default function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const isAdminPage = pathname.startsWith('/admin');
 

@@ -2,12 +2,12 @@
 'use client';
 
 import { usePathname } from 'next/navigation';
-import Header from '@/app/Header';
-import Footer from '@/app/Footer';
-import TopBar from '@/app/TopBar';
-import { Providers } from '@/app/providers';
+import Header from './Header';
+import Footer from './Footer';
+import TopBar from './TopBar';
+import { Providers } from './providers';
 
-export default function AppShell({ children }: { children: React.ReactNode }) {
+export function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const isAdminPage = pathname.startsWith('/admin');
 

@@ -1,8 +1,7 @@
 
 import type { Metadata } from 'next';
 import './globals.css';
-import AppShell from './AppShell';
-import { Providers } from './providers';
+import { AppLayout } from './AppLayout';
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://epiplagrafeiou.gr'),
@@ -55,9 +54,7 @@ export default function RootLayout({
         />
       </head>
       <body className="font-body antialiased">
-        <Providers>
-          <AppShell>{children}</AppShell>
-        </Providers>
+        <AppLayout>{children}</AppLayout>
       </body>
     </html>
   );

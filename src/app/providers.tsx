@@ -12,15 +12,15 @@ import { FirebaseClientProvider } from "@/firebase/client-provider";
 export function Providers({ children }: { children: ReactNode }) {
   return (
     <FirebaseClientProvider>
-      <ProductsProvider>
-        <CartProvider>
-          <SuppliersProvider>
+      <SuppliersProvider>
+        <ProductsProvider>
+          <CartProvider>
             {children}
             <Toaster />
             <NewsletterPopup />
-          </SuppliersProvider>
-        </CartProvider>
-      </ProductsProvider>
+          </CartProvider>
+        </ProductsProvider>
+      </SuppliersProvider>
     </FirebaseClientProvider>
   );
 }
