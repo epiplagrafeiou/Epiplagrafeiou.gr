@@ -34,7 +34,6 @@ export default function Home() {
             height={195}
             className="object-contain"
             priority
-            quality={100}
             data-ai-hint={heroImage.imageHint}
           />
         )}

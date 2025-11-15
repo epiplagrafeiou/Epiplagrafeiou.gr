@@ -1,9 +1,6 @@
 import type { Metadata } from 'next';
-import './globals.css';
-import { FirebaseClientProvider } from '@/firebase/client-provider';
-import { SuppliersProvider } from '@/lib/suppliers-context';
-import { ProductsProvider } from '@/lib/products-context';
-import { CartProvider } from '@/lib/cart-context';
+import '@/app/globals.css';
+import { Providers } from './providers';
 import AppLayout from './AppLayout';
 
 export const metadata: Metadata = {
@@ -57,15 +54,9 @@ export default function RootLayout({
         />
       </head>
       <body className="font-body antialiased">
-        <FirebaseClientProvider>
-          <SuppliersProvider>
-            <ProductsProvider>
-              <CartProvider>
-                <AppLayout>{children}</AppLayout>
-              </CartProvider>
-            </ProductsProvider>
-          </SuppliersProvider>
-        </FirebaseClientProvider>
+        <Providers>
+          <AppLayout>{children}</AppLayout>
+        </Providers>
       </body>
     </html>
   );

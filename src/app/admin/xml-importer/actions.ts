@@ -1,4 +1,3 @@
-
 'use server';
 
 import { megapapParser, type XmlProduct } from '@/lib/xml-parsers/megapap-parser';
@@ -36,5 +35,3 @@ export async function syncProductsFromXml(url: string, supplierName: string): Pr
     throw new Error('An unknown error occurred during XML sync.');
   }
 }
-
-    
