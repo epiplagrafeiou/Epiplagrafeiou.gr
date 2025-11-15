@@ -1,17 +1,11 @@
+
 'use client';
 
 import { Button } from '@/components/ui/button';
-import { ProductCard } from '@/components/products/ProductCard';
-import { useProducts } from '@/lib/products-context';
 import { PackageX } from 'lucide-react';
 import Link from 'next/link';
 
 export default function NotFound() {
-  const { products } = useProducts();
-
-  // Get first 4 products to suggest
-  const suggestedProducts = products.slice(0, 4);
-
   return (
     <div className="container mx-auto px-4 py-16 text-center">
       <div className="mx-auto flex h-24 w-24 items-center justify-center rounded-full bg-secondary">
@@ -31,19 +25,6 @@ export default function NotFound() {
            <Link href="/products">Δείτε όλα τα προϊόντα &rarr;</Link>
         </Button>
       </div>
-
-      {suggestedProducts.length > 0 && (
-        <div className="mt-16">
-          <h2 className="mb-8 text-center font-headline text-2xl font-bold">
-            Ίσως σας ενδιαφέρουν αυτά
-          </h2>
-          <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-4">
-            {suggestedProducts.map((product) => (
-              <ProductCard key={product.id} product={product} />
-            ))}
-          </div>
-        </div>
-      )}
     </div>
   );
 }
