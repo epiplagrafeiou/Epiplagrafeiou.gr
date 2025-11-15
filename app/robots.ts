@@ -1,1 +1,12 @@
-// This file is being moved to src/app/robots.ts
+
+import { MetadataRoute } from 'next'
+ 
+export default function robots(): MetadataRoute.Robots {
+  return {
+    rules: {
+      userAgent: '*',
+      allow: '/',
+    },
+    sitemap: 'https://epiplagrafeiou.gr/sitemap.xml',
+  }
+}
