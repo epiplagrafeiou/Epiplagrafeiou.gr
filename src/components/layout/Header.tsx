@@ -13,7 +13,6 @@ import {
   X, 
   Heart,
   Truck,
-  Camera,
   ChevronRight
 } from 'lucide-react';
 import { useCart } from '@/lib/cart-context';
@@ -122,7 +121,7 @@ export default function Header() {
                 <Button variant="ghost" size="icon" onClick={() => setIsMobileMenuOpen(true)}>
                     <Menu className="h-6 w-6" />
                 </Button>
-                <span className="text-xs font-medium">Μενού</span>
+                <span className="text-xs font-medium text-foreground">Μενού</span>
             </div>
             <Link href="/" className="shrink-0">
               <Logo />
@@ -133,17 +132,14 @@ export default function Header() {
           <div className="hidden flex-1 px-4 lg:px-12 md:block">
             <div className="relative">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-              <Input placeholder="Αναζητήστε προϊόντα, δωμάτια, ιδέες..." className="h-12 w-full rounded-full bg-secondary pl-12 pr-12" />
-              <Button variant="ghost" size="icon" className="absolute right-2 top-1/2 -translate-y-1/2">
-                <Camera className="h-5 w-5 text-muted-foreground" />
-              </Button>
+              <Input placeholder="Αναζητήστε προϊόντα, δωμάτια, ιδέες..." className="h-12 w-full rounded-full bg-secondary pl-12" />
             </div>
           </div>
 
           {/* Right side: Icons */}
           <div className="flex items-center gap-2">
             <LoginDialog>
-                <Button variant="ghost" className="hidden md:flex items-center gap-2">
+                <Button variant="ghost" className="hidden md:flex items-center gap-2 text-foreground">
                     <User />
                     <span className="text-sm font-medium">Σύνδεση/Εγγραφή</span>
                 </Button>
