@@ -24,8 +24,10 @@ export default function TopBar() {
   const [isVisible, setIsVisible] = useState(true);
   const [currentMessageIndex, setCurrentMessageIndex] = useState(0);
   const { totalAmount } = useCart();
+  const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
+    setIsClient(true);
     const interval = setInterval(() => {
       setCurrentMessageIndex((prevIndex) => (prevIndex + 1) % trustMessages.length);
     }, 5000); // Change message every 5 seconds
@@ -33,25 +35,25 @@ export default function TopBar() {
     return () => clearInterval(interval);
   }, []);
 
+  if (!isVisible) return null;
+
   const remainingForFreeShipping = FREE_SHIPPING_THRESHOLD - totalAmount;
   const progressPercentage = (totalAmount / FREE_SHIPPING_THRESHOLD) * 100;
 
   let shippingMessage;
-  if (totalAmount === 0) {
+  if (!isClient || totalAmount === 0) {
     shippingMessage = `Κέρδισε δωρεάν μεταφορικά για παραγγελίες άνω των ${formatCurrency(FREE_SHIPPING_THRESHOLD)}!`;
   } else if (remainingForFreeShipping > 0) {
     shippingMessage = `Πρόσθεσε ακόμη ${formatCurrency(remainingForFreeShipping)} για δωρεάν μεταφορικά!`;
   } else {
     shippingMessage = 'Συγχαρητήρια! Έχεις δωρεάν μεταφορικά!';
   }
-  
-  if (!isVisible) return null;
 
   return (
     <div className="text-sm bg-background relative">
       <div className="relative flex flex-col items-center justify-center bg-primary p-2 text-primary-foreground text-center">
         <span>{shippingMessage}</span>
-         {totalAmount > 0 && totalAmount < FREE_SHIPPING_THRESHOLD && (
+         {isClient && totalAmount > 0 && totalAmount < FREE_SHIPPING_THRESHOLD && (
           <Progress value={progressPercentage} className="absolute bottom-0 left-0 h-1 w-full rounded-none bg-primary/50" />
         )}
       </div>
