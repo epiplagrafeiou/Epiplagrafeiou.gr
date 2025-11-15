@@ -95,7 +95,7 @@ export default function Header() {
                 <Logo />
              </Link>
             <Button variant="ghost" size="icon" onClick={() => setIsMobileMenuOpen(false)}>
-                <X className="h-6 w-6" />
+                <X className="h-6 w-6 text-foreground" />
             </Button>
         </div>
         <div className="p-4">
@@ -114,12 +114,12 @@ export default function Header() {
           {/* Left side: Menu and Logo */}
           <div className="flex items-center gap-4">
             <Button variant="ghost" size="icon" className="md:hidden" onClick={() => setIsMobileMenuOpen(true)}>
-              <Menu className="h-6 w-6" />
+              <Menu className="h-6 w-6 text-foreground" />
               <span className="sr-only">Μενού</span>
             </Button>
              <div className="hidden md:flex flex-col items-center">
                 <Button variant="ghost" size="icon" onClick={() => setIsMobileMenuOpen(true)}>
-                    <Menu className="h-6 w-6" />
+                    <Menu className="h-6 w-6 text-foreground" />
                 </Button>
                 <span className="text-xs font-medium text-foreground">Μενού</span>
             </div>
@@ -139,23 +139,23 @@ export default function Header() {
           {/* Right side: Icons */}
           <div className="flex items-center gap-2">
             <LoginDialog>
-                <Button variant="ghost" className="hidden md:flex items-center gap-2 text-foreground">
-                    <User />
+                <Button variant="ghost" className="hidden md:flex items-center gap-2">
+                    <User className="text-foreground" />
                     <span className="text-sm font-medium text-foreground">Σύνδεση/Εγγραφή</span>
                 </Button>
             </LoginDialog>
             <Button variant="ghost" size="icon" className="hidden md:inline-flex">
-              <Truck />
+              <Truck className="text-foreground" />
               <span className="sr-only">Delivery</span>
             </Button>
             <Button variant="ghost" size="icon" className="hidden md:inline-flex">
-              <Heart />
+              <Heart className="text-foreground" />
               <span className="sr-only">Wishlist</span>
             </Button>
             <Button variant="ghost" size="icon" asChild aria-label="Cart">
               <Link href="/cart">
                 <div className="relative">
-                  <ShoppingCart />
+                  <ShoppingCart className="text-foreground" />
                   {itemCount > 0 && (
                     <span className="absolute -right-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-xs text-primary-foreground">
                       {itemCount}
@@ -165,7 +165,7 @@ export default function Header() {
               </Link>
             </Button>
             <Button variant="ghost" size="icon" className="md:hidden" >
-              <Search />
+              <Search className="text-foreground" />
             </Button>
           </div>
         </div>
@@ -177,7 +177,7 @@ export default function Header() {
                 <Link
                     key={link.name}
                     href={link.slug}
-                    className="group relative text-sm font-semibold"
+                    className="group relative text-sm font-semibold text-foreground"
                 >
                     {link.name}
                     <span className="absolute bottom-[-2px] left-0 h-0.5 w-full scale-x-0 bg-primary transition-transform duration-300 group-hover:scale-x-100"></span>
