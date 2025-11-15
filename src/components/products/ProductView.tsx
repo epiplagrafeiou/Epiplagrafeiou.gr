@@ -231,7 +231,7 @@ export function ProductView({ product, allProducts }: ProductViewProps) {
               Κερδίζεις {pointsEarned} πόντους με αυτή την αγορά!
           </div>
           <Separator className="my-6" />
-          <div
+          <article
             className="prose prose-sm max-w-none text-muted-foreground"
             dangerouslySetInnerHTML={{ __html: product.description }}
           />

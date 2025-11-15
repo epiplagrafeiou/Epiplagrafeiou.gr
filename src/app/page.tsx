@@ -11,8 +11,8 @@ import { Armchair, Briefcase, Files, Library, Monitor, Wrench } from 'lucide-rea
 const mainCategories = [
     { name: 'Καρέκλες', slug: 'karekles-grafeiou', Icon: Armchair },
     { name: 'Γραφεία', slug: 'grafeia', Icon: Briefcase },
-    { name: 'Συρταριέρες', slug: 'syrtarieres', Icon: Files },
-    { name: 'Ραφιέρες', slug: 'rafieres-kai-bibliothikes', Icon: Library },
+    { name: 'Συρταριέρες', slug: 'syrtarieres-kai-ntoulapia', Icon: Files },
+    { name: 'Ραφιέρες', slug: 'bibliothikes-kai-rafieres', Icon: Library },
     { name: 'Αξεσουάρ', slug: 'aksesouar-grafeiou', Icon: Monitor },
     { name: 'Ανταλλακτικά', slug: 'antallaktika-gia-karekles-grafeiou', Icon: Wrench },
 ]
