@@ -6,6 +6,7 @@ import { useCollection } from '@/firebase/firestore/use-collection';
 import { collection, writeBatch, doc, updateDoc } from 'firebase/firestore';
 import { useFirestore, useMemoFirebase, FirestorePermissionError, errorEmitter } from '@/firebase';
 import { PlaceHolderImages } from './placeholder-images';
+import backendData from '../../docs/backend.json';
 
 
 export interface Product {
@@ -21,6 +22,17 @@ export interface Product {
   stock?: number;
   supplierId: string;
 }
+
+// Manually extract seed products. This is safer than dynamic loops.
+const getSeedProducts = (): Product[] => {
+    const productsStructure = backendData.firestore.structure.find(s => s.path === '/products/{productId}');
+    if (productsStructure && 'seed' in productsStructure.definition) {
+        return productsStructure.definition.seed as Product[];
+    }
+    return [];
+}
+const manualProducts: Product[] = getSeedProducts();
+
 
 interface ProductsContextType {
   products: Product[];
@@ -48,7 +60,7 @@ export const ProductsProvider = ({ children }: { children: React.ReactNode }) =>
   const { data: fetchedProducts, isLoading } = useCollection<Product>(productsQuery);
   
   const products = useMemo(() => {
-    const combined = [...(fetchedProducts || [])];
+    const combined = [...manualProducts, ...(fetchedProducts || [])];
     const uniqueProducts = Array.from(new Map(combined.map(p => [p.id, p])).values());
     return uniqueProducts;
   }, [fetchedProducts]);
