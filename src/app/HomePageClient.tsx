@@ -7,6 +7,14 @@ import { Armchair, Briefcase, Files, Library, Monitor, Wrench } from 'lucide-rea
 import { ProductCard } from '@/components/products/ProductCard';
 import { useProducts } from '@/lib/products-context';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Card, CardContent } from "@/components/ui/card";
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  CarouselNext,
+  CarouselPrevious,
+} from "@/components/ui/carousel";
 
 const mainCategories = [
     { name: 'Καρέκλες', slug: 'karekles-grafeiou', Icon: Armchair },
@@ -20,22 +28,39 @@ const mainCategories = [
 export default function HomePageClient() {
   const { products, isLoaded } = useProducts();
   const featuredProducts = products.slice(0, 4);
-  const heroImage = PlaceHolderImages.find((img) => img.id === 'hero-background');
+  const heroSlides = PlaceHolderImages.filter(img => img.id.startsWith('hero-slide-'));
 
   return (
     <div className="flex flex-col">
-      <section className="w-full flex justify-center bg-secondary">
-        {heroImage && (
-          <Image
-            src={heroImage.imageUrl}
-            alt={heroImage.description}
-            width={1170}
-            height={195}
-            className="object-contain"
-            priority
-            data-ai-hint={heroImage.imageHint}
-          />
-        )}
+       <section className="w-full">
+        <Carousel className="w-full" opts={{ loop: true }}>
+          <CarouselContent>
+            {heroSlides.map((slide) => (
+              <CarouselItem key={slide.id}>
+                <div className="relative h-[300px] md:h-[400px] lg:h-[500px]">
+                  <Image
+                    src={slide.imageUrl}
+                    alt={slide.description}
+                    fill
+                    className="object-cover"
+                    priority
+                    data-ai-hint={slide.imageHint}
+                  />
+                  <div className="absolute inset-0 bg-black/40" />
+                  <div className="absolute inset-0 flex flex-col items-center justify-center text-center text-white">
+                    <h1 className="text-3xl font-bold md:text-5xl lg:text-6xl">{slide.title}</h1>
+                    <p className="mt-4 max-w-lg text-lg">{slide.description}</p>
+                    <Button asChild className="mt-8">
+                      <Link href={slide.buttonLink || '#'}>{slide.buttonText}</Link>
+                    </Button>
+                  </div>
+                </div>
+              </CarouselItem>
+            ))}
+          </CarouselContent>
+          <CarouselPrevious className="absolute left-4 top-1/2 -translate-y-1/2" />
+          <CarouselNext className="absolute right-4 top-1/2 -translate-y-1/2" />
+        </Carousel>
       </section>
 
       <section className="py-16">

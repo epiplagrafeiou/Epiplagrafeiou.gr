@@ -5,6 +5,33 @@
       "description": "Modern office furniture hero image.",
       "imageUrl": "https://i.postimg.cc/431JykXw/Anonymo-schedio.png",
       "imageHint": "office furniture"
+    },
+    {
+      "id": "hero-slide-1",
+      "title": "Δημιούργησε τον Ιδανικό Χώρο Εργασίας",
+      "description": "Βρες έπιπλα γραφείου που συνδυάζουν άνεση και στυλ.",
+      "buttonText": "Ανακάλυψε τη Συλλογή",
+      "buttonLink": "/category/grafeia",
+      "imageUrl": "https://images.unsplash.com/photo-1556761175-b413da4b2489?q=80&w=1920&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+      "imageHint": "modern office"
+    },
+    {
+      "id": "hero-slide-2",
+      "title": "Ανανέωσε το Σαλόνι σου",
+      "description": "Μοντέρνοι καναπέδες, τραπεζάκια και έπιπλα TV.",
+      "buttonText": "Δες τα Έπιπλα Σαλονιού",
+      "buttonLink": "/category/saloni",
+      "imageUrl": "https://images.unsplash.com/photo-1493663284031-b7e3aefcae8e?q=80&w=1920&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+      "imageHint": "living room"
+    },
+    {
+      "id": "hero-slide-3",
+      "title": "Έμπνευση για κάθε Γωνιά",
+      "description": "Μικροέπιπλα και διακοσμητικά που κάνουν τη διαφορά.",
+      "buttonText": "Πάρε Ιδέες",
+      "buttonLink": "/category/inspiration",
+      "imageUrl": "https://images.unsplash.com/photo-1533090481721-34f524581a82?q=80&w=1920&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+      "imageHint": "home decor"
     }
   ]
 }
