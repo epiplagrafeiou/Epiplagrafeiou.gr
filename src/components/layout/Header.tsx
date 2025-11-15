@@ -131,7 +131,7 @@ export default function Header() {
           {/* Center: Search Bar */}
           <div className="hidden flex-1 px-4 lg:px-12 md:block">
             <div className="relative">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-foreground" />
               <Input placeholder="Αναζητήστε προϊόντα, δωμάτια, ιδέες..." className="h-12 w-full rounded-full bg-secondary pl-12" />
             </div>
           </div>
@@ -141,7 +141,7 @@ export default function Header() {
             <LoginDialog>
                 <Button variant="ghost" className="hidden md:flex items-center gap-2 text-foreground">
                     <User />
-                    <span className="text-sm font-medium">Σύνδεση/Εγγραφή</span>
+                    <span className="text-sm font-medium text-foreground">Σύνδεση/Εγγραφή</span>
                 </Button>
             </LoginDialog>
             <Button variant="ghost" size="icon" className="hidden md:inline-flex">
