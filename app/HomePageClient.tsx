@@ -1,3 +1,4 @@
+
 'use client';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -24,7 +25,7 @@ export default function HomePageClient() {
 
   return (
     <div className="flex flex-col">
-      <section className="w-full flex justify-center bg-secondary">
+      <section className="w-full flex justify-center">
         {heroImage && (
           <Image
             src={heroImage.imageUrl}
