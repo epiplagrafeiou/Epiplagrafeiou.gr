@@ -1,1 +1,5 @@
-// This file is being moved to src/app/cart/page.tsx
+import CartPageClient from '@/app/cart/CartPageClient';
+
+export default function CartPage() {
+  return <CartPageClient />;
+}
