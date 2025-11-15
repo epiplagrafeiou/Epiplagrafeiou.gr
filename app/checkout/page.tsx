@@ -30,8 +30,9 @@ import { Elements, CardElement, useStripe, useElements } from '@stripe/react-str
 import { useToast } from '@/hooks/use-toast';
 import { Award } from 'lucide-react';
 import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
-import { doc, updateDoc, increment } from 'firebase/firestore';
+import { doc, updateDoc, increment, collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { type UserProfile } from '@/lib/user-actions';
+import { useRouter } from 'next/navigation';
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || '');
 
@@ -59,6 +60,7 @@ const CheckoutForm = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const { user } = useUser();
   const firestore = useFirestore();
+  const router = useRouter();
 
   const userProfileRef = useMemoFirebase(() => {
     if (!firestore || !user) return null;
@@ -139,15 +141,37 @@ const CheckoutForm = () => {
       }
 
       if (paymentIntent?.status === 'succeeded') {
+        // Create order in Firestore
+        const ordersRef = collection(firestore, 'orders');
+        await addDoc(ordersRef, {
+            userId: user.uid,
+            customerDetails: {
+                name: `${data.firstName} ${data.lastName}`,
+                email: data.email,
+                phone: data.phone,
+            },
+            shippingAddress: {
+                address: data.address,
+                city: data.city,
+                postalCode: data.postalCode,
+                country: data.country,
+            },
+            items: cartItems,
+            total: total,
+            shippingCost: totalShipping,
+            status: 'Pending',
+            createdAt: serverTimestamp(),
+        });
+        
         // Update user points
         const userRef = doc(firestore, 'users', user.uid);
         await updateDoc(userRef, {
             points: increment(pointsEarned)
         });
 
-        toast({ title: 'Επιτυχία!', description: `Η πληρωμή σας ολοκληρώθηκε. Κερδίσατε ${pointsEarned} πόντους!` });
+        toast({ title: 'Επιτυχία!', description: `Η πληρωμή σας ολοκληρώθηκε. Η παραγγελία σας καταχωρήθηκε.` });
         clearCart();
-        // Redirect to a thank you page
+        router.push('/');
       }
 
     } catch (error: any) {
@@ -227,14 +251,14 @@ const CheckoutForm = () => {
             <CardHeader><CardTitle>Διεύθυνση Αποστολής</CardTitle></CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
-                <FormField name="firstName" render={({ field }) => (<FormItem><FormLabel>Όνομα</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
-                <FormField name="lastName" render={({ field }) => (<FormItem><FormLabel>Επώνυμο</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
+                <FormField control={form.control} name="firstName" render={({ field }) => (<FormItem><FormLabel>Όνομα</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
+                <FormField control={form.control} name="lastName" render={({ field }) => (<FormItem><FormLabel>Επώνυμο</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
               </div>
-              <FormField name="address" render={({ field }) => (<FormItem><FormLabel>Διεύθυνση</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
+              <FormField control={form.control} name="address" render={({ field }) => (<FormItem><FormLabel>Διεύθυνση</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
               <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-                <FormField name="city" render={({ field }) => (<FormItem><FormLabel>Πόλη</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
-                <FormField name="postalCode" render={({ field }) => (<FormItem><FormLabel>Ταχυδρομικός Κώδικας</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
-                <FormField name="country" render={({ field }) => (<FormItem><FormLabel>Χώρα</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
+                <FormField control={form.control} name="city" render={({ field }) => (<FormItem><FormLabel>Πόλη</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
+                <FormField control={form.control} name="postalCode" render={({ field }) => (<FormItem><FormLabel>Ταχυδρομικός Κώδικας</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
+                <FormField control={form.control} name="country" render={({ field }) => (<FormItem><FormLabel>Χώρα</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
               </div>
             </CardContent>
           </Card>
@@ -281,3 +305,5 @@ export default function CheckoutPage() {
     </div>
   );
 }
+
+    
