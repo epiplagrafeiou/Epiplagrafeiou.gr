@@ -21,7 +21,7 @@ service cloud.firestore {
      * @description Public read access, admin-only writes.
      */
     match /products/{productId} {
-      allow get, list: if true;
+      allow read: if true;
       allow create, update, delete: if isAdmin();
     }
 
