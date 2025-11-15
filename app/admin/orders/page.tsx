@@ -1,6 +1,7 @@
 
 'use client';
 
+import { useMemo } from 'react';
 import {
   Card,
   CardContent,
@@ -152,6 +153,3 @@ export default function OrdersPage() {
         </div>
     );
 }
-
-
-    
