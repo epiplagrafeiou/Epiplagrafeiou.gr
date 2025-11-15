@@ -1,3 +1,4 @@
+
 'use client';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -14,6 +15,8 @@ import {
   CarouselNext,
   CarouselPrevious,
 } from "@/components/ui/carousel";
+import { Card, CardContent } from '@/components/ui/card';
+
 
 const mainCategories = [
     { name: 'Καρέκλες', slug: 'karekles-grafeiou', Icon: Armchair },
@@ -31,45 +34,47 @@ export default function HomePageClient() {
 
   return (
     <div className="flex flex-col">
-       <section className="w-full">
-        <Carousel className="w-full" opts={{ loop: true }}>
-          <CarouselContent>
-            {heroSlides.length > 0 ? (
-              heroSlides.map((slide) => (
-                <CarouselItem key={slide.id}>
-                  <div className="relative h-[350px] md:h-[500px] lg:h-[650px]">
-                    <Image
-                      src={slide.imageUrl}
-                      alt={slide.description}
-                      fill
-                      className="object-cover"
-                      priority
-                      data-ai-hint={slide.imageHint}
-                    />
-                    <div className="absolute inset-0 bg-black/40" />
-                    <div className="absolute inset-0 flex flex-col items-center justify-center text-center text-white p-4">
-                      <h1 className="text-3xl font-bold md:text-5xl lg:text-6xl">{slide.title}</h1>
-                      <p className="mt-4 max-w-lg text-lg">{slide.description}</p>
-                      {slide.buttonText && slide.buttonLink && (
-                        <Button asChild className="mt-8">
-                          <Link href={slide.buttonLink}>{slide.buttonText}</Link>
-                        </Button>
-                      )}
+       <section className="w-full py-6 md:py-8">
+        <div className="container mx-auto px-4">
+          <Carousel className="w-full shadow-lg" opts={{ loop: true }}>
+            <CarouselContent>
+              {heroSlides.length > 0 ? (
+                heroSlides.map((slide) => (
+                  <CarouselItem key={slide.id}>
+                    <div className="relative h-[250px] md:h-[350px] lg:h-[450px] rounded-lg overflow-hidden">
+                      <Image
+                        src={slide.imageUrl}
+                        alt={slide.description}
+                        fill
+                        className="object-cover"
+                        priority
+                        data-ai-hint={slide.imageHint}
+                      />
+                      <div className="absolute inset-0 bg-black/40" />
+                      <div className="absolute inset-0 flex flex-col items-center justify-center text-center text-white p-4">
+                        <h1 className="text-3xl font-bold md:text-5xl lg:text-6xl">{slide.title}</h1>
+                        <p className="mt-4 max-w-lg text-lg">{slide.description}</p>
+                        {slide.buttonText && slide.buttonLink && (
+                          <Button asChild className="mt-8">
+                            <Link href={slide.buttonLink}>{slide.buttonText}</Link>
+                          </Button>
+                        )}
+                      </div>
                     </div>
+                  </CarouselItem>
+                ))
+              ) : (
+                <CarouselItem>
+                  <div className="relative h-[250px] md:h-[350px] lg:h-[450px] bg-secondary flex items-center justify-center rounded-lg">
+                    <p className="text-muted-foreground">Hero images are loading...</p>
                   </div>
                 </CarouselItem>
-              ))
-            ) : (
-              <CarouselItem>
-                <div className="relative h-[350px] md:h-[500px] lg:h-[650px] bg-secondary flex items-center justify-center">
-                  <p className="text-muted-foreground">Hero images are loading...</p>
-                </div>
-              </CarouselItem>
-            )}
-          </CarouselContent>
-          <CarouselPrevious className="absolute left-4 top-1/2 -translate-y-1/2" />
-          <CarouselNext className="absolute right-4 top-1/2 -translate-y-1/2" />
-        </Carousel>
+              )}
+            </CarouselContent>
+            <CarouselPrevious className="absolute left-4 top-1/2 -translate-y-1/2" />
+            <CarouselNext className="absolute right-4 top-1/2 -translate-y-1/2" />
+          </Carousel>
+        </div>
       </section>
 
       <section className="py-16">
