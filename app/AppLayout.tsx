@@ -22,7 +22,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
       </main>
       {!isAdminPage && <Footer />}
       <Toaster />
-      <NewsletterPopup />
+      {!isAdminPage && <NewsletterPopup />}
     </div>
   );
 }
