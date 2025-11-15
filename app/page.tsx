@@ -1,1 +1,6 @@
-// This file is being moved to src/app/page.tsx
+
+import HomePageClient from '../src/app/HomePageClient';
+
+export default function Home() {
+  return <HomePageClient />;
+}
