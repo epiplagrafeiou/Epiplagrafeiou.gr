@@ -2,11 +2,10 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { ProductCard } from '@/components/products/ProductCard';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
-import { useProducts } from '@/lib/products-context';
-import { createSlug } from '@/lib/utils';
 import { Armchair, Briefcase, Files, Library, Monitor, Wrench } from 'lucide-react';
+import { ProductCard } from '@/components/products/ProductCard';
+import { useProducts } from '@/lib/products-context';
 
 const mainCategories = [
     { name: 'Καρέκλες', slug: 'karekles-grafeiou', Icon: Armchair },
@@ -17,8 +16,7 @@ const mainCategories = [
     { name: 'Ανταλλακτικά', slug: 'antallaktika-gia-karekles-grafeiou', Icon: Wrench },
 ]
 
-
-export default function Home() {
+function HomePageContent() {
   const { products } = useProducts();
   const featuredProducts = products.slice(0, 4);
   const heroImage = PlaceHolderImages.find((img) => img.id === 'hero-background');
@@ -76,4 +74,8 @@ export default function Home() {
       </section>
     </div>
   );
+}
+
+export default function Home() {
+    return <HomePageContent />;
 }

@@ -1,4 +1,3 @@
-
 'use client';
 
 import { Button } from '@/components/ui/button';
@@ -12,7 +11,7 @@ export default function NotFound() {
         <PackageX className="h-12 w-12 text-muted-foreground" />
       </div>
       <h1 className="mt-8 text-3xl font-bold tracking-tight text-foreground sm:text-5xl">
-        Σελίδα δεν βρέθηκε
+        Η σελίδα δεν βρέθηκε
       </h1>
       <p className="mt-6 text-base leading-7 text-muted-foreground">
         Ουπς! Δεν μπορούμε να βρούμε τη σελίδα που ψάχνετε.
