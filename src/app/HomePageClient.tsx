@@ -7,7 +7,6 @@ import { Armchair, Briefcase, Files, Library, Monitor, Wrench } from 'lucide-rea
 import { ProductCard } from '@/components/products/ProductCard';
 import { useProducts } from '@/lib/products-context';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Card, CardContent } from "@/components/ui/card";
 import {
   Carousel,
   CarouselContent,
