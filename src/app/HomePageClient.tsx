@@ -35,28 +35,38 @@ export default function HomePageClient() {
        <section className="w-full">
         <Carousel className="w-full" opts={{ loop: true }}>
           <CarouselContent>
-            {heroSlides.map((slide) => (
-              <CarouselItem key={slide.id}>
-                <div className="relative h-[300px] md:h-[400px] lg:h-[500px]">
-                  <Image
-                    src={slide.imageUrl}
-                    alt={slide.description}
-                    fill
-                    className="object-cover"
-                    priority
-                    data-ai-hint={slide.imageHint}
-                  />
-                  <div className="absolute inset-0 bg-black/40" />
-                  <div className="absolute inset-0 flex flex-col items-center justify-center text-center text-white">
-                    <h1 className="text-3xl font-bold md:text-5xl lg:text-6xl">{slide.title}</h1>
-                    <p className="mt-4 max-w-lg text-lg">{slide.description}</p>
-                    <Button asChild className="mt-8">
-                      <Link href={slide.buttonLink || '#'}>{slide.buttonText}</Link>
-                    </Button>
+            {heroSlides.length > 0 ? (
+              heroSlides.map((slide) => (
+                <CarouselItem key={slide.id}>
+                  <div className="relative h-[350px] md:h-[500px] lg:h-[650px]">
+                    <Image
+                      src={slide.imageUrl}
+                      alt={slide.description}
+                      fill
+                      className="object-cover"
+                      priority
+                      data-ai-hint={slide.imageHint}
+                    />
+                    <div className="absolute inset-0 bg-black/40" />
+                    <div className="absolute inset-0 flex flex-col items-center justify-center text-center text-white p-4">
+                      <h1 className="text-3xl font-bold md:text-5xl lg:text-6xl">{slide.title}</h1>
+                      <p className="mt-4 max-w-lg text-lg">{slide.description}</p>
+                      {slide.buttonText && slide.buttonLink && (
+                        <Button asChild className="mt-8">
+                          <Link href={slide.buttonLink}>{slide.buttonText}</Link>
+                        </Button>
+                      )}
+                    </div>
                   </div>
+                </CarouselItem>
+              ))
+            ) : (
+              <CarouselItem>
+                <div className="relative h-[350px] md:h-[500px] lg:h-[650px] bg-secondary flex items-center justify-center">
+                  <p className="text-muted-foreground">Hero images are loading...</p>
                 </div>
               </CarouselItem>
-            ))}
+            )}
           </CarouselContent>
           <CarouselPrevious className="absolute left-4 top-1/2 -translate-y-1/2" />
           <CarouselNext className="absolute right-4 top-1/2 -translate-y-1/2" />

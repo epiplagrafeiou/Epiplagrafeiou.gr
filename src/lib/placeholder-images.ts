@@ -5,8 +5,10 @@ export type ImagePlaceholder = {
   description: string;
   imageUrl: string;
   imageHint: string;
+  title?: string;
+  buttonText?: string;
+  buttonLink?: string;
 };
 
-// Only contains the static images from the JSON file.
-// All dynamic product images now come directly from the Product objects in Firestore.
+// This now correctly loads all placeholder images from the JSON file, including the new hero slides.
 export const PlaceHolderImages: ImagePlaceholder[] = [...data.placeholderImages];
