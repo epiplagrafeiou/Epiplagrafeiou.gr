@@ -43,13 +43,13 @@ function CartItemRow({ item }: { item: CartItem }) {
             value={item.quantity}
             onChange={(e) => updateQuantity(item.id, parseInt(e.target.value))}
             className="h-9 w-20"
-            aria-label={`Quantity for ${item.name}`}
+            aria-label={`Ποσότητα για ${item.name}`}
           />
           <Button
             variant="ghost"
             size="icon"
             onClick={() => removeFromCart(item.id)}
-            aria-label={`Remove ${item.name} from cart`}
+            aria-label={`Αφαίρεση ${item.name} από το καλάθι`}
           >
             <Trash2 className="h-4 w-4 text-muted-foreground" />
           </Button>
@@ -71,10 +71,10 @@ export default function CartPageClient() {
     return (
       <div className="container mx-auto flex flex-col items-center justify-center py-24 text-center">
         <ShoppingBag className="h-24 w-24 text-muted-foreground" />
-        <h1 className="mt-6 text-2xl font-bold">Your cart is empty</h1>
-        <p className="mt-2 text-muted-foreground">Looks like you haven't added anything to your cart yet.</p>
+        <h1 className="mt-6 text-2xl font-bold">Το καλάθι σας είναι άδειο</h1>
+        <p className="mt-2 text-muted-foreground">Φαίνεται ότι δεν έχετε προσθέσει ακόμα τίποτα στο καλάθι σας.</p>
         <Button asChild className="mt-6">
-          <Link href="/products">Start Shopping</Link>
+          <Link href="/products">Ξεκινήστε τις αγορές σας</Link>
         </Button>
       </div>
     );
@@ -82,7 +82,7 @@ export default function CartPageClient() {
 
   return (
     <div className="container mx-auto px-4 py-12">
-      <h1 className="font-headline text-3xl font-bold">Your Cart</h1>
+      <h1 className="font-headline text-3xl font-bold">Το Καλάθι σας</h1>
       <div className="mt-8 grid grid-cols-1 gap-12 lg:grid-cols-3">
         <div className="divide-y lg:col-span-2">
           {cartItems.map((item) => (
@@ -92,32 +92,32 @@ export default function CartPageClient() {
         <div className="lg:col-span-1">
           <Card>
             <CardHeader>
-              <CardTitle>Order Summary</CardTitle>
+              <CardTitle>Σύνοψη Παραγγελίας</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Subtotal</span>
+                <span className="text-muted-foreground">Υποσύνολο</span>
                 <span>{formatCurrency(totalAmount)}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Shipping</span>
-                <span>{totalShipping > 0 ? formatCurrency(totalShipping) : 'Free'}</span>
+                <span className="text-muted-foreground">Μεταφορικά</span>
+                <span>{totalShipping > 0 ? formatCurrency(totalShipping) : 'Δωρεάν'}</span>
               </div>
                <div className="flex justify-between text-sm">
                 <span className="flex items-center gap-2 text-muted-foreground">
-                  <Award className="h-4 w-4" /> Points Earned
+                  <Award className="h-4 w-4" /> Κερδισμένοι Πόντοι
                 </span>
                 <span className="font-medium">{pointsEarned}</span>
               </div>
               <Separator />
               <div className="flex justify-between font-bold">
-                <span>Total</span>
+                <span>Σύνολο</span>
                 <span>{formatCurrency(total)}</span>
               </div>
             </CardContent>
             <CardFooter>
               <Button asChild size="lg" className="w-full bg-accent text-accent-foreground hover:bg-accent/90">
-                <Link href="/checkout">Proceed to Checkout</Link>
+                <Link href="/checkout">Ολοκλήρωση Παραγγελίας</Link>
               </Button>
             </CardFooter>
           </Card>
