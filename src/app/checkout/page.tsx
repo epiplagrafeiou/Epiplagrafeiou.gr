@@ -3,7 +3,7 @@
 
 import React, { useEffect, useState } from "react";
 import { Elements } from "@stripe/react-stripe-js";
-import { loadStripe } from "@stripe/stripe-js";
+import { loadStripe, type StripeElementsOptions } from "@stripe/stripe-js";
 import CheckoutPayment from "@/components/checkout/CheckoutPayment";
 import { useCart } from "@/lib/cart-context";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -16,7 +16,7 @@ export default function CheckoutPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (totalAmount === 0) {
+    if (totalAmount === 0 && cartItems.length === 0) {
         setLoading(false);
         return;
     };
@@ -30,7 +30,7 @@ export default function CheckoutPage() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             cartItems,
-            totalAmount,
+            amount: totalAmount, // Send amount in currency units
             shippingDetails: {}, // Optionally include form data here
           }),
         });
@@ -68,23 +68,33 @@ export default function CheckoutPage() {
     );
   }
 
-  if (!clientSecret) {
+  if (cartItems.length > 0 && !clientSecret) {
     return (
       <div className="container mx-auto px-4 py-12">
         <div className="text-center text-destructive">Unable to initialize payment. Please check your cart or try again later.</div>
       </div>
     );
   }
+  
+  if (cartItems.length === 0) {
+      // Redirect or show empty cart message
+      return (
+           <div className="container mx-auto px-4 py-12 text-center">
+                <h1 className="text-2xl font-bold">Your cart is empty.</h1>
+                <p className="text-muted-foreground">Add items to your cart to proceed to checkout.</p>
+           </div>
+      )
+  }
 
-  const options = {
+  const options: StripeElementsOptions = {
     clientSecret,
-    appearance: { theme: 'stripe' as const },
+    appearance: { theme: 'stripe' },
   };
 
   return (
     <div className="container mx-auto px-4 py-12">
       <Elements stripe={stripePromise} options={options}>
-        <CheckoutPayment clientSecret={clientSecret} />
+        <CheckoutPayment clientSecret={clientSecret!} />
       </Elements>
     </div>
   );
