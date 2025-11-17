@@ -273,29 +273,52 @@ const CheckoutForm = () => {
             </CardContent>
           </Card>
           <Card>
-            <CardHeader><CardTitle>Πληρωμή με Κάρτα</CardTitle></CardHeader>
+            <CardHeader>
+              <CardTitle>Πληρωμή με Κάρτα</CardTitle>
+            </CardHeader>
             <CardContent className="space-y-4">
-                <FormField control={form.control} name="cardName" render={({ field }) => (<FormItem><FormLabel>Όνομα κατόχου κάρτας</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
+
+              {/* Cardholder Name */}
+              <FormField
+                control={form.control}
+                name="cardName"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Όνομα κατόχου κάρτας</FormLabel>
+                    <FormControl>
+                      <Input {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* Card Number */}
+              <div className="space-y-2">
+                <FormLabel>Αριθμός Κάρτας</FormLabel>
+                <div className="border rounded-md p-3">
+                  <CardNumberElement options={stripeElementStyles} />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                {/* Expiration Date */}
                 <div className="space-y-2">
-                    <Label>Αριθμός Κάρτας</Label>
-                    <div className="border rounded-md p-3">
-                        <CardNumberElement options={stripeElementStyles} />
-                    </div>
+                  <FormLabel>Ημερομηνία Λήξης (MM/YY)</FormLabel>
+                  <div className="border rounded-md p-3">
+                    <CardExpiryElement options={stripeElementStyles} />
+                  </div>
                 </div>
-                <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                        <Label>Ημερομηνία Λήξης</Label>
-                        <div className="border rounded-md p-3">
-                            <CardExpiryElement options={stripeElementStyles} />
-                        </div>
-                    </div>
-                    <div className="space-y-2">
-                        <Label>CVC</Label>
-                        <div className="border rounded-md p-3">
-                            <CardCvcElement options={stripeElementStyles} />
-                        </div>
-                    </div>
+
+                {/* CVC */}
+                <div className="space-y-2">
+                  <FormLabel>CVC</FormLabel>
+                  <div className="border rounded-md p-3">
+                    <CardCvcElement options={stripeElementStyles} />
+                  </div>
                 </div>
+              </div>
+
             </CardContent>
           </Card>
         </div>
@@ -326,3 +349,5 @@ export default function CheckoutPage() {
     </div>
   );
 }
+
+    
