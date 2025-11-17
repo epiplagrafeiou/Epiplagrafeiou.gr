@@ -23,7 +23,10 @@ export default function TopBar() {
   const progressPercentage = (totalAmount / FREE_SHIPPING_THRESHOLD) * 100;
 
   let shippingMessage;
-  if (!isClient || totalAmount === 0) {
+  if (!isClient) {
+    // Render a default message on the server and initial client render
+    shippingMessage = `Κέρδισε δωρεάν μεταφορικά για παραγγελίες άνω των ${formatCurrency(FREE_SHIPPING_THRESHOLD)}!`;
+  } else if (totalAmount === 0) {
     shippingMessage = `Κέρδισε δωρεάν μεταφορικά για παραγγελίες άνω των ${formatCurrency(FREE_SHIPPING_THRESHOLD)}!`;
   } else if (remainingForFreeShipping > 0) {
     shippingMessage = `Πρόσθεσε ακόμη ${formatCurrency(remainingForFreeShipping)} για δωρεάν μεταφορικά!`;
