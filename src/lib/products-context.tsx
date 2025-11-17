@@ -1,3 +1,4 @@
+
 'use client';
 
 import { createContext, useContext, useMemo } from 'react';
@@ -6,7 +7,6 @@ import { useCollection } from '@/firebase/firestore/use-collection';
 import { collection, writeBatch, doc, updateDoc } from 'firebase/firestore';
 import { useFirestore, useMemoFirebase, FirestorePermissionError, errorEmitter } from '@/firebase';
 import { PlaceHolderImages } from './placeholder-images';
-import backendData from '../../docs/backend.json';
 
 
 export interface Product {
@@ -23,15 +23,69 @@ export interface Product {
   supplierId: string;
 }
 
-// Manually extract seed products. This is safer than dynamic loops.
-const getSeedProducts = (): Product[] => {
-    const productsStructure = backendData.firestore.structure.find(s => s.path === '/products/{productId}');
-    if (productsStructure && 'seed' in productsStructure.definition) {
-        return productsStructure.definition.seed as Product[];
+const manualProducts: Product[] = [
+    {
+      id: "manual-001",
+      name: "Σετ 5τμχ Ρόδες Για Καρέκλα Γραφείου",
+      slug: "set-5tmch-rodes-gia-karekla-grafeiou",
+      price: 12.99,
+      originalPrice: 13.99,
+      description: "Ρόδες σετ 5 τεμαχίων για καρέκλες γραφείου.",
+      imageId: "https://www.zougris.gr/content/images/thumbs/0008329.jpeg",
+      category: "Ανταλλακτικά Για Καρέκλες Γραφείου",
+      images: ["https://www.zougris.gr/content/images/thumbs/0008329.jpeg"],
+      stock: 177,
+      supplierId: "manual"
+    },
+    {
+      id: "11.2213",
+      name: "ΑΜΟΡΤΙΣΕΡ ΜΑΥΡΟ ΚΑΡ.ΓΡΑΦΕΙΟΥ 26/35εκ.",
+      slug: "amortiser-mayro-kargrafeiou-2635ek",
+      price: 18.99,
+      description: "Αμορτισέρ μαύρο για καρέκλες γραφείου 26/35εκ.",
+      imageId: "https://www.zougris.gr/content/images/thumbs/0004662.jpeg",
+      category: "Ανταλλακτικά Για Καρέκλες Γραφείου",
+      images: ["https://www.zougris.gr/content/images/thumbs/0004662.jpeg"],
+      stock: 350,
+      supplierId: "manual"
+    },
+    {
+      id: "01.0942",
+      name: "ΠΟΔΙ Φ62εκ. ΧΡΩΜΙΟΥ ΓΙΑ ΚΑΡΕΚΛΑ ΓΡΑΦΕΙΟΥ",
+      slug: "podi-f62ek-chromiou-gia-karekla-grafeiou",
+      price: 28.99,
+      description: "Πόδι χρωμίου Φ62εκ. για απόλυτη ανθεκτικότητα στο βάρος.",
+      imageId: "https://www.zougris.gr/content/images/thumbs/0010615.jpeg",
+      category: "Ανταλλακτικά Για Καρέκλες Γραφείου",
+      images: ["https://www.zougris.gr/content/images/thumbs/0010615.jpeg", "https://www.zougris.gr/content/images/thumbs/0010616.jpeg"],
+      stock: 98,
+      supplierId: "manual"
+    },
+    {
+      id: "manual-pelmata",
+      name: "Σέτ 5τμχ Πέλματα Για Καρέκλα Γραφείου",
+      slug: "set-5tmch-pelmata-gia-karekla-grafeiou",
+      price: 12.99,
+      description: "Πέλματα, κάντε τις καρέκλες σας σταθερές αντικαθιστώντας εύκολα τις ρόδες με τα πέλματα.",
+      imageId: "https://www.zougris.gr/content/images/thumbs/0008499.jpeg",
+      category: "Ανταλλακτικά Για Καρέκλες Γραφείου",
+      images: ["https://www.zougris.gr/content/images/thumbs/0008499.jpeg"],
+      stock: 61,
+      supplierId: "manual"
+    },
+    {
+      id: "manual-pro-wheels",
+      name: "Σετ 5τμχ Ρόδες Pro 63χιλ. Ελαστικής Πολυουρεθάνης Για Καρέκλα Γραφείου",
+      slug: "set-5tmch-rodes-pro-63chil-elastikis-polyourethanis-gia-karekla-grafeiou",
+      price: 28.99,
+      description: "Ρόδες Pro σετ 5 τεμαχίων για καρέκλες γραφείου.Από ελαστική πολυουρεθάνη για ομαλότερη κύλιση χωρίς να αφήνει σημάδια στο δάπεδο.Κατάλληλες για καρέκλες με πείρο 11 χιλιοστών.",
+      imageId: "https://www.zougris.gr/content/images/thumbs/0010300.jpeg",
+      category: "Ανταλλακτικά Για Καρέκλες Γραφείου",
+      images: ["https://www.zougris.gr/content/images/thumbs/0010300.jpeg"],
+      stock: 214,
+      supplierId: "manual"
     }
-    return [];
-}
-const manualProducts: Product[] = getSeedProducts();
+];
 
 
 interface ProductsContextType {
