@@ -39,7 +39,7 @@ export default function ClientCategory({ slug }: { slug: string }) {
     };
   });
 
-  if (isLoaded && !categoryPath) {
+  if (isLoaded && filteredProducts.length === 0 && !categoryPath) {
     return (
         <div className="container mx-auto px-4 py-16 text-center">
             <h1 className="text-3xl font-bold">Κατηγορία δεν βρέθηκε</h1>

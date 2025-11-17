@@ -25,12 +25,13 @@ import {
 import Image from 'next/image';
 import { Separator } from '@/components/ui/separator';
 import { loadStripe, StripeElementsOptions } from '@stripe/stripe-js';
-import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
+import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import { useToast } from '@/hooks/use-toast';
 import { Award } from 'lucide-react';
 import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
-import { doc, updateDoc, increment } from 'firebase/firestore';
+import { doc, updateDoc, increment, collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { type UserProfile } from '@/lib/user-actions';
+import { useRouter } from 'next/navigation';
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || '');
 
@@ -50,7 +51,7 @@ type CheckoutFormValues = z.infer<typeof checkoutSchema>;
 const SHIPPING_COST = 10;
 const FREE_SHIPPING_THRESHOLD = 150;
 
-const CheckoutForm = () => {
+const CheckoutForm = ({ clientSecret }: { clientSecret: string }) => {
   const { cartItems, totalAmount, clearCart } = useCart();
   const { toast } = useToast();
   const stripe = useStripe();
@@ -58,6 +59,7 @@ const CheckoutForm = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const { user } = useUser();
   const firestore = useFirestore();
+  const router = useRouter();
 
   const userProfileRef = useMemoFirebase(() => {
     if (!firestore || !user) return null;
@@ -95,59 +97,70 @@ const CheckoutForm = () => {
       return;
     }
 
-    const cardElement = elements.getElement(CardElement);
-    if (!cardElement) {
-      toast({ variant: 'destructive', title: 'Σφάλμα', description: 'Το πεδίο της κάρτας δεν βρέθηκε.' });
-      return;
-    }
-
     setIsProcessing(true);
 
     try {
-      const res = await fetch('/api/create-payment-intent', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ amount: Math.round(total * 100) }), // Amount in cents
-      });
-
-      const { clientSecret, error: backendError } = await res.json();
-
-      if (backendError) {
-        throw new Error(backendError);
-      }
-
-      const { error: stripeError, paymentIntent } = await stripe.confirmCardPayment(clientSecret, {
-        payment_method: {
-          card: cardElement,
-          billing_details: {
-            name: `${data.firstName} ${data.lastName}`,
-            email: data.email,
-            phone: data.phone,
-            address: {
-              line1: data.address,
-              city: data.city,
-              postal_code: data.postalCode,
-              country: 'GR', // Assuming Greece
-            },
-          },
+      const { error: stripeError } = await stripe.confirmPayment({
+        elements,
+        confirmParams: {
+          return_url: `${window.location.origin}/`, // We will handle success/failure manually below
+          payment_method_data: {
+             billing_details: {
+                name: `${data.firstName} ${data.lastName}`,
+                email: data.email,
+                phone: data.phone,
+                address: {
+                line1: data.address,
+                city: data.city,
+                postal_code: data.postalCode,
+                country: 'GR', // Assuming Greece
+                },
+             }
+          }
         },
+        // We handle the redirect manually to perform actions after payment
+        redirect: 'if_required', 
       });
+
 
       if (stripeError) {
-        throw stripeError;
+        if (stripeError.type === "card_error" || stripeError.type === "validation_error") {
+            throw new Error(stripeError.message || 'Υπήρξε ένα σφάλμα με την κάρτα σας.');
+        } else {
+            throw new Error('Παρουσιάστηκε ένα απρόσμενο σφάλμα κατά την πληρωμή.');
+        }
       }
 
-      if (paymentIntent?.status === 'succeeded') {
-        // Update user points
-        const userRef = doc(firestore, 'users', user.uid);
-        await updateDoc(userRef, {
-            points: increment(pointsEarned)
-        });
+      // If no error, payment is successful
+      const ordersRef = collection(firestore, 'orders');
+      await addDoc(ordersRef, {
+          userId: user.uid,
+          customerDetails: {
+              name: `${data.firstName} ${data.lastName}`,
+              email: data.email,
+              phone: data.phone,
+          },
+          shippingAddress: {
+              address: data.address,
+              city: data.city,
+              postalCode: data.postalCode,
+              country: data.country,
+          },
+          items: cartItems,
+          total: total,
+          shippingCost: totalShipping,
+          status: 'Pending',
+          createdAt: serverTimestamp(),
+      });
+      
+      const userRef = doc(firestore, 'users', user.uid);
+      await updateDoc(userRef, {
+          points: increment(pointsEarned)
+      });
 
-        toast({ title: 'Επιτυχία!', description: `Η πληρωμή σας ολοκληρώθηκε. Κερδίσατε ${pointsEarned} πόντους!` });
-        clearCart();
-        // Redirect to a thank you page
-      }
+      toast({ title: 'Επιτυχία!', description: `Η πληρωμή σας ολοκληρώθηκε. Η παραγγελία σας καταχωρήθηκε.` });
+      clearCart();
+      router.push('/');
 
     } catch (error: any) {
       toast({
@@ -207,53 +220,35 @@ const CheckoutForm = () => {
                 <Separator className="my-2" />
                 <div className="flex justify-between text-lg font-bold"><span>Σύνολο</span><span>{formatCurrency(total)}</span></div>
               </div>
-              <Button type="submit" size="lg" className="w-full mt-6 bg-accent text-accent-foreground hover:bg-accent/90" disabled={isProcessing || !stripe}>
-                {isProcessing ? 'Επεξεργασία...' : `Πληρωμή ${formatCurrency(total)}`}
-              </Button>
+               <Button type="submit" size="lg" className="w-full mt-6 bg-accent text-accent-foreground hover:bg-accent/90" disabled={isProcessing || !stripe || !elements}>
+                 {isProcessing ? 'Επεξεργασία...' : `Πληρωμή ${formatCurrency(total)}`}
+               </Button>
             </CardContent>
           </Card>
         </div>
         <div className="lg:order-1 space-y-8">
           <h1 className="font-headline text-3xl font-bold">Checkout</h1>
           <Card>
-            <CardHeader><CardTitle>Στοιχεία Επικοινωνίας</CardTitle></CardHeader>
-            <CardContent className="space-y-4">
-              <FormField control={form.control} name="email" render={({ field }) => (<FormItem><FormLabel>Email</FormLabel><FormControl><Input placeholder="you@example.com" {...field} /></FormControl><FormMessage /></FormItem>)} />
-              <FormField control={form.control} name="phone" render={({ field }) => (<FormItem><FormLabel>Τηλέφωνο</FormLabel><FormControl><Input placeholder="69..." {...field} /></FormControl><FormMessage /></FormItem>)} />
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader><CardTitle>Διεύθυνση Αποστολής</CardTitle></CardHeader>
+            <CardHeader><CardTitle>Στοιχεία Αποστολής</CardTitle></CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
-                <FormField name="firstName" render={({ field }) => (<FormItem><FormLabel>Όνομα</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
-                <FormField name="lastName" render={({ field }) => (<FormItem><FormLabel>Επώνυμο</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
+                <FormField control={form.control} name="firstName" render={({ field }) => (<FormItem><FormLabel>Όνομα</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
+                <FormField control={form.control} name="lastName" render={({ field }) => (<FormItem><FormLabel>Επώνυμο</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
               </div>
-              <FormField name="address" render={({ field }) => (<FormItem><FormLabel>Διεύθυνση</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
+              <FormField control={form.control} name="address" render={({ field }) => (<FormItem><FormLabel>Διεύθυνση</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
               <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-                <FormField name="city" render={({ field }) => (<FormItem><FormLabel>Πόλη</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
-                <FormField name="postalCode" render={({ field }) => (<FormItem><FormLabel>Ταχυδρομικός Κώδικας</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
-                <FormField name="country" render={({ field }) => (<FormItem><FormLabel>Χώρα</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
+                <FormField control={form.control} name="city" render={({ field }) => (<FormItem><FormLabel>Πόλη</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
+                <FormField control={form.control} name="postalCode" render={({ field }) => (<FormItem><FormLabel>Ταχυδρομικός Κώδικας</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
+                <FormField control={form.control} name="country" render={({ field }) => (<FormItem><FormLabel>Χώρα</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
               </div>
+              <FormField control={form.control} name="phone" render={({ field }) => (<FormItem><FormLabel>Τηλέφωνο</FormLabel><FormControl><Input placeholder="69..." {...field} /></FormControl><FormMessage /></FormItem>)} />
+              <FormField control={form.control} name="email" render={({ field }) => (<FormItem><FormLabel>Email</FormLabel><FormControl><Input placeholder="you@example.com" {...field} /></FormControl><FormMessage /></FormItem>)} />
             </CardContent>
           </Card>
           <Card>
-            <CardHeader><CardTitle>Πληρωμή με Κάρτα</CardTitle></CardHeader>
+            <CardHeader><CardTitle>Στοιχεία Πληρωμής</CardTitle></CardHeader>
             <CardContent>
-                <CardElement options={{
-                    style: {
-                        base: {
-                            fontSize: '16px',
-                            color: '#424770',
-                            '::placeholder': {
-                                color: '#aab7c4',
-                            },
-                        },
-                        invalid: {
-                            color: '#9e2146',
-                        },
-                    },
-                }} className="p-3 border rounded-md" />
+                <PaymentElement />
             </CardContent>
           </Card>
         </div>
@@ -263,20 +258,43 @@ const CheckoutForm = () => {
 };
 
 export default function CheckoutPage() {
+  const [clientSecret, setClientSecret] = useState<string | null>(null);
   const { totalAmount } = useCart();
+  const { toast } = useToast();
+
   const totalShipping = totalAmount >= FREE_SHIPPING_THRESHOLD ? 0 : SHIPPING_COST;
   const total = totalAmount + totalShipping;
 
+  useEffect(() => {
+    if (totalAmount > 0) {
+      fetch('/api/create-payment-intent', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ amount: Math.round(total * 100) }),
+      })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.error) {
+          toast({ variant: 'destructive', title: 'Σφάλμα', description: data.error });
+        } else {
+          setClientSecret(data.clientSecret);
+        }
+      });
+    }
+  }, [totalAmount, total, toast]);
+
   const options: StripeElementsOptions = {
-    // clientSecret is not needed here as we fetch it on submit
+    clientSecret: clientSecret || undefined,
     appearance: { theme: 'stripe' },
   };
 
   return (
     <div className="container mx-auto px-4 py-12">
-      <Elements stripe={stripePromise} options={options}>
-        <CheckoutForm />
-      </Elements>
+      {clientSecret && (
+        <Elements stripe={stripePromise} options={options}>
+          <CheckoutForm clientSecret={clientSecret}/>
+        </Elements>
+      )}
     </div>
   );
 }
