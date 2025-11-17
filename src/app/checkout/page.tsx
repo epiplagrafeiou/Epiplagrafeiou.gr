@@ -25,7 +25,14 @@ import {
 import Image from 'next/image';
 import { Separator } from '@/components/ui/separator';
 import { loadStripe, StripeElementsOptions } from '@stripe/stripe-js';
-import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js';
+import { 
+    Elements, 
+    useStripe, 
+    useElements,
+    CardNumberElement,
+    CardExpiryElement,
+    CardCvcElement
+} from '@stripe/react-stripe-js';
 import { useToast } from '@/hooks/use-toast';
 import { Award } from 'lucide-react';
 import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
@@ -44,12 +51,28 @@ const checkoutSchema = z.object({
   city: z.string().min(1, 'Η πόλη είναι απαραίτητη.'),
   postalCode: z.string().min(1, 'Ο ταχυδρομικός κώδικας είναι απαραίτητος.'),
   country: z.string().min(1, 'Η χώρα είναι απαραίτητη.'),
+  cardName: z.string().min(1, 'Το όνομα στην κάρτα είναι απαραίτητο.'),
 });
 
 type CheckoutFormValues = z.infer<typeof checkoutSchema>;
 
 const SHIPPING_COST = 10;
 const FREE_SHIPPING_THRESHOLD = 150;
+
+const stripeElementStyles = {
+  style: {
+    base: {
+      fontSize: '16px',
+      color: '#424770',
+      '::placeholder': {
+        color: '#aab7c4',
+      },
+    },
+    invalid: {
+      color: '#9e2146',
+    },
+  },
+};
 
 const CheckoutForm = ({ clientSecret }: { clientSecret: string }) => {
   const { cartItems, totalAmount, clearCart } = useCart();
@@ -73,6 +96,7 @@ const CheckoutForm = ({ clientSecret }: { clientSecret: string }) => {
     defaultValues: {
       country: 'Ελλάδα',
       email: user?.email || '',
+      cardName: '',
     },
   });
 
@@ -81,8 +105,10 @@ const CheckoutForm = ({ clientSecret }: { clientSecret: string }) => {
         form.setValue('email', user.email || '');
     }
     if(userProfile) {
-        form.setValue('firstName', userProfile.name?.split(' ')[0] || '');
-        form.setValue('lastName', userProfile.name?.split(' ').slice(1).join(' ') || '');
+        const name = userProfile.name || '';
+        form.setValue('firstName', name.split(' ')[0] || '');
+        form.setValue('lastName', name.split(' ').slice(1).join(' ') || '');
+        form.setValue('cardName', name);
     }
   }, [user, userProfile, form]);
 
@@ -93,74 +119,62 @@ const CheckoutForm = ({ clientSecret }: { clientSecret: string }) => {
 
   const onSubmit = async (data: CheckoutFormValues) => {
     if (!stripe || !elements || !user || !firestore) {
-      toast({ variant: 'destructive', title: 'Σφάλμα', description: 'Δεν είναι δυνατή η επεξεργασία της πληρωμής. Παρακαλώ συνδεθείτε και δοκιμάστε ξανά.' });
+      toast({ variant: 'destructive', title: 'Σφάλμα', description: 'Δεν είναι δυνατή η επεξεργασία της πληρωμής.' });
+      return;
+    }
+
+    const cardNumberElement = elements.getElement(CardNumberElement);
+    if (!cardNumberElement) {
+      toast({ variant: 'destructive', title: 'Σφάλμα', description: 'Το πεδίο της κάρτας δεν βρέθηκε.' });
       return;
     }
 
     setIsProcessing(true);
 
     try {
-      const { error: stripeError } = await stripe.confirmPayment({
-        elements,
-        confirmParams: {
-          return_url: `${window.location.origin}/`, // We will handle success/failure manually below
-          payment_method_data: {
-             billing_details: {
-                name: `${data.firstName} ${data.lastName}`,
-                email: data.email,
-                phone: data.phone,
-                address: {
-                line1: data.address,
-                city: data.city,
-                postal_code: data.postalCode,
-                country: 'GR', // Assuming Greece
-                },
-             }
-          }
+       const { error: stripeError, paymentIntent } = await stripe.confirmCardPayment(clientSecret, {
+        payment_method: {
+          card: cardNumberElement,
+          billing_details: {
+            name: data.cardName,
+            email: data.email,
+            phone: data.phone,
+            address: {
+              line1: data.address,
+              city: data.city,
+              postal_code: data.postalCode,
+              country: 'GR',
+            },
+          },
         },
-        // We handle the redirect manually to perform actions after payment
-        redirect: 'if_required', 
       });
-
 
       if (stripeError) {
-        if (stripeError.type === "card_error" || stripeError.type === "validation_error") {
-            throw new Error(stripeError.message || 'Υπήρξε ένα σφάλμα με την κάρτα σας.');
-        } else {
-            throw new Error('Παρουσιάστηκε ένα απρόσμενο σφάλμα κατά την πληρωμή.');
-        }
+        throw stripeError;
       }
 
-      // If no error, payment is successful
-      const ordersRef = collection(firestore, 'orders');
-      await addDoc(ordersRef, {
-          userId: user.uid,
-          customerDetails: {
-              name: `${data.firstName} ${data.lastName}`,
-              email: data.email,
-              phone: data.phone,
-          },
-          shippingAddress: {
-              address: data.address,
-              city: data.city,
-              postalCode: data.postalCode,
-              country: data.country,
-          },
-          items: cartItems,
-          total: total,
-          shippingCost: totalShipping,
-          status: 'Pending',
-          createdAt: serverTimestamp(),
-      });
-      
-      const userRef = doc(firestore, 'users', user.uid);
-      await updateDoc(userRef, {
-          points: increment(pointsEarned)
-      });
+      if (paymentIntent?.status === 'succeeded') {
+        const ordersRef = collection(firestore, 'orders');
+        await addDoc(ordersRef, {
+            userId: user.uid,
+            customerDetails: { name: `${data.firstName} ${data.lastName}`, email: data.email, phone: data.phone },
+            shippingAddress: { address: data.address, city: data.city, postalCode: data.postalCode, country: data.country },
+            items: cartItems,
+            total: total,
+            shippingCost: totalShipping,
+            status: 'Pending',
+            createdAt: serverTimestamp(),
+        });
+        
+        const userRef = doc(firestore, 'users', user.uid);
+        await updateDoc(userRef, { points: increment(pointsEarned) });
 
-      toast({ title: 'Επιτυχία!', description: `Η πληρωμή σας ολοκληρώθηκε. Η παραγγελία σας καταχωρήθηκε.` });
-      clearCart();
-      router.push('/');
+        toast({ title: 'Επιτυχία!', description: `Η πληρωμή σας ολοκληρώθηκε. Η παραγγελία σας καταχωρήθηκε.` });
+        clearCart();
+        router.push('/');
+      } else {
+        throw new Error('Η πληρωμή δεν ολοκληρώθηκε. Παρακαλώ δοκιμάστε ξανά.');
+      }
 
     } catch (error: any) {
       toast({
@@ -229,7 +243,7 @@ const CheckoutForm = ({ clientSecret }: { clientSecret: string }) => {
         <div className="lg:order-1 space-y-8">
           <h1 className="font-headline text-3xl font-bold">Checkout</h1>
           <Card>
-            <CardHeader><CardTitle>Στοιχεία Αποστολής</CardTitle></CardHeader>
+            <CardHeader><CardTitle>Στοιχεία Αποστολής & Επικοινωνίας</CardTitle></CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <FormField control={form.control} name="firstName" render={({ field }) => (<FormItem><FormLabel>Όνομα</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
@@ -246,9 +260,29 @@ const CheckoutForm = ({ clientSecret }: { clientSecret: string }) => {
             </CardContent>
           </Card>
           <Card>
-            <CardHeader><CardTitle>Στοιχεία Πληρωμής</CardTitle></CardHeader>
-            <CardContent>
-                <PaymentElement />
+            <CardHeader><CardTitle>Πληρωμή με Κάρτα</CardTitle></CardHeader>
+            <CardContent className="space-y-4">
+                <FormField control={form.control} name="cardName" render={({ field }) => (<FormItem><FormLabel>Όνομα κατόχου κάρτας</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
+                <div className="space-y-2">
+                    <Label>Αριθμός Κάρτας</Label>
+                    <div className="border rounded-md p-3">
+                        <CardNumberElement options={stripeElementStyles} />
+                    </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                        <Label>Ημερομηνία Λήξης</Label>
+                        <div className="border rounded-md p-3">
+                            <CardExpiryElement options={stripeElementStyles} />
+                        </div>
+                    </div>
+                    <div className="space-y-2">
+                        <Label>CVC</Label>
+                        <div className="border rounded-md p-3">
+                            <CardCvcElement options={stripeElementStyles} />
+                        </div>
+                    </div>
+                </div>
             </CardContent>
           </Card>
         </div>
@@ -290,10 +324,12 @@ export default function CheckoutPage() {
 
   return (
     <div className="container mx-auto px-4 py-12">
-      {clientSecret && (
+      {clientSecret ? (
         <Elements stripe={stripePromise} options={options}>
           <CheckoutForm clientSecret={clientSecret}/>
         </Elements>
+      ) : (
+        <div>Loading checkout...</div>
       )}
     </div>
   );

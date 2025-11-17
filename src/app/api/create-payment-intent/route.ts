@@ -13,10 +13,11 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: 'Invalid amount.' }, { status: 400 });
     }
 
+    // Creating a Payment Intent without automatic_payment_methods
+    // to be used with manual card element confirmation.
     const paymentIntent = await stripe.paymentIntents.create({
       amount,
       currency: 'eur',
-      automatic_payment_methods: { enabled: true },
     });
 
     return NextResponse.json({ clientSecret: paymentIntent.client_secret });
