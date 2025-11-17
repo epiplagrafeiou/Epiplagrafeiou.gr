@@ -1,44 +1,52 @@
 
-import { NextResponse } from 'next/server';
-import Stripe from 'stripe';
-import { Firestore, collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { NextResponse } from "next/server";
+import Stripe from "stripe";
 import { initializeFirebase } from '@/firebase';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 
-// This is not standard practice for production but follows the project constraints.
-// It attempts to use the client SDK on the server side.
-function getDb(): Firestore {
-  const { firestore } = initializeFirebase();
-  return firestore;
-}
 
+// Initialize Stripe with the secret key
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2024-06-20',
+  apiVersion: "2024-06-20",
 });
 
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { cartItems = [], shippingDetails = {}, currency = 'eur', totalAmount } = body;
+    const { cartItems = [], totalAmount, shippingDetails = {} } = body;
+
+    // Use client-side initialization as per project constraints
+    const { firestore } = initializeFirebase();
 
     // compute amount (in cents)
     const amount = Math.round(totalAmount * 100);
-
-    if (!amount || amount < 1) {
+     if (!amount || amount < 1) {
         return NextResponse.json({ error: 'Invalid amount' }, { status: 400 });
     }
-    
-    // In a real production app, you would use the Firebase Admin SDK here.
-    // Given the constraints, we will proceed without creating a pre-emptive order record,
-    // and instead rely on the success page to handle order creation post-payment.
-    const orderRefId: string | null = null; 
+
+
+    // create pending order in Firestore
+    let orderRefId: string | null = null;
+    try {
+        const orderRef = await addDoc(collection(firestore, "orders"), {
+            items: cartItems,
+            shippingDetails, // This will be empty for now, can be populated from a form
+            total: amount / 100,
+            status: "pending_payment",
+            createdAt: serverTimestamp(),
+        });
+        orderRefId = orderRef.id;
+    } catch (err) {
+      console.warn("Could not create Firestore order (continuing without it):", err);
+    }
 
     // create PaymentIntent with automatic payment methods (Payment Element)
     const paymentIntent = await stripe.paymentIntents.create({
       amount,
-      currency,
+      currency: "eur",
       automatic_payment_methods: { enabled: true },
       metadata: {
-        // orderId will be created on the success page
+        orderId: orderRefId ?? "unknown",
       },
     });
 
