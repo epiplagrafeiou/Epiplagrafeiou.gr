@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -74,7 +75,7 @@ const stripeElementStyles = {
   },
 };
 
-const CheckoutForm = ({ clientSecret }: { clientSecret: string }) => {
+const CheckoutForm = () => {
   const { cartItems, totalAmount, clearCart } = useCart();
   const { toast } = useToast();
   const stripe = useStripe();
@@ -132,7 +133,19 @@ const CheckoutForm = ({ clientSecret }: { clientSecret: string }) => {
     setIsProcessing(true);
 
     try {
-       const { error: stripeError, paymentIntent } = await stripe.confirmCardPayment(clientSecret, {
+      const res = await fetch('/api/create-payment-intent', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ amount: Math.round(total * 100) }),
+      });
+
+      const { clientSecret, error: backendError } = await res.json();
+
+      if (backendError) {
+        throw new Error(backendError);
+      }
+      
+      const { error: stripeError, paymentIntent } = await stripe.confirmCardPayment(clientSecret, {
         payment_method: {
           card: cardNumberElement,
           billing_details: {
@@ -292,41 +305,20 @@ const CheckoutForm = ({ clientSecret }: { clientSecret: string }) => {
 };
 
 export default function CheckoutPage() {
-  const [clientSecret, setClientSecret] = useState<string | null>(null);
   const { totalAmount } = useCart();
-  const { toast } = useToast();
-
-  const totalShipping = totalAmount >= FREE_SHIPPING_THRESHOLD ? 0 : SHIPPING_COST;
-  const total = totalAmount + totalShipping;
-
-  useEffect(() => {
-    if (totalAmount > 0) {
-      fetch('/api/create-payment-intent', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ amount: Math.round(total * 100) }),
-      })
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.error) {
-          toast({ variant: 'destructive', title: 'Σφάλμα', description: data.error });
-        } else {
-          setClientSecret(data.clientSecret);
-        }
-      });
-    }
-  }, [totalAmount, total, toast]);
-
+  
   const options: StripeElementsOptions = {
-    clientSecret: clientSecret || undefined,
+    mode: 'payment',
+    amount: Math.round(totalAmount * 100),
+    currency: 'eur',
     appearance: { theme: 'stripe' },
   };
 
   return (
     <div className="container mx-auto px-4 py-12">
-      {clientSecret ? (
+      {totalAmount > 0 ? (
         <Elements stripe={stripePromise} options={options}>
-          <CheckoutForm clientSecret={clientSecret}/>
+          <CheckoutForm />
         </Elements>
       ) : (
         <div>Loading checkout...</div>
@@ -334,3 +326,5 @@ export default function CheckoutPage() {
     </div>
   );
 }
+
+    
