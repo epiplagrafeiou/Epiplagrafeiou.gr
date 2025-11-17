@@ -1,353 +1,85 @@
 
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { useForm } from 'react-hook-form';
-import { z } from 'zod';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { useCart } from '@/lib/cart-context';
-import { formatCurrency } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from '@/components/ui/form';
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
-import Image from 'next/image';
-import { Separator } from '@/components/ui/separator';
-import { loadStripe, StripeElementsOptions } from '@stripe/stripe-js';
-import { 
-    Elements, 
-    useStripe, 
-    useElements,
-    CardNumberElement,
-    CardExpiryElement,
-    CardCvcElement
-} from '@stripe/react-stripe-js';
-import { useToast } from '@/hooks/use-toast';
-import { Award } from 'lucide-react';
-import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
-import { doc, updateDoc, increment, collection, addDoc, serverTimestamp } from 'firebase/firestore';
-import { type UserProfile } from '@/lib/user-actions';
-import { useRouter } from 'next/navigation';
+import React, { useEffect, useState } from "react";
+import { Elements } from "@stripe/react-stripe-js";
+import { loadStripe } from "@stripe/stripe-js";
+import CheckoutPayment from "@/components/checkout/CheckoutPayment";
+import { useCart } from "@/lib/cart-context";
+import { Skeleton } from "@/components/ui/skeleton";
 
-const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || '');
-
-const checkoutSchema = z.object({
-  email: z.string().email({ message: 'Το email δεν είναι έγκυρο.' }),
-  phone: z.string().min(1, 'Το τηλέφωνο είναι απαραίτητο.'),
-  firstName: z.string().min(1, 'Το όνομα είναι απαραίτητο.'),
-  lastName: z.string().min(1, 'Το επώνυμο είναι απαραίτητο.'),
-  address: z.string().min(1, 'Η διεύθυνση είναι απαραίτητη.'),
-  city: z.string().min(1, 'Η πόλη είναι απαραίτητη.'),
-  postalCode: z.string().min(1, 'Ο ταχυδρομικός κώδικας είναι απαραίτητος.'),
-  country: z.string().min(1, 'Η χώρα είναι απαραίτητη.'),
-  cardName: z.string().min(1, 'Το όνομα στην κάρτα είναι απαραίτητο.'),
-});
-
-type CheckoutFormValues = z.infer<typeof checkoutSchema>;
-
-const SHIPPING_COST = 10;
-const FREE_SHIPPING_THRESHOLD = 150;
-
-const stripeElementStyles = {
-  style: {
-    base: {
-      fontSize: '16px',
-      color: '#424770',
-      '::placeholder': {
-        color: '#aab7c4',
-      },
-    },
-    invalid: {
-      color: '#9e2146',
-    },
-  },
-};
-
-const CheckoutForm = () => {
-  const { cartItems, totalAmount, clearCart } = useCart();
-  const { toast } = useToast();
-  const stripe = useStripe();
-  const elements = useElements();
-  const [isProcessing, setIsProcessing] = useState(false);
-  const { user } = useUser();
-  const firestore = useFirestore();
-  const router = useRouter();
-
-  const userProfileRef = useMemoFirebase(() => {
-    if (!firestore || !user) return null;
-    return doc(firestore, 'users', user.uid);
-  }, [firestore, user]);
-
-  const { data: userProfile } = useDoc<UserProfile>(userProfileRef);
-
-  const form = useForm<CheckoutFormValues>({
-    resolver: zodResolver(checkoutSchema),
-    defaultValues: {
-      country: 'Ελλάδα',
-      email: user?.email || '',
-      cardName: '',
-    },
-  });
-
-  useEffect(() => {
-    if (user) {
-        form.setValue('email', user.email || '');
-    }
-    if(userProfile) {
-        const name = userProfile.name || '';
-        form.setValue('firstName', name.split(' ')[0] || '');
-        form.setValue('lastName', name.split(' ').slice(1).join(' ') || '');
-        form.setValue('cardName', name);
-    }
-  }, [user, userProfile, form]);
-
-
-  const totalShipping = totalAmount >= FREE_SHIPPING_THRESHOLD ? 0 : SHIPPING_COST;
-  const total = totalAmount + totalShipping;
-  const pointsEarned = Math.floor(totalAmount * 5);
-
-  const onSubmit = async (data: CheckoutFormValues) => {
-    if (!stripe || !elements || !user || !firestore) {
-      toast({ variant: 'destructive', title: 'Σφάλμα', description: 'Δεν είναι δυνατή η επεξεργασία της πληρωμής.' });
-      return;
-    }
-
-    const cardNumberElement = elements.getElement(CardNumberElement);
-    if (!cardNumberElement) {
-      toast({ variant: 'destructive', title: 'Σφάλμα', description: 'Το πεδίο της κάρτας δεν βρέθηκε.' });
-      return;
-    }
-
-    setIsProcessing(true);
-
-    try {
-      const res = await fetch('/api/create-payment-intent', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ amount: Math.round(total * 100) }),
-      });
-
-      const { clientSecret, error: backendError } = await res.json();
-
-      if (backendError) {
-        throw new Error(backendError);
-      }
-      
-      const { error: stripeError, paymentIntent } = await stripe.confirmCardPayment(clientSecret, {
-        payment_method: {
-          card: cardNumberElement,
-          billing_details: {
-            name: data.cardName,
-            email: data.email,
-            phone: data.phone,
-            address: {
-              line1: data.address,
-              city: data.city,
-              postal_code: data.postalCode,
-              country: 'GR',
-            },
-          },
-        },
-      });
-
-      if (stripeError) {
-        throw stripeError;
-      }
-
-      if (paymentIntent?.status === 'succeeded') {
-        const ordersRef = collection(firestore, 'orders');
-        await addDoc(ordersRef, {
-            userId: user.uid,
-            customerDetails: { name: `${data.firstName} ${data.lastName}`, email: data.email, phone: data.phone },
-            shippingAddress: { address: data.address, city: data.city, postalCode: data.postalCode, country: data.country },
-            items: cartItems,
-            total: total,
-            shippingCost: totalShipping,
-            status: 'Pending',
-            createdAt: serverTimestamp(),
-        });
-        
-        const userRef = doc(firestore, 'users', user.uid);
-        await updateDoc(userRef, { points: increment(pointsEarned) });
-
-        toast({ title: 'Επιτυχία!', description: `Η πληρωμή σας ολοκληρώθηκε. Η παραγγελία σας καταχωρήθηκε.` });
-        clearCart();
-        router.push('/');
-      } else {
-        throw new Error('Η πληρωμή δεν ολοκληρώθηκε. Παρακαλώ δοκιμάστε ξανά.');
-      }
-
-    } catch (error: any) {
-      toast({
-        variant: 'destructive',
-        title: 'Η πληρωμή απέτυχε',
-        description: error.message || 'Παρουσιάστηκε ένα άγνωστο σφάλμα.',
-      });
-    } finally {
-      setIsProcessing(false);
-    }
-  };
-
-  return (
-    <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="grid grid-cols-1 gap-x-12 gap-y-8 lg:grid-cols-2">
-        <div className="lg:order-2">
-          <Card>
-            <CardHeader>
-              <CardTitle>Η Παραγγελία Σας</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {cartItems.map((item) => {
-                  const image = item.imageId;
-                  return (
-                    <div key={item.id} className="flex items-center gap-4">
-                      <div className="relative h-16 w-16 flex-shrink-0 overflow-hidden rounded-md border">
-                        {image && <Image src={image} alt={item.name} fill className="object-cover" />}
-                        <span className="absolute -right-2 -top-2 flex h-6 w-6 items-center justify-center rounded-full bg-secondary text-sm font-medium">{item.quantity}</span>
-                      </div>
-                      <div className="flex-grow">
-                        <p className="font-medium">{item.name}</p>
-                      </div>
-                      <p className="font-medium">{formatCurrency(item.price * item.quantity)}</p>
-                    </div>
-                  );
-                })}
-              </div>
-              <Separator className="my-6" />
-              <div className="space-y-2">
-                <div className="flex justify-between"><span className="text-muted-foreground">Υποσύνολο</span><span>{formatCurrency(totalAmount)}</span></div>
-                <div className="flex justify-between"><span className="text-muted-foreground">Μεταφορικά</span><span>{totalShipping > 0 ? formatCurrency(totalShipping) : 'Δωρεάν'}</span></div>
-                 {userProfile && (
-                    <div className="flex justify-between text-sm">
-                        <span className="flex items-center gap-2 text-muted-foreground">
-                        <Award className="h-4 w-4" /> Υπάρχοντες Πόντοι
-                        </span>
-                        <span className="font-medium">{userProfile.points}</span>
-                    </div>
-                 )}
-                <div className="flex justify-between text-sm">
-                  <span className="flex items-center gap-2 text-muted-foreground">
-                    <Award className="h-4 w-4" /> Πόντοι που θα κερδίσετε
-                  </span>
-                  <span className="font-medium">{pointsEarned}</span>
-                </div>
-                <Separator className="my-2" />
-                <div className="flex justify-between text-lg font-bold"><span>Σύνολο</span><span>{formatCurrency(total)}</span></div>
-              </div>
-               <Button type="submit" size="lg" className="w-full mt-6 bg-accent text-accent-foreground hover:bg-accent/90" disabled={isProcessing || !stripe || !elements}>
-                 {isProcessing ? 'Επεξεργασία...' : `Πληρωμή ${formatCurrency(total)}`}
-               </Button>
-            </CardContent>
-          </Card>
-        </div>
-        <div className="lg:order-1 space-y-8">
-          <h1 className="font-headline text-3xl font-bold">Checkout</h1>
-          <Card>
-            <CardHeader><CardTitle>Στοιχεία Αποστολής & Επικοινωνίας</CardTitle></CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <FormField control={form.control} name="firstName" render={({ field }) => (<FormItem><FormLabel>Όνομα</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
-                <FormField control={form.control} name="lastName" render={({ field }) => (<FormItem><FormLabel>Επώνυμο</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
-              </div>
-              <FormField control={form.control} name="address" render={({ field }) => (<FormItem><FormLabel>Διεύθυνση</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-                <FormField control={form.control} name="city" render={({ field }) => (<FormItem><FormLabel>Πόλη</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
-                <FormField control={form.control} name="postalCode" render={({ field }) => (<FormItem><FormLabel>Ταχυδρομικός Κώδικας</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
-                <FormField control={form.control} name="country" render={({ field }) => (<FormItem><FormLabel>Χώρα</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
-              </div>
-              <FormField control={form.control} name="phone" render={({ field }) => (<FormItem><FormLabel>Τηλέφωνο</FormLabel><FormControl><Input placeholder="69..." {...field} /></FormControl><FormMessage /></FormItem>)} />
-              <FormField control={form.control} name="email" render={({ field }) => (<FormItem><FormLabel>Email</FormLabel><FormControl><Input placeholder="you@example.com" {...field} /></FormControl><FormMessage /></FormItem>)} />
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader>
-              <CardTitle>Πληρωμή με Κάρτα</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-
-              {/* Cardholder Name */}
-              <FormField
-                control={form.control}
-                name="cardName"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Όνομα κατόχου κάρτας</FormLabel>
-                    <FormControl>
-                      <Input {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              {/* Card Number */}
-              <div className="space-y-2">
-                <FormLabel>Αριθμός Κάρτας</FormLabel>
-                <div className="border rounded-md p-3">
-                  <CardNumberElement options={stripeElementStyles} />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                {/* Expiration Date */}
-                <div className="space-y-2">
-                  <FormLabel>Ημερομηνία Λήξης (MM/YY)</FormLabel>
-                  <div className="border rounded-md p-3">
-                    <CardExpiryElement options={stripeElementStyles} />
-                  </div>
-                </div>
-
-                {/* CVC */}
-                <div className="space-y-2">
-                  <FormLabel>CVC</FormLabel>
-                  <div className="border rounded-md p-3">
-                    <CardCvcElement options={stripeElementStyles} />
-                  </div>
-                </div>
-              </div>
-
-            </CardContent>
-          </Card>
-        </div>
-      </form>
-    </Form>
-  );
-};
+const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
 
 export default function CheckoutPage() {
-  const { totalAmount } = useCart();
-  
-  const options: StripeElementsOptions = {
-    mode: 'payment',
-    amount: Math.round(totalAmount * 100),
-    currency: 'eur',
-    appearance: { theme: 'stripe' },
+  const { cartItems, totalAmount } = useCart();
+  const [clientSecret, setClientSecret] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (totalAmount === 0) {
+        setLoading(false);
+        return;
+    };
+    
+    let cancelled = false;
+    async function createIntent() {
+      setLoading(true);
+      try {
+        const res = await fetch("/api/create-payment-intent", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            cartItems,
+            totalAmount: totalAmount,
+            shippingDetails: {}, // Optionally include form data here
+          }),
+        });
+        const data = await res.json();
+        if (data.error) {
+            throw new Error(data.error);
+        }
+        if (!cancelled) setClientSecret(data.clientSecret ?? null);
+      } catch (err) {
+        console.error("create-payment-intent failed", err);
+        if (!cancelled) setClientSecret(null);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+
+    createIntent();
+    return () => {
+      cancelled = true;
+    };
+  }, [cartItems, totalAmount]);
+
+  if (loading) {
+    return (
+      <div className="container mx-auto px-4 py-12">
+        <Skeleton className="h-6 w-1/3 mb-4" />
+        <Skeleton className="h-48 w-full" />
+      </div>
+    );
+  }
+
+  if (!clientSecret) {
+    return (
+      <div className="container mx-auto px-4 py-12">
+        <div className="text-center text-red-500">Unable to initialize payment. Please check your cart or try again later.</div>
+      </div>
+    );
+  }
+
+  const options = {
+    clientSecret,
+    appearance: { theme: 'stripe' as const },
   };
 
   return (
     <div className="container mx-auto px-4 py-12">
-      {totalAmount > 0 ? (
-        <Elements stripe={stripePromise} options={options}>
-          <CheckoutForm />
-        </Elements>
-      ) : (
-        <div>Loading checkout...</div>
-      )}
+      <Elements stripe={stripePromise} options={options}>
+        <CheckoutPayment clientSecret={clientSecret} />
+      </Elements>
     </div>
   );
 }
-
-    
