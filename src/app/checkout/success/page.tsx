@@ -4,6 +4,8 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { notFound } from "next/navigation";
 import Stripe from 'stripe';
 import { CheckCircle } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import Link from 'next/link';
 
 export const dynamic = "force-dynamic";
 
@@ -20,10 +22,6 @@ async function VerificationContent({ paymentIntentId }: { paymentIntentId: strin
         if (paymentIntent.status !== 'succeeded') {
             throw new Error('Payment not successful.');
         }
-
-        // The logic to update Firestore is removed as per the constraints
-        // of not being able to use Firebase Admin SDK reliably.
-        // The order confirmation relies solely on Stripe's success status.
 
     } catch (err: any) {
         console.error("Success page error:", err);
@@ -59,7 +57,9 @@ async function VerificationContent({ paymentIntentId }: { paymentIntentId: strin
                     <p><strong>Amount Paid:</strong> {formatCurrency((paymentIntent.amount || 0) / 100)}</p>
                     <p><strong>Payment Reference:</strong> <code className="font-mono">{paymentIntent.id}</code></p>
                 </div>
-                <p className="text-xs text-muted-foreground">You can now safely close this window.</p>
+                 <Button asChild className="mt-6">
+                    <Link href="/">Return to Homepage</Link>
+                </Button>
             </CardContent>
         </Card>
     );
@@ -89,4 +89,3 @@ export default function CheckoutSuccessPage({ searchParams }: { searchParams: { 
     </div>
   );
 }
-

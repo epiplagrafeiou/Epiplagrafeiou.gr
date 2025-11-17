@@ -37,7 +37,6 @@ export default function CheckoutPayment({ clientSecret }: { clientSecret: string
       })
       setIsProcessing(false);
     }
-    // If no error, Stripe redirects the user to the return_url.
   };
 
   return (

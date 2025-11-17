@@ -30,7 +30,7 @@ export default function CheckoutPage() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             cartItems,
-            totalAmount: totalAmount,
+            totalAmount,
             shippingDetails: {}, // Optionally include form data here
           }),
         });
@@ -56,8 +56,14 @@ export default function CheckoutPage() {
   if (loading) {
     return (
       <div className="container mx-auto px-4 py-12">
-        <Skeleton className="h-6 w-1/3 mb-4" />
-        <Skeleton className="h-48 w-full" />
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <div>
+                <Skeleton className="h-96 w-full" />
+            </div>
+            <div>
+                 <Skeleton className="h-64 w-full" />
+            </div>
+        </div>
       </div>
     );
   }
@@ -65,7 +71,7 @@ export default function CheckoutPage() {
   if (!clientSecret) {
     return (
       <div className="container mx-auto px-4 py-12">
-        <div className="text-center text-red-500">Unable to initialize payment. Please check your cart or try again later.</div>
+        <div className="text-center text-destructive">Unable to initialize payment. Please check your cart or try again later.</div>
       </div>
     );
   }
