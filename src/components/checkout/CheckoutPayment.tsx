@@ -1,8 +1,7 @@
 
-// components/checkout/CheckoutPayment.tsx
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import {
   PaymentElement,
   useStripe,
@@ -11,15 +10,15 @@ import {
 import { useCart } from "@/lib/cart-context";
 import { Button } from "@/components/ui/button";
 import { formatCurrency } from "@/lib/utils";
-import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
-import Image from "next/image";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Loader2 } from "lucide-react";
 
 interface Props { clientSecret: string; }
 
 export default function CheckoutPayment({ clientSecret }: Props) {
   const stripe = useStripe();
   const elements = useElements();
-  const { cartItems, totalAmount } = useCart();
+  const { totalAmount } = useCart();
   const [isProcessing, setIsProcessing] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
@@ -29,11 +28,12 @@ export default function CheckoutPayment({ clientSecret }: Props) {
       return;
     }
     setIsProcessing(true);
+    setMessage(null);
 
     const { error } = await stripe.confirmPayment({
       elements,
       confirmParams: {
-        return_url: `${window.location.origin}/checkout/success`,
+        return_url: `${window.location.origin}/checkout/success?method=stripe`,
       },
     });
 
@@ -46,23 +46,23 @@ export default function CheckoutPayment({ clientSecret }: Props) {
   };
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-        <Card className="col-span-1 md:col-span-2">
-            <CardHeader>
-                <CardTitle>Στοιχεία Πληρωμής</CardTitle>
-            </CardHeader>
-            <CardContent>
-                <form onSubmit={handleSubmit}>
-                    <PaymentElement id="payment-element" />
-                     {message && <div id="payment-message" className="text-destructive text-sm mt-4">{message}</div>}
-                    <Button disabled={isProcessing || !stripe || !elements} type="submit" className="w-full mt-6" size="lg">
-                        <span id="button-text">
-                        {isProcessing ? "Επεξεργασία..." : `Πληρωμή ${formatCurrency(totalAmount)}`}
-                        </span>
-                    </Button>
-                </form>
-            </CardContent>
-        </Card>
-    </div>
+    <Card>
+        <CardHeader>
+            <CardTitle>Στοιχεία Πληρωμής</CardTitle>
+        </CardHeader>
+        <CardContent>
+            <form onSubmit={handleSubmit}>
+                <PaymentElement id="payment-element" />
+                 {message && <div id="payment-message" className="text-destructive text-sm mt-4">{message}</div>}
+                <Button disabled={isProcessing || !stripe || !elements} type="submit" className="w-full mt-6" size="lg">
+                    {isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                    <span id="button-text">
+                    {isProcessing ? "Επεξεργασία..." : `Πληρωμή ${formatCurrency(totalAmount)}`}
+                    </span>
+                </Button>
+            </form>
+        </CardContent>
+    </Card>
   );
 }
+
