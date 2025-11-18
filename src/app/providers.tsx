@@ -1,6 +1,7 @@
 
 'use client';
 
+import { usePathname } from 'next/navigation';
 import { FirebaseClientProvider } from '@/firebase/client-provider';
 import { SuppliersProvider } from '@/lib/suppliers-context';
 import { ProductsProvider } from '@/lib/products-context';
@@ -13,22 +14,29 @@ import { Toaster } from "@/components/ui/toaster";
 import NewsletterPopup from "@/components/layout/NewsletterPopup";
 
 export function Providers({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
+  const isAdminPage = pathname.startsWith('/admin');
+
   return (
     <FirebaseClientProvider>
       <SuppliersProvider>
         <ProductsProvider>
           <CartProvider>
             <WishlistProvider>
-              <div className="flex min-h-screen flex-col">
-                <TopBar />
-                <Header />
-                <main className="flex-grow bg-white">
-                  {children}
-                </main>
-                <Footer />
-              </div>
+              {isAdminPage ? (
+                <main>{children}</main>
+              ) : (
+                <div className="flex min-h-screen flex-col">
+                  <TopBar />
+                  <Header />
+                  <main className="flex-grow bg-white">
+                    {children}
+                  </main>
+                  <Footer />
+                </div>
+              )}
               <Toaster />
-              <NewsletterPopup />
+              {!isAdminPage && <NewsletterPopup />}
             </WishlistProvider>
           </CartProvider>
         </ProductsProvider>
