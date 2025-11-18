@@ -32,7 +32,7 @@ const mainNavLinks = [
     { name: 'Προϊόντα', slug: '/products' },
     { name: 'Δωμάτια', slug: '/category/rooms' },
     { name: 'Είδη Σπιτιού', slug: '/category/home-goods' },
-    { name: 'Έμπνευση', slug: '/category/inspiration' },
+    { name: 'Έμπνευση', slug: '/blog' },
 ]
 
 export default function Header() {
