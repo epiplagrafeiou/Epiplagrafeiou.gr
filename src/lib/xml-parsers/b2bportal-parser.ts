@@ -17,8 +17,8 @@ export async function b2bportalParser(url: string): Promise<XmlProduct[]> {
     ignoreAttributes: false,
     attributeNamePrefix: '',
     isArray: (name, jpath, isLeafNode, isAttribute) => {
-        // Handle both possible paths for products
-      return jpath === 'mywebstore.products.product' || jpath === 'products.product' || jpath.endsWith('.gallery.image');
+      // Handle both possible paths for products
+      return jpath === 'b2bportal.products.product' || jpath.endsWith('.gallery.image');
     },
     textNodeName: '_text',
     trimValues: true,
@@ -39,25 +39,27 @@ export async function b2bportalParser(url: string): Promise<XmlProduct[]> {
 
   const parsed = parser.parse(xmlText);
   const data = deCdata(parsed);
-  // Try the original path first, then fall back to the alternative.
-  const productArray = data.mywebstore?.products?.product || data.products?.product;
+  // The new correct path based on your provided XML snippet
+  const productArray = data.b2bportal?.products?.product;
 
   if (!productArray || !Array.isArray(productArray)) {
     console.error('Parsed product data is not an array or is missing:', productArray);
     throw new Error(
-      'The XML feed does not have the expected structure for b2bportal format. Could not find a product array at `mywebstore.products.product` or `products.product`.'
+      'The XML feed does not have the expected structure for b2bportal format. Could not find a product array at `b2bportal.products.product`.'
     );
   }
 
   const products: XmlProduct[] = productArray.map((p: any) => {
     let allImages: string[] = [];
     
-    if (p.image_url && typeof p.image_url === 'string') {
-        allImages.push(p.image_url);
+    // Main image from <image> tag
+    if (p.image && typeof p.image === 'string') {
+        allImages.push(p.image);
     }
     
-    if (p.extra_images && p.extra_images.image) {
-      const galleryImages = (Array.isArray(p.extra_images.image) ? p.extra_images.image : [p.extra_images.image])
+    // Gallery images
+    if (p.gallery && p.gallery.image) {
+      const galleryImages = (Array.isArray(p.gallery.image) ? p.gallery.image : [p.gallery.image])
         .map((img: any) => (typeof img === 'object' && img._text ? img._text : img))
         .filter(Boolean);
       allImages.push(...galleryImages);
@@ -67,18 +69,20 @@ export async function b2bportalParser(url: string): Promise<XmlProduct[]> {
 
     const mainImage = allImages[0] || null;
 
-    const rawCategory = [p.category_name, p.subcategory_name].filter(Boolean).join(' > ');
+    const rawCategory = [p.category, p.subcategory].filter(Boolean).join(' > ');
     
-    const stock = p.availability?.toLowerCase() === 'ναι' ? 10 : 0;
+    // Availability is now "1" for in stock
+    const stock = p.availability === 1 ? 10 : 0;
     
-    const finalWebOfferPrice = parseFloat(p.price_vat?.toString().replace(',', '.') || '0');
+    // Use the correct price field, which seems to be 'price'
+    const finalWebOfferPrice = parseFloat(p.price?.toString().replace(',', '.') || '0');
 
     return {
-      id: p.product_code?.toString() || `temp-id-${Math.random()}`,
-      name: p.product_name || 'No Name',
-      retailPrice: p.price_vat?.toString().replace(',', '.') || '0',
+      id: p.code?.toString() || p.id?.toString() || `temp-id-${Math.random()}`,
+      name: p.name || 'No Name',
+      retailPrice: p.retail_price?.toString().replace(',', '.') || '0',
       webOfferPrice: finalWebOfferPrice.toString(),
-      description: p.product_description || '',
+      description: p.descr || '',
       category: mapCategory(rawCategory),
       mainImage: mainImage,
       images: allImages,
@@ -88,5 +92,3 @@ export async function b2bportalParser(url: string): Promise<XmlProduct[]> {
 
   return products;
 }
-
-    
