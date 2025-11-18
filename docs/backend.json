@@ -172,14 +172,15 @@
       "description": "Represents a customer order.",
       "type": "object",
       "properties": {
-        "userId": { "type": "string" },
+        "userId": { "type": ["string", "null"] },
         "customerDetails": {
           "type": "object",
           "properties": {
             "name": { "type": "string" },
-            "email": { "type": "string" },
+            "email": { "type": "string", "format": "email" },
             "phone": { "type": "string" }
-          }
+          },
+          "required": ["name", "email", "phone"]
         },
         "shippingAddress": {
           "type": "object",
@@ -188,24 +189,38 @@
             "city": { "type": "string" },
             "postalCode": { "type": "string" },
             "country": { "type": "string" }
-          }
+          },
+          "required": ["address", "city", "postalCode", "country"]
+        },
+        "companyDetails": {
+          "type": ["object", "null"],
+          "properties": {
+            "name": { "type": "string" },
+            "vat": { "type": "string" },
+            "taxOffice": { "type": "string" },
+            "address": { "type": "string" }
+          },
+          "required": ["name", "vat", "taxOffice", "address"]
         },
         "items": {
           "type": "array",
           "items": { "$ref": "#/entities/Product" }
         },
         "total": { "type": "number" },
-        "shippingCost": { "type": "number" },
         "status": { 
           "type": "string",
-          "enum": ["Pending", "Shipped", "Delivered", "Cancelled"]
+          "enum": ["Pending Payment", "Pending", "Shipped", "Delivered", "Cancelled"]
+        },
+        "paymentMethod": {
+            "type": "string",
+            "enum": ["stripe", "bank_transfer"]
         },
         "createdAt": { 
           "type": "string",
           "format": "date-time"
         }
       },
-      "required": ["userId", "customerDetails", "shippingAddress", "items", "total", "status", "createdAt"]
+      "required": ["customerDetails", "shippingAddress", "items", "total", "status", "createdAt"]
     }
   },
   "auth": {
@@ -332,5 +347,3 @@
     ]
   }
 }
-
-    
