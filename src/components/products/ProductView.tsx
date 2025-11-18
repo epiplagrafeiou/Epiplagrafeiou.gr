@@ -128,6 +128,7 @@ export function ProductView({ product, allProducts }: ProductViewProps) {
   };
 
   const pointsEarned = Math.floor(product.price * 5);
+  const installmentAmount = (product.price / 3).toFixed(2);
 
   return (
     <div className="container mx-auto px-4 py-12">
@@ -225,6 +226,17 @@ export function ProductView({ product, allProducts }: ProductViewProps) {
                 {formatCurrency(product.originalPrice)}
               </p>
             )}
+          </div>
+          <div className="mt-2 flex items-center gap-2 text-sm text-gray-600">
+            <span>ή σε 3 άτοκες δόσεις των {formatCurrency(parseFloat(installmentAmount))} με</span>
+            <Image 
+                src="https://i.postimg.cc/xdpY00RT/Marketing-Badge-With-Clear-Space.png" 
+                alt="Klarna" 
+                width={50} 
+                height={25}
+                className="object-contain"
+                unoptimized
+            />
           </div>
           <div className="mt-2 text-sm font-medium text-green-600 flex items-center gap-1">
               <Award className="h-4 w-4" />

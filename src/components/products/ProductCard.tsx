@@ -9,6 +9,7 @@ import { Heart } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { PriceDisplay } from './PriceDisplay';
 import AddToCartButton from './AddToCartButton';
+import { formatCurrency } from '@/lib/utils';
 
 interface ProductCardProps {
   product: Product;
@@ -50,6 +51,7 @@ export function ProductCard({ product }: ProductCardProps) {
 
   const productCategory = product.category.split(' > ').pop();
   const pointsEarned = Math.floor(product.price * 5);
+  const installmentAmount = (product.price / 3).toFixed(2);
 
   return (
     <div
@@ -80,6 +82,17 @@ export function ProductCard({ product }: ProductCardProps) {
 
             <div className="mt-2 flex items-center justify-between">
                 <PriceDisplay price={product.price} />
+            </div>
+             <div className="mt-2 flex items-center gap-2 text-xs text-gray-600">
+                <span>ή σε 3 άτοκες δόσεις των {formatCurrency(parseFloat(installmentAmount))} με</span>
+                <Image 
+                    src="https://i.postimg.cc/xdpY00RT/Marketing-Badge-With-Clear-Space.png" 
+                    alt="Klarna" 
+                    width={40} 
+                    height={20} 
+                    className="object-contain"
+                    unoptimized
+                />
             </div>
             <div className="mt-1 text-xs text-blue-600">
               {pointsEarned} πόντους ανταμοιβής
