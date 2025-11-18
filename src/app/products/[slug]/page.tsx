@@ -1,3 +1,4 @@
+
 'use client';
 
 import { notFound, useParams } from 'next/navigation';
@@ -58,7 +59,6 @@ export default function ProductDetailPage() {
   )
     .map((id) => products.find((p) => p.id === id)!)
     .filter(Boolean)
-    .sort(() => 0.5 - Math.random())
     .slice(0, 4);
 
   return (
