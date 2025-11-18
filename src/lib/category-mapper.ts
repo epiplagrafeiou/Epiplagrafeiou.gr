@@ -47,7 +47,10 @@ const prefixesToRemove = [
     "Φωτισμός >",
     "Οργάνωση Σπιτιού >",
     "Σαλόνι >",
-    "Εικόνα - Ήχος >"
+    "Εικόνα - Ήχος >",
+    "Δέντρο ή Δάσος φέτος τα Χριστούγεννα ? Μεγάλο το δίλημμα >",
+    "Δέντρο ή Δάσος φέτος τα Χριστούγεννα ? Μεγάλο το δίληmma >",
+    "Λευκά Είδη >"
 ];
 
 // This function takes a raw category from the XML and returns the standardized one.
@@ -88,6 +91,10 @@ export function mapCategory(rawCategory: string): string {
     if (categoryMap[currentCategory]) {
         return categoryMap[currentCategory];
     }
+    
+    // Clean up any remaining extra characters like '!'
+    currentCategory = currentCategory.replace(/[.!?]/g, '').trim();
+
 
     // Capitalize the first letter for consistency
     return currentCategory.charAt(0).toUpperCase() + currentCategory.slice(1);
