@@ -3,6 +3,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Logo } from '@/components/icons/Logo';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -41,6 +42,14 @@ export default function Header() {
   const { user, isUserLoading } = useUser();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const { allCategories } = useProducts();
+  const router = useRouter();
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const handleSearch = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!searchQuery.trim()) return;
+    router.push(`/products?q=${encodeURIComponent(searchQuery)}`);
+  };
 
   const handleLinkClick = () => {
     setIsMobileMenuOpen(false);
@@ -133,10 +142,15 @@ export default function Header() {
 
           {/* Center: Search Bar */}
           <div className="hidden flex-1 px-4 lg:px-12 md:block">
-            <div className="relative">
+            <form onSubmit={handleSearch} className="relative">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-foreground" />
-              <Input placeholder="Αναζητήστε προϊόντα, δωμάτια, ιδέες..." className="h-12 w-full rounded-full bg-secondary pl-12" />
-            </div>
+              <Input 
+                placeholder="Αναζητήστε προϊόντα, δωμάτια, ιδέες..." 
+                className="h-12 w-full rounded-full bg-secondary pl-12" 
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </form>
           </div>
 
           {/* Right side: Icons */}
@@ -174,9 +188,11 @@ export default function Header() {
                 </div>
               </Link>
             </Button>
-            <Button variant="ghost" size="icon" className="md:hidden" >
-              <Search className="text-foreground" />
-            </Button>
+             <form onSubmit={handleSearch} className="relative md:hidden">
+              <Button variant="ghost" size="icon" type="submit">
+                <Search className="text-foreground" />
+              </Button>
+            </form>
           </div>
         </div>
 

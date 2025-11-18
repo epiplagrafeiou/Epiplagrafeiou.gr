@@ -1,7 +1,8 @@
 
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { useProducts } from '@/lib/products-context';
 import { ProductCard } from '@/components/products/ProductCard';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -19,13 +20,20 @@ import { Slider } from "@/components/ui/slider"
 import { formatCurrency } from '@/lib/utils';
 import { PackageSearch } from 'lucide-react';
 
-export default function ProductsPage() {
-  const { products, isLoaded, categories } = useProducts();
-  const [searchTerm, setSearchTerm] = useState('');
+function ProductsContent() {
+  const { products, isLoaded } = useProducts();
+  const searchParams = useSearchParams();
+  const querySearchTerm = searchParams.get('q') || '';
+  
+  const [searchTerm, setSearchTerm] = useState(querySearchTerm);
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [priceRange, setPriceRange] = useState<[number, number]>([0, 1000]);
   const [sortBy, setSortBy] = useState('price-asc');
   const [inStockOnly, setInStockOnly] = useState(false);
+
+  useEffect(() => {
+    setSearchTerm(querySearchTerm);
+  }, [querySearchTerm]);
 
   const filteredAndSortedProducts = useMemo(() => {
     let filtered = products;
@@ -74,6 +82,13 @@ export default function ProductsPage() {
   };
   
   const maxPrice = useMemo(() => Math.ceil(Math.max(...products.map(p => p.price), 1000)), [products]);
+   
+  useEffect(() => {
+    if (isLoaded) {
+      const maxProductPrice = Math.ceil(Math.max(...products.map(p => p.price), 1000));
+      setPriceRange([0, maxProductPrice]);
+    }
+  }, [isLoaded, products]);
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -182,3 +197,12 @@ export default function ProductsPage() {
     </div>
   );
 }
+
+export default function ProductsPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <ProductsContent />
+    </Suspense>
+  );
+}
+
