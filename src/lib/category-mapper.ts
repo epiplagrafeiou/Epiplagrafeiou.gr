@@ -50,7 +50,9 @@ const prefixesToRemove = [
     "Εικόνα - Ήχος >",
     "Δέντρο ή Δάσος φέτος τα Χριστούγεννα ? Μεγάλο το δίλημμα >",
     "Δέντρο ή Δάσος φέτος τα Χριστούγεννα ? Μεγάλο το δίληmma >",
-    "Λευκά Είδη >"
+    "Λευκά Είδη >",
+    "Κονσόλες & Μπουφέδες >",
+    "Το θυμάσαι; >",
 ];
 
 // This function takes a raw category from the XML and returns the standardized one.
