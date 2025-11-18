@@ -26,9 +26,9 @@ export function Providers({ children }: { children: React.ReactNode }) {
                   {children}
                 </main>
                 <Footer />
-                <Toaster />
-                <NewsletterPopup />
               </div>
+              <Toaster />
+              <NewsletterPopup />
             </WishlistProvider>
           </CartProvider>
         </ProductsProvider>
