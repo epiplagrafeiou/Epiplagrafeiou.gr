@@ -1,3 +1,4 @@
+
 /**
  * @file Firestore Security Rules for Epipla Graphiou AI eShop.
  *
@@ -41,6 +42,14 @@ service cloud.firestore {
       allow create: if isOwner(userId);
       allow update: if isOwner(userId) && isUpdatingOwnProfile(userId);
       allow delete: if false; // Users should not be able to delete their own profiles.
+    }
+    
+    /**
+     * @description Admins can manage all orders. Users can create orders.
+     */
+    match /orders/{orderId} {
+      allow get, list, update, delete: if isAdmin();
+      allow create: if isSignedIn();
     }
 
     /**

@@ -1,15 +1,15 @@
 
 import { Suspense } from 'react';
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
 import { notFound } from "next/navigation";
 import Stripe from 'stripe';
-import { CheckCircle } from 'lucide-react';
+import { CheckCircle, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 
 export const dynamic = "force-dynamic";
 
-async function VerificationContent({ paymentIntentId }: { paymentIntentId: string }) {
+async function StripeVerificationContent({ paymentIntentId }: { paymentIntentId: string }) {
     let paymentIntent: Stripe.PaymentIntent | null = null;
     let errorMessage: string | null = null;
 
@@ -49,23 +49,45 @@ async function VerificationContent({ paymentIntentId }: { paymentIntentId: strin
         <Card className="w-full max-w-lg mx-auto text-center">
             <CardHeader className="items-center">
                 <CheckCircle className="h-16 w-16 text-green-500 mb-4" />
-                <CardTitle className="text-2xl">Thank You! Payment Successful</CardTitle>
+                <CardTitle className="text-2xl">Ευχαριστούμε! Η πληρωμή ήταν επιτυχής!</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-                <p>Your payment was successful and your order is now confirmed. A confirmation email has been sent to you.</p>
+                <p>Η πληρωμή σας ήταν επιτυχής και η παραγγελία σας έχει επιβεβαιωθεί. Ένα email επιβεβαίωσης έχει σταλεί στη διεύθυνσή σας.</p>
                 <div className="text-left bg-secondary p-4 rounded-md text-sm">
-                    <p><strong>Amount Paid:</strong> {formatCurrency((paymentIntent.amount || 0) / 100)}</p>
-                    <p><strong>Payment Reference:</strong> <code className="font-mono">{paymentIntent.id}</code></p>
+                    <p><strong>Ποσό:</strong> {formatCurrency((paymentIntent.amount || 0) / 100)}</p>
+                    <p><strong>Κωδικός Πληρωμής:</strong> <code className="font-mono">{paymentIntent.id}</code></p>
                 </div>
                  <Button asChild className="mt-6">
-                    <Link href="/">Return to Homepage</Link>
+                    <Link href="/">Επιστροφή στην Αρχική</Link>
                 </Button>
             </CardContent>
         </Card>
     );
 }
 
-// Helper function to format currency, as it can't be imported in server components easily without context
+function BankTransferConfirmation({ orderId }: { orderId: string }) {
+     return (
+        <Card className="w-full max-w-lg mx-auto text-center">
+            <CardHeader className="items-center">
+                <Clock className="h-16 w-16 text-blue-500 mb-4" />
+                <CardTitle className="text-2xl">Η παραγγελία σας καταχωρήθηκε!</CardTitle>
+                <CardDescription>Εκκρεμεί η πληρωμή μέσω τραπεζικής κατάθεσης.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+                <p>Ένα email επιβεβαίωσης με τις οδηγίες πληρωμής έχει σταλεί στη διεύθυνσή σας. Η παραγγελία σας θα αποσταλεί μόλις επιβεβαιωθεί η πληρωμή.</p>
+                <div className="text-left bg-secondary p-4 rounded-md text-sm">
+                    <p><strong>Κωδικός Παραγγελίας:</strong> <code className="font-mono">{orderId}</code></p>
+                    <p className="mt-2">Παρακαλούμε χρησιμοποιήστε τον κωδικό παραγγελίας ως αιτιολογία κατάθεσης.</p>
+                </div>
+                 <Button asChild className="mt-6">
+                    <Link href="/">Επιστροφή στην Αρχική</Link>
+                </Button>
+            </CardContent>
+        </Card>
+    );
+}
+
+
 function formatCurrency(amount: number) {
   return new Intl.NumberFormat('el-GR', {
     style: 'currency',
@@ -76,16 +98,26 @@ function formatCurrency(amount: number) {
 
 export default function CheckoutSuccessPage({ searchParams }: { searchParams: { [key: string]: string | string[] | undefined } }) {
   const paymentIntentId = searchParams?.payment_intent as string | undefined;
+  const orderId = searchParams?.order_id as string | undefined;
+  const method = searchParams?.method as string | undefined;
 
-  if (!paymentIntentId) {
-    notFound();
+  if (method === 'bank_transfer' && orderId) {
+      return (
+        <div className="container mx-auto px-4 py-16 flex items-center justify-center min-h-[60vh]">
+            <BankTransferConfirmation orderId={orderId} />
+        </div>
+      )
   }
 
-  return (
-    <div className="container mx-auto px-4 py-16 flex items-center justify-center min-h-[60vh]">
-        <Suspense fallback={<div>Loading payment details...</div>}>
-            <VerificationContent paymentIntentId={paymentIntentId} />
-        </Suspense>
-    </div>
-  );
+  if (method === 'stripe' && paymentIntentId) {
+     return (
+        <div className="container mx-auto px-4 py-16 flex items-center justify-center min-h-[60vh]">
+            <Suspense fallback={<div>Loading payment details...</div>}>
+                <StripeVerificationContent paymentIntentId={paymentIntentId} />
+            </Suspense>
+        </div>
+      );
+  }
+
+  notFound();
 }

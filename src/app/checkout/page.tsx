@@ -7,6 +7,9 @@ import { loadStripe, type StripeElementsOptions } from "@stripe/stripe-js";
 import CheckoutPayment from "@/components/checkout/CheckoutPayment";
 import { useCart } from "@/lib/cart-context";
 import { Skeleton } from "@/components/ui/skeleton";
+import { BankTransferFlow } from "@/components/checkout/BankTransferFlow";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { CreditCard, Landmark } from "lucide-react";
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
 
@@ -14,12 +17,19 @@ export default function CheckoutPage() {
   const { cartItems, totalAmount } = useCart();
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [paymentMethod, setPaymentMethod] = useState("stripe");
 
   useEffect(() => {
     if (totalAmount === 0 && cartItems.length === 0) {
         setLoading(false);
         return;
     };
+    
+    // Only create a payment intent if stripe is the selected method
+    if (paymentMethod !== 'stripe') {
+      setLoading(false);
+      return;
+    }
     
     let cancelled = false;
     async function createIntent() {
@@ -29,9 +39,7 @@ export default function CheckoutPage() {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            cartItems,
-            amount: totalAmount, // Send amount in currency units
-            shippingDetails: {}, // Optionally include form data here
+            totalAmount: totalAmount,
           }),
         });
         const data = await res.json();
@@ -51,51 +59,59 @@ export default function CheckoutPage() {
     return () => {
       cancelled = true;
     };
-  }, [cartItems, totalAmount]);
+  }, [cartItems, totalAmount, paymentMethod]);
 
-  if (loading) {
-    return (
-      <div className="container mx-auto px-4 py-12">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            <div>
-                <Skeleton className="h-96 w-full" />
-            </div>
-            <div>
-                 <Skeleton className="h-64 w-full" />
-            </div>
+
+  const renderStripeForm = () => {
+    if (loading) {
+       return (
+        <div className="space-y-4 mt-4">
+            <Skeleton className="h-12 w-full" />
+            <Skeleton className="h-48 w-full" />
         </div>
-      </div>
-    );
-  }
+      );
+    }
 
-  if (cartItems.length > 0 && !clientSecret) {
-    return (
-      <div className="container mx-auto px-4 py-12">
-        <div className="text-center text-destructive">Unable to initialize payment. Please check your cart or try again later.</div>
-      </div>
-    );
-  }
-  
-  if (cartItems.length === 0) {
-      // Redirect or show empty cart message
+    if (!clientSecret) {
       return (
-           <div className="container mx-auto px-4 py-12 text-center">
-                <h1 className="text-2xl font-bold">Your cart is empty.</h1>
-                <p className="text-muted-foreground">Add items to your cart to proceed to checkout.</p>
-           </div>
-      )
-  }
+        <div className="mt-4 text-center text-destructive">Unable to initialize card payment. Please select another method or try again.</div>
+      );
+    }
+    
+    const options: StripeElementsOptions = {
+      clientSecret,
+      appearance: { theme: 'stripe' },
+    };
 
-  const options: StripeElementsOptions = {
-    clientSecret,
-    appearance: { theme: 'stripe' },
-  };
-
-  return (
-    <div className="container mx-auto px-4 py-12">
+    return (
       <Elements stripe={stripePromise} options={options}>
         <CheckoutPayment clientSecret={clientSecret!} />
       </Elements>
+    )
+  }
+
+  return (
+    <div className="container mx-auto px-4 py-12">
+        <h1 className="text-3xl font-bold mb-8 text-center">Ολοκλήρωση Παραγγελίας</h1>
+        
+        <Tabs value={paymentMethod} onValueChange={setPaymentMethod} className="w-full max-w-xl mx-auto">
+            <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="stripe">
+                    <CreditCard className="mr-2 h-4 w-4"/>
+                    Κάρτα / IRIS / Apple Pay
+                </TabsTrigger>
+                <TabsTrigger value="bank_transfer">
+                    <Landmark className="mr-2 h-4 w-4" />
+                    Τραπεζική Κατάθεση
+                </TabsTrigger>
+            </TabsList>
+            <TabsContent value="stripe">
+                {renderStripeForm()}
+            </TabsContent>
+            <TabsContent value="bank_transfer">
+                <BankTransferFlow />
+            </TabsContent>
+        </Tabs>
     </div>
   );
 }
