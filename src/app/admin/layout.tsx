@@ -11,11 +11,15 @@ export default function AdminLayout({
   children: React.ReactNode;
 }) {
   return (
-    <SidebarProvider>
-      <Sidebar>
-        <AdminSidebar />
-      </Sidebar>
-      <SidebarInset>{children}</SidebarInset>
-    </SidebarProvider>
+    <div className="flex min-h-screen flex-col">
+       <main className="flex-grow">
+        <SidebarProvider>
+          <Sidebar>
+            <AdminSidebar />
+          </Sidebar>
+          <SidebarInset>{children}</SidebarInset>
+        </SidebarProvider>
+       </main>
+    </div>
   );
 }
