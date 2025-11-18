@@ -15,6 +15,9 @@ export default function Footer() {
               © {new Date().getFullYear()} Epipla Graphiou. All rights reserved.
             </p>
              <div className="flex flex-col space-y-2">
+                <Link href="/blog" className="text-sm text-muted-foreground hover:text-foreground">
+                    Blog
+                </Link>
                 <Link href="/privacy-policy" className="text-sm text-muted-foreground hover:text-foreground">
                     Πολιτική απορρήτου
                 </Link>
