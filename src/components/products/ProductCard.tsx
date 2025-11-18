@@ -20,8 +20,16 @@ interface ProductCardProps {
 
 export function ProductCard({ product }: ProductCardProps) {
   const { toast } = useToast();
+  // Client-side state
+  const [isClient, setIsClient] = useState(false);
   const { wishlist, addToWishlist, removeFromWishlist } = useWishlist();
-  const isFavorite = wishlist.includes(product.id);
+
+  useEffect(() => {
+    // This effect runs only on the client, after the component mounts
+    setIsClient(true);
+  }, []);
+
+  const isFavorite = isClient && wishlist.includes(product.id);
 
   const primaryImageSrc =
     product.imageId && product.imageId.length > 0
@@ -135,3 +143,4 @@ export function ProductCard({ product }: ProductCardProps) {
     </div>
   );
 }
+

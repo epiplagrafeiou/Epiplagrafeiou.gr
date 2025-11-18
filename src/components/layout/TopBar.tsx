@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -17,16 +16,19 @@ export default function TopBar() {
     setIsClient(true);
   }, []);
 
-  if (!isVisible) return null;
+  if (!isClient || !isVisible) {
+    return (
+      <div className="relative z-50 h-10 text-sm text-primary-foreground bg-primary">
+        {/* Placeholder to prevent layout shift */}
+      </div>
+    );
+  }
 
   const remainingForFreeShipping = FREE_SHIPPING_THRESHOLD - totalAmount;
   const progressPercentage = (totalAmount / FREE_SHIPPING_THRESHOLD) * 100;
 
   let shippingMessage;
-  if (!isClient) {
-    // Render a default message on the server and initial client render
-    shippingMessage = `Κέρδισε δωρεάν μεταφορικά για παραγγελίες άνω των ${formatCurrency(FREE_SHIPPING_THRESHOLD)}!`;
-  } else if (totalAmount === 0) {
+  if (totalAmount === 0) {
     shippingMessage = `Κέρδισε δωρεάν μεταφορικά για παραγγελίες άνω των ${formatCurrency(FREE_SHIPPING_THRESHOLD)}!`;
   } else if (remainingForFreeShipping > 0) {
     shippingMessage = `Πρόσθεσε ακόμη ${formatCurrency(remainingForFreeShipping)} για δωρεάν μεταφορικά!`;
