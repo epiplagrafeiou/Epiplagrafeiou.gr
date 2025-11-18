@@ -1,45 +1,19 @@
 
-// A simple mapping from supplier category to your store's standard category.
-// We can add more rules here as needed.
-const categoryMap: { [key: string]: string } = {
-  // Example: 'Supplier Category': 'Your Store Category'
-  'Καφετιέρες': 'Coffee Machines',
-  'Μικροσυσκευές': 'Small Appliances',
-  'Ραφιέρες/Ράφια Τοίχου': 'Ραφιέρες Τοίχου',
-  'Οροφής Φωτιστικά': 'Φωτιστικά Οροφής',
-  'Διακοσμητικοί Καθρέπτες': 'Καθρέπτες',
-  'Κεριά LED': 'Κεριά',
-  'Δέντρο ή Δάσος φέτος τα Χριστούγεννα ? Μεγάλο το δίλημμα > Χριστουγεννιάτικα Δέντρα !': 'Χριστουγεννιάτικα Δέντρα',
-  'Δέντρο ή Δάσος φέτος τα Χριστούγεννα ? Μεγάλο το δίλημμα > Βάσεις Χριστουγεννιάτικων Δέντρων': 'Βάσεις Χριστουγεννιάτικων Δέντρων',
-  'Λευκά Είδη > Χαλιά': 'Χαλιά',
-  'Διακόσμηση & Ατμόσφαιρα > Κορνίζες': 'Κορνίζες',
-  'Οργάνωση Σπιτιού > Κάδοι Απορριμάτων': 'Κάδοι Απορριμάτων',
-  'Διακόσμηση & Ατμόσφαιρα > Κεριά Διακοσμητικά': 'Κεριά',
-  'Έπιπλα εσωτερικού χώρου > Σκαμπώ μπαρ': 'Σκαμπώ μπαρ',
-  'Διακόσμηση & Ατμόσφαιρα > Τεχνητά Φυτά & Κασπώ': 'Τεχνητά Φυτά & Κασπώ',
-  'Δέντρο ή Δάσος φέτος τα Χριστούγεννα ? Μεγάλο το δίληmma > Vintage Ξύλινα Στολίδια Δέντρου': 'Ξύλινα Στολίδια Δέντρου',
-  'Φωτισμός > Οροφής φωτιστικά': 'Φωτιστικά Οροφής',
-  'Διακόσμηση > Μαξιλάρια διακόσμησης καναπέ': 'Διακοσμητικά Μαξιλάρια',
-  'Σαλόνι > Μαξιλάρια Διακοσμητικά . Εξωτερικού & Εσωτερικού Χώρου': 'Διακοσμητικά Μαξιλάρια',
-  'Διακόσμηση & Ατμόσφαιρα > Κεριά Ατμοσφαιρικού Φωτισμού Led': 'Κεριά',
-  'Οργάνωση Σπιτιού > Κρεμάστρες Δαπέδου': 'Κρεμάστρες Δαπέδου',
-  'Εικόνα - Ήχος > Πολύμπριζα': 'Πολύμπριζα',
-  'Σαλόνι > Κουρτίνες & Κουρτινόξυλα': 'Κουρτίνες & Κουρτινόξυλα',
-  'Οργάνωση Σπιτιού > Κουτιά Αποθήκευσης - Τακτοποίησης': 'Κουτιά Αποθήκευσης - Τακτοποίησης',
-  'Εικόνα - Ήχος > Προεκτάσεις Ρεύματος & Μπαλαντέζες': 'Προεκτάσεις & Μπαλαντέζες',
-  'Φωτισμός > Απλίκες': 'Απλίκες',
-  'Φωτισμός > Χριστουγεννιάτικα Φωτεινά Στοιχεία': 'Χριστουγενιάτικα Φωτινά Στοιχεία',
-  'Διακόσμηση & Ατμόσφαιρα > Διακοσμητικά στοιχεία': 'Διακοσμητικά',
-  'Διακόσμηση > Γενικό διακοσμητικό': 'Διακοσμητικά',
-  'Διακόσμηση & Ατμόσφαιρα > Διαχύτες Αρωμάτων - Αρωματικά Χώρου': 'Αρωματικά Χώρου',
-  'Έπιπλα γραφείου > Ανταλλακτικά γραφείου': 'Ανταλλακτικά Για Καρέκλες Γραφείου',
+// This file contains the logic for cleaning and standardizing category names from supplier XML feeds.
+
+// A map for specific, one-to-one replacements. This runs AFTER the general cleaning.
+const specificCategoryMap: { [key: string]: string } = {
+  'Ανταλλακτικά γραφείου': 'Ανταλλακτικά Για Καρέκλες Γραφείου',
   'Ανταλλακτικά': 'Ανταλλακτικά Για Καρέκλες Γραφείου',
   'ΣΚΑΜΠΟ-ΑΝΤΑΛΛΑΚΤΙΚΑ': 'Ανταλλακτικά Για Καρέκλες Γραφείου',
-  'Έπιπλα γραφείου > Συρταριέρες γραφείου': 'Συρταριέρες',
+  'Συρταριέρες γραφείου': 'Συρταριέρες',
+  'Τζακια και Εστίες Φωτιάς Βεράντας - Κήπου': 'Εστίες Φωτιάς Εξωτερικού Χώρου',
+  'Αξεσουάρ Κρασιού': 'Περί Κρασιού & Ποτού...',
+  'Στήλες Και Τηλέφωνα Ντους': 'Αξεσουάρ Μπάνιου',
 };
 
-// Prefixes to be removed from the start of category strings
-const prefixesToRemove = [
+// Prefixes and phrases to be aggressively removed from category strings.
+const junkPrefixesAndPhrases = [
     "Έπιπλα εσωτερικού χώρου >",
     "Έπιπλα γραφείου >",
     "Διακόσμηση & Ατμόσφαιρα >",
@@ -48,56 +22,49 @@ const prefixesToRemove = [
     "Οργάνωση Σπιτιού >",
     "Σαλόνι >",
     "Εικόνα - Ήχος >",
-    "Δέντρο ή Δάσος φέτος τα Χριστούγεννα ? Μεγάλο το δίλημμα >",
-    "Δέντρο ή Δάσος φέτος τα Χριστούγεννα ? Μεγάλο το δίληmma >",
     "Λευκά Είδη >",
     "Κονσόλες & Μπουφέδες >",
+    "Κήπος - Βεράντα >",
     "Το θυμάσαι; >",
+    "Δέντρο ή Δάσος φέτος τα Χριστούγεννα ? Μεγάλο το δίλημμα >",
+    "Δέντρο ή Δάσος φέτος τα Χριστούγεννα ? Μεγάλο το δίληmma >",
+    "Η απογείωση της Αγωνίας μέχρι τα Χριστούγεννα",
+    "Όλα Αλλάζουν τα Χριστούγεννα Το Τραπέζι να μείνει ίδιο",
+    "Η Διακόσμηση που θα μας βάλει στα Χριστούγεννα",
+    "Οταν ονειρευόμαστε το Μαγικό Χωριό…",
+    "Και αν δεν έχουμε ταξιδέψει κοιτάζοντας την",
+    "Παραδοσιακά απο τις Κρύες Βόρειες Χώρες",
+    "Εορταστικό Χουχούλιασμα",
 ];
 
-// This function takes a raw category from the XML and returns the standardized one.
-// If no mapping is found, it returns the original category.
+// This function takes a raw category from the XML and returns a standardized one.
 export function mapCategory(rawCategory: string): string {
     if (!rawCategory) return 'Uncategorized';
     
     let currentCategory = rawCategory.trim();
 
-    // Check for a direct match in our explicit mapping first.
-    if (categoryMap[currentCategory]) {
-        return categoryMap[currentCategory];
+    // 1. Remove all junk prefixes and phrases
+    for (const phrase of junkPrefixesAndPhrases) {
+        currentCategory = currentCategory.replace(phrase, '').trim();
     }
     
-    // Remove any parenthetical parts. e.g., "Βιβλιοθήκες (σε “Έπιπλα Εσωτερικού”)" -> "Βιβλιοθήκες"
+    // 2. Remove parenthetical text, e.g., "Βιβλιοθήκες (σε “Έπιπλα Εσωτερικού”)" -> "Βιβλιοθήκες"
     currentCategory = currentCategory.replace(/\s*\(.*\)\s*/g, '').trim();
-
-    // Remove common prefixes
-    for (const prefix of prefixesToRemove) {
-        if (currentCategory.startsWith(prefix)) {
-            currentCategory = currentCategory.substring(prefix.length).trim();
-            break; // Stop after the first prefix match
-        }
-    }
-
-    // After removing prefixes, check the map again for the simplified name
-    if (categoryMap[currentCategory]) {
-        return categoryMap[currentCategory];
+    
+    // 3. Handle paths with '>', keeping only the most specific parts if needed, but often the whole path is good.
+    // For now, we trust the combined path.
+    
+    // 4. Check for a specific mapping in our dictionary
+    if (specificCategoryMap[currentCategory]) {
+        return specificCategoryMap[currentCategory];
     }
     
-    // As a final step, if the category still contains ' > ', take the last part.
-    if (currentCategory.includes(' > ')) {
-        const parts = currentCategory.split(' > ');
-        currentCategory = parts[parts.length - 1].trim();
-    }
-    
-    // Final check on the map with the very last part
-    if (categoryMap[currentCategory]) {
-        return categoryMap[currentCategory];
-    }
-    
-    // Clean up any remaining extra characters like '!'
+    // 5. General cleanup for any remaining unwanted characters or formatting issues
     currentCategory = currentCategory.replace(/[.!?]/g, '').trim();
+    
+    // If after all this, the string is empty, mark it as Uncategorized
+    if (!currentCategory) return 'Uncategorized';
 
-
-    // Capitalize the first letter for consistency
+    // Final step: Capitalize the first letter for consistency
     return currentCategory.charAt(0).toUpperCase() + currentCategory.slice(1);
 }

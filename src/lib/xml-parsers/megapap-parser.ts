@@ -86,8 +86,11 @@ export async function megapapParser(url: string): Promise<XmlProduct[]> {
         p.quantity ??
         0;
       const stock = Number(rawStock) || 0;
-      const rawCategory = p.category || 'Uncategorized';
       
+      // For megapap, the category might be a single string or already structured.
+      // We prioritize `p.category` and then `p.subcategory` if it exists.
+      const rawCategory = [p.category, p.subcategory].filter(Boolean).join(' > ');
+
       let finalWebOfferPrice = parseFloat(p.weboffer_price_with_vat || p.retail_price_with_vat || '0');
       const productName = p.name?.toLowerCase() || '';
       if (productName.includes('καναπ') || productName.includes('sofa')) {

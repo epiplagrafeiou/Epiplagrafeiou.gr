@@ -69,7 +69,8 @@ export async function b2bportalParser(url: string): Promise<XmlProduct[]> {
 
     const mainImage = allImages[0] || null;
 
-    const rawCategory = [p.category, p.subcategory].filter(Boolean).join(' > ');
+    // Correctly order: subcategory > category
+    const rawCategory = [p.subcategory, p.category].filter(Boolean).join(' > ');
     
     // Availability is now "1" for in stock
     const stock = p.availability === 1 ? 10 : 0;
