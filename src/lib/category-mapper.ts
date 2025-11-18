@@ -5,15 +5,12 @@ const categoryMap: { [key: string]: string } = {
   // Example: 'Supplier Category': 'Your Store Category'
   'Καφετιέρες': 'Coffee Machines',
   'Μικροσυσκευές': 'Small Appliances',
-  'Ραφιέρες/Ράφια Τοίχου': 'Ραφιέρες',
-  'Ραφιέρες Τοίχου': 'Ραφιέρες',
+  'Ραφιέρες/Ράφια Τοίχου': 'Ραφιέρες Τοίχου',
   'Οροφής Φωτιστικά': 'Φωτιστικά Οροφής',
   'Διακοσμητικοί Καθρέπτες': 'Καθρέπτες',
   'Κεριά LED': 'Κεριά',
   'Δέντρο ή Δάσος φέτος τα Χριστούγεννα ? Μεγάλο το δίλημμα > Χριστουγεννιάτικα Δέντρα !': 'Χριστουγεννιάτικα Δέντρα',
   'Δέντρο ή Δάσος φέτος τα Χριστούγεννα ? Μεγάλο το δίλημμα > Βάσεις Χριστουγεννιάτικων Δέντρων': 'Βάσεις Χριστουγεννιάτικων Δέντρων',
-  'Σαλόνι > Γραφεία': 'Γραφεία',
-  'Έπιπλα γραφείου > Γραφεία': 'Γραφεία',
   'Λευκά Είδη > Χαλιά': 'Χαλιά',
   'Διακόσμηση & Ατμόσφαιρα > Κορνίζες': 'Κορνίζες',
   'Οργάνωση Σπιτιού > Κάδοι Απορριμάτων': 'Κάδοι Απορριμάτων',
@@ -21,8 +18,6 @@ const categoryMap: { [key: string]: string } = {
   'Έπιπλα εσωτερικού χώρου > Σκαμπώ μπαρ': 'Σκαμπώ μπαρ',
   'Διακόσμηση & Ατμόσφαιρα > Τεχνητά Φυτά & Κασπώ': 'Τεχνητά Φυτά & Κασπώ',
   'Δέντρο ή Δάσος φέτος τα Χριστούγεννα ? Μεγάλο το δίληmma > Vintage Ξύλινα Στολίδια Δέντρου': 'Ξύλινα Στολίδια Δέντρου',
-  'Έπιπλα εσωτερικού χώρου > Καναπέδες γωνιακοί': 'Καναπέδες γωνιακοί',
-  'Έπιπλα εσωτερικού χώρου > Παπουτσοθήκες': 'Παπουτσοθήκες',
   'Φωτισμός > Οροφής φωτιστικά': 'Φωτιστικά Οροφής',
   'Διακόσμηση > Μαξιλάρια διακόσμησης καναπέ': 'Διακοσμητικά Μαξιλάρια',
   'Σαλόνι > Μαξιλάρια Διακοσμητικά . Εξωτερικού & Εσωτερικού Χώρου': 'Διακοσμητικά Μαξιλάρια',
@@ -32,53 +27,68 @@ const categoryMap: { [key: string]: string } = {
   'Σαλόνι > Κουρτίνες & Κουρτινόξυλα': 'Κουρτίνες & Κουρτινόξυλα',
   'Οργάνωση Σπιτιού > Κουτιά Αποθήκευσης - Τακτοποίησης': 'Κουτιά Αποθήκευσης - Τακτοποίησης',
   'Εικόνα - Ήχος > Προεκτάσεις Ρεύματος & Μπαλαντέζες': 'Προεκτάσεις & Μπαλαντέζες',
-  'Έπιπλα εσωτερικού χώρου > Τραπεζάκια σαλονιού': 'Τραπεζάκια σαλονιού',
-  'Έπιπλα εσωτερικού χώρου > Καναπέδες - Κρεβάτι': 'Καναπές Κρεβάτι',
-  'Σαλόνι > Καναπέδες': 'Καναπές Κρεβάτι',
-  'Έπιπλα εσωτερικού χώρου > Βιβλιοθήκες': 'Βιβλιοθήκες',
-  'Σαλόνι > Βιβλιοθήκες': 'Βιβλιοθήκες',
-  'Έπιπλα εσωτερικού χώρου > Ντουλάπες ρούχων': 'Ντουλάπες',
-  'Διακόσμηση & Ατμόσφαιρα > Ρολόγια Εσωτερικού χώρου': 'Ρολόγια Τοίχου',
-  'Έπιπλα εσωτερικού χώρου > Πουφ': 'Πουφ',
-  'Έπιπλα γραφείου > Reception': 'Γραφεία Υποδοχής - Reception',
-  'Διακόσμηση & Ατμόσφαιρα > Διακοσμητικοί Πίνακες': 'Πίνακες',
   'Φωτισμός > Απλίκες': 'Απλίκες',
-  'Έπιπλα εσωτερικού χώρου > Έπιπλα εισόδου': 'Έπιπλα Εισόδου',
-  'Έπιπλα εσωτερικού χώρου > Κονσόλες': 'Κονσόλες',
   'Φωτισμός > Χριστουγεννιάτικα Φωτεινά Στοιχεία': 'Χριστουγενιάτικα Φωτινά Στοιχεία',
   'Διακόσμηση & Ατμόσφαιρα > Διακοσμητικά στοιχεία': 'Διακοσμητικά',
-  'Διακόσμηση > Γενικό διακοσμητικό': 'Κρεμαστές Βάσεις Γλάστρας',
-  'Έπιπλα εσωτερικού χώρου > Πολυθρόνες σαλονιού': 'Πολυθρόνες',
+  'Διακόσμηση > Γενικό διακοσμητικό': 'Διακοσμητικά',
   'Διακόσμηση & Ατμόσφαιρα > Διαχύτες Αρωμάτων - Αρωματικά Χώρου': 'Αρωματικά Χώρου',
-  'Έπιπλα εσωτερικού χώρου': 'Μπουφέδες',
   'Έπιπλα γραφείου > Ανταλλακτικά γραφείου': 'Ανταλλακτικά Για Καρέκλες Γραφείου',
   'Ανταλλακτικά': 'Ανταλλακτικά Για Καρέκλες Γραφείου',
   'ΣΚΑΜΠΟ-ΑΝΤΑΛΛΑΚΤΙΚΑ': 'Ανταλλακτικά Για Καρέκλες Γραφείου',
-  'Έπιπλα εσωτερικού χώρου > Συρταριέρες - Τουαλέτες': 'Συρταριέρες - Τουαλέτες',
+  'Έπιπλα γραφείου > Συρταριέρες γραφείου': 'Συρταριέρες',
 };
+
+// Prefixes to be removed from the start of category strings
+const prefixesToRemove = [
+    "Έπιπλα εσωτερικού χώρου >",
+    "Έπιπλα γραφείου >",
+    "Διακόσμηση & Ατμόσφαιρα >",
+    "Διακόσμηση >",
+    "Φωτισμός >",
+    "Οργάνωση Σπιτιού >",
+    "Σαλόνι >",
+    "Εικόνα - Ήχος >"
+];
 
 // This function takes a raw category from the XML and returns the standardized one.
 // If no mapping is found, it returns the original category.
 export function mapCategory(rawCategory: string): string {
     if (!rawCategory) return 'Uncategorized';
+    
+    let currentCategory = rawCategory.trim();
 
-    // First, check for a direct match for the full raw category string.
-    // This is useful for very specific, long category names.
-    if (categoryMap[rawCategory]) {
-        return categoryMap[rawCategory];
+    // Check for a direct match in our explicit mapping first.
+    if (categoryMap[currentCategory]) {
+        return categoryMap[currentCategory];
     }
     
-    // Then, remove any parenthetical parts. e.g., "Βιβλιοθήκες (σε “Έπιπλα Εσωτερικού”)" -> "Βιβλιοθήκες"
-    const cleanedCategory = rawCategory.replace(/\s*\(.*\)\s*/g, '').trim();
+    // Remove any parenthetical parts. e.g., "Βιβλιοθήκες (σε “Έπιπλα Εσωτερικού”)" -> "Βιβλιοθήκες"
+    currentCategory = currentCategory.replace(/\s*\(.*\)\s*/g, '').trim();
 
-    // Check for a direct match in our map with the cleaned category
-    if (categoryMap[cleanedCategory]) {
-        return categoryMap[cleanedCategory];
+    // Remove common prefixes
+    for (const prefix of prefixesToRemove) {
+        if (currentCategory.startsWith(prefix)) {
+            currentCategory = currentCategory.substring(prefix.length).trim();
+            break; // Stop after the first prefix match
+        }
+    }
+
+    // After removing prefixes, check the map again for the simplified name
+    if (categoryMap[currentCategory]) {
+        return categoryMap[currentCategory];
     }
     
-    // Handle hierarchical categories (e.g., "Μικροσυσκευές > Καφετιέρες")
-    const parts = cleanedCategory.split(' > ').map(part => part.trim());
-    const mappedParts = parts.map(part => categoryMap[part] || part);
+    // As a final step, if the category still contains ' > ', take the last part.
+    if (currentCategory.includes(' > ')) {
+        const parts = currentCategory.split(' > ');
+        currentCategory = parts[parts.length - 1].trim();
+    }
     
-    return mappedParts.join(' > ');
+    // Final check on the map with the very last part
+    if (categoryMap[currentCategory]) {
+        return categoryMap[currentCategory];
+    }
+
+    // Capitalize the first letter for consistency
+    return currentCategory.charAt(0).toUpperCase() + currentCategory.slice(1);
 }
