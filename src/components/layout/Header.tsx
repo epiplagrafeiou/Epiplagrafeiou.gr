@@ -26,6 +26,7 @@ import {
 } from '@/components/ui/collapsible';
 import { createSlug } from '@/lib/utils';
 import { useProducts } from '@/lib/products-context';
+import { useWishlist } from '@/lib/wishlist-context';
 
 const mainNavLinks = [
     { name: 'Προϊόντα', slug: '/products' },
@@ -36,6 +37,7 @@ const mainNavLinks = [
 
 export default function Header() {
   const { itemCount } = useCart();
+  const { wishlistCount } = useWishlist();
   const { user, isUserLoading } = useUser();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const { allCategories } = useProducts();
@@ -149,9 +151,16 @@ export default function Header() {
               <Truck className="text-foreground" />
               <span className="sr-only">Delivery</span>
             </Button>
-            <Button variant="ghost" size="icon" className="hidden md:inline-flex">
-              <Heart className="text-foreground" />
-              <span className="sr-only">Wishlist</span>
+            <Button variant="ghost" size="icon" asChild className="hidden md:inline-flex relative">
+              <Link href="/wishlist">
+                <Heart className="text-foreground" />
+                {wishlistCount > 0 && (
+                  <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-xs text-primary-foreground">
+                    {wishlistCount}
+                  </span>
+                )}
+                <span className="sr-only">Wishlist</span>
+              </Link>
             </Button>
             <Button variant="ghost" size="icon" asChild aria-label="Cart">
               <Link href="/cart">

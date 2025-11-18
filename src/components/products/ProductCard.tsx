@@ -1,3 +1,4 @@
+
 'use client';
 
 import Image from 'next/image';
@@ -10,6 +11,8 @@ import { useToast } from '@/hooks/use-toast';
 import { PriceDisplay } from './PriceDisplay';
 import AddToCartButton from './AddToCartButton';
 import { formatCurrency } from '@/lib/utils';
+import { useWishlist } from '@/lib/wishlist-context';
+import { cn } from '@/lib/utils';
 
 interface ProductCardProps {
   product: Product;
@@ -17,6 +20,9 @@ interface ProductCardProps {
 
 export function ProductCard({ product }: ProductCardProps) {
   const { toast } = useToast();
+  const { wishlist, addToWishlist, removeFromWishlist } = useWishlist();
+  const isFavorite = wishlist.includes(product.id);
+
   const primaryImageSrc =
     product.imageId && product.imageId.length > 0
       ? product.imageId
@@ -40,13 +46,22 @@ export function ProductCard({ product }: ProductCardProps) {
     setCurrentImage(primaryImageSrc);
   };
   
-  const handleActionClick = (e: React.MouseEvent, action: 'favorite') => {
+  const handleFavoriteClick = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    toast({
-      title: 'Added to Favorites!',
-      description: `${product.name} has been added to your favorites.`,
-    });
+    if (isFavorite) {
+      removeFromWishlist(product.id);
+      toast({
+        title: 'Αφαιρέθηκε από τα Αγαπημένα',
+        description: `${product.name} αφαιρέθηκε από τη λίστα επιθυμιών.`,
+      });
+    } else {
+      addToWishlist(product.id);
+      toast({
+        title: 'Προστέθηκε στα Αγαπημένα!',
+        description: `${product.name} προστέθηκε στη λίστα επιθυμιών.`,
+      });
+    }
   }
 
   const productCategory = product.category.split(' > ').pop();
@@ -104,11 +119,14 @@ export function ProductCard({ product }: ProductCardProps) {
                     <Button
                         variant="secondary"
                         size="icon"
-                        className="h-9 w-9 shrink-0 rounded-full bg-gray-200 text-gray-800 shadow-md hover:bg-gray-300"
-                        onClick={(e) => handleActionClick(e, 'favorite')}
+                        className={cn(
+                            "h-9 w-9 shrink-0 rounded-full bg-gray-200 text-gray-800 shadow-md hover:bg-gray-300",
+                            isFavorite && "bg-red-100 text-red-500 hover:bg-red-200"
+                        )}
+                        onClick={handleFavoriteClick}
                         aria-label="Add to favorites"
                     >
-                        <Heart className="h-5 w-5" />
+                        <Heart className={cn("h-5 w-5", isFavorite && "fill-current")} />
                     </Button>
                 </div>
             </div>
