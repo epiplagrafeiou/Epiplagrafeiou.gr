@@ -1,79 +1,103 @@
 
-// This file contains the logic for cleaning and standardizing category names from supplier XML feeds.
+'use client';
 
-// A map for specific, one-to-one replacements. This runs AFTER the general cleaning.
-const specificCategoryMap: { [key: string]: string } = {
-  'Ανταλλακτικά γραφείου': 'Ανταλλακτικά Για Καρέκλες Γραφείου',
-  'Ανταλλακτικά': 'Ανταλλακτικά Για Καρέκλες Γραφείου',
-  'ΣΚΑΜΠΟ-ΑΝΤΑΛΛΑΚΤΙΚΑ': 'Ανταλλακτικά Για Καρέκλες Γραφείου',
-  'Συρταριέρες γραφείου': 'Συρταριέρες',
-  'Τζακια και Εστίες Φωτιάς Βεράντας - Κήπου': 'Εστίες Φωτιάς Εξωτερικού Χώρου',
-  'Αξεσουάρ Κρασιού': 'Περί Κρασιού & Ποτού...',
-  'Στήλες Και Τηλέφωνα Ντους': 'Αξεσουάρ Μπάνιου',
-  'Βοηθητικά Τραπεζάκια > Τραπεζάκια Σαλονιού': 'Τραπεζάκια Σαλονιού > Βοηθητικά Τραπεζάκια',
-};
+export interface UnifiedCategory {
+  main: string;
+  sub: string;
+}
 
-// Prefixes to be removed from the START of a category string.
-const junkPrefixes = [
-    "Έπιπλα εσωτερικού χώρου",
-    "Έπιπλα γραφείου",
-    "Διακόσμηση & Ατμόσφαιρα",
-    "Διακόσμηση",
-    "Φωτισμός",
-    "Οργάνωση Σπιτιού",
-    "Σαλόνι",
-    "Εικόνα - Ήχος",
-    "Λευκά Είδη",
-    "Κονσόλες & Μπουφέδες",
-    "Κήπος - Βεράντα",
-];
+// Normalizes the raw category string for easier matching
+function normalize(str: string): string {
+  if (!str) return "";
+  return str.trim().toLowerCase()
+    .replace(/[ά]/g, 'α')
+    .replace(/[έ]/g, 'ε')
+    .replace(/[ή]/g, 'η')
+    .replace(/[ίϊΐ]/g, 'ι')
+    .replace(/[ό]/g, 'ο')
+    .replace(/[ύϋΰ]/g, 'υ')
+    .replace(/[ώ]/g, 'ω')
+    .replace(/[^a-zα-ω0-9 >]/gi, '');
+}
 
-const junkPhrases = [
-     "Το θυμάσαι; >",
-    "Δέντρο ή Δάσος φέτος τα Χριστούγεννα ? Μεγάλο το δίλημμα >",
-    "Δέντρο ή Δάσος φέτος τα Χριστούγεννα ? Μεγάλο το δίληmma >",
-    "Η απογείωση της Αγωνίας μέχρι τα Χριστούγεννα",
-    "Όλα Αλλάζουν τα Χριστούγεννα Το Τραπέζι να μείνει ίδιο",
-    "Η Διακόσμηση που θα μας βάλει στα Χριστούγεννα",
-    "Οταν ονειρευόμαστε το Μαγικό Χωριό…",
-    "Και αν δεν έχουμε ταξιδέψει κοιτάζοντας την",
-    "Παραδοσιακά απο τις Κρύες Βόρειες Χώρες",
-    "Εορταστικό Χουχούλιασμα",
-];
+/**
+ * Maps a raw category string to a structured, unified category object.
+ * @param raw The raw category string from the supplier feed.
+ * @returns A UnifiedCategory object with main and sub categories.
+ */
+export function mapCategoryToObject(raw: string): UnifiedCategory {
+  const key = normalize(raw);
 
+  // ΓΡΑΦΕΙΟ
+  if (key.includes("γραφει")) return { main: "ΓΡΑΦΕΙΟ", sub: "Γραφεία" };
+  if (key.includes("καρεκλες γραφειου")) return { main: "ΓΡΑΦΕΙΟ", sub: "Καρέκλες γραφείου" };
+  if (key.includes("βιβλιοθηκ")) return { main: "ΓΡΑΦΕΙΟ", sub: "Βιβλιοθήκες" };
+  if (key.includes("συρταριερ")) return { main: "ΓΡΑΦΕΙΟ", sub: "Συρταριέρες" };
+  if (key.includes("ντουλαπες") || key.includes("αρχει")) return { main: "ΓΡΑΦΕΙΟ", sub: "Ντουλάπες Αρχείων" };
+  if (key.includes("ραφιερ")) return { main: "ΓΡΑΦΕΙΟ", sub: "Ραφιέρες" };
+  if (key.includes("reception")) return { main: "ΓΡΑΦΕΙΟ", sub: "Reception Desks" };
 
-// This function takes a raw category from the XML and returns a standardized one.
-export function mapCategory(rawCategory: string): string {
-    if (!rawCategory) return 'Uncategorized';
-    
-    let currentCategory = rawCategory.trim();
+  // ΣΑΛΟΝΙ
+  if (key.includes("καναπε")) return { main: "ΣΑΛΟΝΙ", sub: "Καναπέδες" };
+  if (key.includes("πολυθρον")) return { main: "ΣΑΛΟΝΙ", sub: "Πολυθρόνες" };
+  if (key.includes("τραπεζακια")) return { main: "ΣΑΛΟΝΙ", sub: "Τραπεζάκια σαλονιού" };
+  if (key.includes("τηλεοραση")) return { main: "ΣΑΛΟΝΙ", sub: "Έπιπλα τηλεόρασης" };
+  if (key.includes("συνθεσ")) return { main: "ΣΑΛΟΝΙ", sub: "Συνθέσεις" };
+  if (key.includes("σκαμπ")) return { main: "ΣΑΛΟΝΙ", sub: "Σκαμπό & Πουφ" };
 
-    // 1. Remove specific junk phrases entirely
-    for (const phrase of junkPhrases) {
-        currentCategory = currentCategory.replace(phrase, '').trim();
-    }
-    
-    // 2. Remove parenthetical text, e.g., "Βιβλιοθήκες (σε “Έπιπλα Εσωτερικού”)" -> "Βιβλιοθήκες"
-    currentCategory = currentCategory.replace(/\s*\(.*\)\s*/g, '').trim();
-    
-    // 3. Smartly remove junk prefixes ONLY if they are at the beginning of the path
-    const parts = currentCategory.split('>').map(p => p.trim());
-    if (parts.length > 1 && junkPrefixes.includes(parts[0])) {
-        parts.shift(); // Remove the first part if it's a junk prefix
-    }
-    currentCategory = parts.join(' > ');
-    
-    // 4. Check for a specific, full-path mapping in our dictionary
-    if (specificCategoryMap[currentCategory]) {
-        return specificCategoryMap[currentCategory];
-    }
-    
-    // 5. General cleanup for any remaining unwanted characters or formatting issues
-    currentCategory = currentCategory.replace(/[.!?]/g, '').trim();
-    
-    // If after all this, the string is empty, mark it as Uncategorized
-    if (!currentCategory) return 'Uncategorized';
+  // ΚΡΕΒΑΤΟΚΑΜΑΡΑ
+  if (key.includes("κρεβατ")) return { main: "ΚΡΕΒΑΤΟΚΑΜΑΡΑ", sub: "Κρεβάτια" };
+  if (key.includes("στρωμα")) return { main: "ΚΡΕΒΑΤΟΚΑΜΑΡΑ", sub: "Στρώματα" };
+  if (key.includes("κομοδιν")) return { main: "ΚΡΕΒΑΤΟΚΑΜΑΡΑ", sub: "Κομοδίνα" };
+  if (key.includes("συρταριερ")) return { main: "ΚΡΕΒΑΤΟΚΑΜΑΡΑ", sub: "Συρταριέρες" };
+  if (key.includes("ντουλαπ")) return { main: "ΚΡΕΒΑΤΟΚΑΜΑΡΑ", sub: "Ντουλάπες" };
+  if (key.includes("τουαλετ")) return { main: "ΚΡΕΒΑΤΟΚΑΜΑΡΑ", sub: "Τουαλέτες" };
 
-    // Final step: Capitalize the first letter for consistency, but leave the rest of the path as is
-    return currentCategory.charAt(0).toUpperCase() + currentCategory.slice(1);
+  // ΤΡΑΠΕΖΑΡΙΑ
+  if (key.includes("τραπεζαρια") || key.includes("τραπεζι")) return { main: "ΤΡΑΠΕΖΑΡΙΑ", sub: "Τραπέζια" };
+  if (key.includes("καρεκλ") && !key.includes("γραφειου")) return { main: "ΤΡΑΠΕΖΑΡΙΑ", sub: "Καρέκλες" };
+  if (key.includes("μπουφε")) return { main: "ΤΡΑΠΕΖΑΡΙΑ", sub: "Μπουφέδες" };
+  if (key.includes("βιτριν")) return { main: "ΤΡΑΠΕΖΑΡΙΑ", sub: "Βιτρίνες" };
+  if (key.includes("stool") || key.includes("παγκο")) return { main: "ΤΡΑΠΕΖΑΡΙΑ", sub: "Stools" };
+
+  // ΕΞΩΤΕΡΙΚΟΣ ΧΩΡΟΣ
+  if (key.includes("κηπου") || key.includes("βεραντ")) return { main: "ΕΞΩΤΕΡΙΚΟΣ ΧΩΡΟΣ", sub: "Καρέκλες κήπου" };
+  if (key.includes("ξαπλωστ")) return { main: "ΕΞΩΤΕΡΙΚΟΣ ΧΩΡΟΣ", sub: "Ξαπλώστρες" };
+  if (key.includes("σαλονι κηπου")) return { main: "ΕΞΩΤΕΡΙΚΟΣ ΧΩΡΟΣ", sub: "Σετ σαλονιού κήπου" };
+
+  // ΦΩΤΙΣΜΟΣ
+  if (key.includes("φωτιστικ")) return { main: "ΦΩΤΙΣΜΟΣ", sub: "Γενικά" };
+  if (key.includes("led")) return { main: "ΦΩΤΙΣΜΟΣ", sub: "LED" };
+
+  // ΔΙΑΚΟΣΜΗΣΗ
+  if (key.includes("διακοσμητικ")) return { main: "ΔΙΑΚΟΣΜΗΣΗ", sub: "Γενικά" };
+  if (key.includes("πινακ")) return { main: "ΔΙΑΚΟΣΜΗΣΗ", sub: "Πίνακες" };
+  if (key.includes("φυτα")) return { main: "ΔΙΑΚΟΣΜΗΣΗ", sub: "Φυτά" };
+  if (key.includes("κερια")) return { main: "ΔΙΑΚΟΣΜΗΣΗ", sub: "Κεριά" };
+  if (key.includes("ρολογ")) return { main: "ΔΙΑΚΟΣΜΗΣΗ", sub: "Ρολόγια" };
+  if (key.includes("χαλι")) return { main: "ΔΙΑΚΟΣΜΗΣΗ", sub: "Χαλιά" };
+
+  // ΑΞΕΣΟΥΑΡ – ΜΙΚΡΟΕΠΙΠΛΑ
+  if (key.includes("ραφιερ")) return { main: "ΑΞΕΣΟΥΑΡ – ΜΙΚΡΟΕΠΙΠΛΑ", sub: "Ραφιέρες" };
+  if (key.includes("βοηθητικα τραπεζ")) return { main: "ΑΞΕΣΟΥΑΡ – ΜΙΚΡΟΕΠΙΠΛΑ", sub: "Βοηθητικά τραπέζια" };
+  if (key.includes("καλογερ") || key.includes("κρεμαστρ")) return { main: "ΑΞΕΣΟΥΑΡ – ΜΙΚΡΟΕΠΙΠΛΑ", sub: "Καλόγεροι" };
+  
+  // ΠΡΟΣΦΟΡΕΣ
+  if (key.includes("black friday") || key.includes("προσφορες")) return { main: "ΠΡΟΣΦΟΡΕΣ", sub: "Μειωμένη Τιμή" };
+
+  // ΧΡΙΣΤΟΥΓΕΝΝΙΑΤΙΚΑ
+  if (key.includes("χριστουγενν")) return { main: "ΧΡΙΣΤΟΥΓΕΝΝΙΑΤΙΚΑ", sub: "Εποχιακά" };
+
+  // Fallback
+  return { main: "ΑΛΛΑ", sub: "Uncategorized" };
+}
+
+/**
+ * Maps a raw category string to a unified string format "MAIN > SUB".
+ * @param raw The raw category string from the supplier feed.
+ * @returns A formatted category string.
+ */
+export function mapCategory(raw: string): string {
+    const { main, sub } = mapCategoryToObject(raw);
+    return `${main} > ${sub}`;
 }
