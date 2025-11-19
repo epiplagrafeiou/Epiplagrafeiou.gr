@@ -23,26 +23,48 @@ export default function RootLayout({
   useEffect(() => {
     // Array of attributes commonly injected by browser extensions that can cause hydration mismatches.
     const attrsToRemove = [
-      'fdprocessedid',      // McAfee WebAdvisor, Feather DevTools
-      'data-avast-orig-ctx',// Avast Online Security
+      'fdprocessedid',
+      'data-avast-orig-ctx',
       'data-avast-is-processed',
-      'data-mcafeescript',    // Older McAfee
-      'data-blocked',         // Generic privacy blockers
-      // Add any other problematic attributes here
+      'data-mcafeescript',
+      'data-blocked',
     ];
 
-    const cleanDOM = () => {
-      attrsToRemove.forEach(attr => {
-        document.querySelectorAll(`[${attr}]`).forEach(el => {
-          el.removeAttribute(attr);
+    const cleanNode = (node: Node) => {
+      if (node.nodeType === 1 && (node as Element).hasAttributes()) { // It's an element node
+        const el = node as Element;
+        attrsToRemove.forEach(attr => {
+          if (el.hasAttribute(attr)) {
+            el.removeAttribute(attr);
+          }
         });
-      });
+      }
     };
-
-    // Run the cleanup script as soon as the client-side code executes.
-    // This cleans the DOM before React's hydration process begins, preventing mismatches.
-    cleanDOM();
     
+    // Initial cleanup of the entire document
+    document.querySelectorAll(attrsToRemove.map(attr => `[${attr}]`).join(',')).forEach(cleanNode);
+    
+    // Set up a MutationObserver to watch for future changes
+    const observer = new MutationObserver((mutationsList) => {
+      for (const mutation of mutationsList) {
+        if (mutation.type === 'childList') {
+          mutation.addedNodes.forEach(cleanNode);
+        } else if (mutation.type === 'attributes') {
+          cleanNode(mutation.target);
+        }
+      }
+    });
+
+    // Start observing the document body for added nodes and attribute changes
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: attrsToRemove
+    });
+
+    // Disconnect the observer when the component unmounts
+    return () => observer.disconnect();
   }, []);
 
   return (
