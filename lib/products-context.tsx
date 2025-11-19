@@ -1,7 +1,7 @@
 'use client';
 
 import { createContext, useContext, useMemo } from 'react';
-import { createSlug } from './utils';
+import { createSlug, normalizeCategory } from './utils';
 import { useCollection } from '@/firebase/firestore/use-collection';
 import { collection, writeBatch, doc, updateDoc } from 'firebase/firestore';
 import { useFirestore, useMemoFirebase, FirestorePermissionError, errorEmitter } from '@/firebase';
@@ -92,7 +92,7 @@ export const ProductsProvider = ({ children }: { children: React.ReactNode }) =>
           imageId: imageId, // Save the URL
           images: sortedImages,
           price: p.price,
-          category: p.category,
+          category: normalizeCategory(p.category), // SAFE NORMALIZATION
           description: p.description,
           stock: Number(p.stock) || 0,
         };
@@ -120,7 +120,7 @@ export const ProductsProvider = ({ children }: { children: React.ReactNode }) =>
     const productRef = doc(firestore, 'products', product.id);
     const { id, ...productData } = product;
 
-    updateDoc(productRef, productData).catch(error => {
+    updateDoc(productRef, {...productData, category: normalizeCategory(productData.category) }).catch(error => {
         const permissionError = new FirestorePermissionError({
             path: productRef.path,
             operation: 'update',
@@ -159,7 +159,8 @@ export const ProductsProvider = ({ children }: { children: React.ReactNode }) =>
         return {
             ...p,
             imageId: mainImageUrl,
-            images: Array.from(new Set([mainImageUrl, ...allImageUrls])).filter(Boolean)
+            images: Array.from(new Set([mainImageUrl, ...allImageUrls])).filter(Boolean),
+            category: normalizeCategory(p.category)
         };
     });
   }, [products]);
@@ -169,7 +170,7 @@ export const ProductsProvider = ({ children }: { children: React.ReactNode }) =>
     return Array.from(
       new Set(
         publicFacingProducts
-          .map((p) => p.category.split(' > ').pop()!)
+          .map((p) => normalizeCategory(p.category).split(' > ').pop()!)
           .filter(Boolean)
       )
     ).sort();
@@ -178,7 +179,7 @@ export const ProductsProvider = ({ children }: { children: React.ReactNode }) =>
   const allCategories = useMemo(() => {
     const publicFacingProducts = allProducts.filter((p) => (p.stock ?? 0) > 0);
     return Array.from(
-      new Set(publicFacingProducts.map((p) => p.category).filter(Boolean))
+      new Set(publicFacingProducts.map((p) => normalizeCategory(p.category)).filter(Boolean))
     ).sort();
   }, [allProducts]);
 
