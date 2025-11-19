@@ -24,10 +24,11 @@ export default function ClientCategory({ slug }: { slug: string }) {
     return productCategoryPath.startsWith(slug);
   });
   
-  // Simplified logic: If after loading there are no products for this slug, show not found.
-  // This is more robust than trying to pre-validate the category path.
+  // This check could still be problematic if categories are not loaded yet.
+  // A better approach is to simply show "no products" if the array is empty after loading.
   if (isLoaded && filteredProducts.length === 0) {
-    notFound();
+    // Instead of calling notFound(), we will let the component render a "no products" message.
+    // This avoids the 404 page for empty categories.
   }
 
   const categoryParts = slug.split('/');
@@ -102,19 +103,17 @@ export default function ClientCategory({ slug }: { slug: string }) {
               </CardFooter>
             </Card>
           ))
-        ) : (
+        ) : filteredProducts.length > 0 ? (
           filteredProducts.map((product) => (
             <ProductCard key={product.id} product={product} />
           ))
+        ) : (
+          <div className="text-center col-span-full py-16">
+            <h2 className="text-xl font-semibold">No Products Found</h2>
+            <p className="text-muted-foreground mt-2">There are no products in this category yet. Try checking back later.</p>
+          </div>
         )}
       </div>
-
-      {isLoaded && filteredProducts.length === 0 && (
-        <div className="text-center col-span-full py-16">
-            <h2 className="text-xl font-semibold">No Products Found</h2>
-            <p className="text-muted-foreground mt-2">There are no products in this category yet.</p>
-        </div>
-      )}
 
       <div className="mt-16 border-t pt-12">
         <h2 className="text-center text-2xl font-bold mb-8">Εξερευνήστε Επίσης</h2>

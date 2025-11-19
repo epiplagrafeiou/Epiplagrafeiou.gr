@@ -1,9 +1,9 @@
 'use client';
+import { useParams } from 'next/navigation';
 import ClientCategory from "./ClientCategory";
 
-type Props = { params: { slug: string[] } };
-
-export default function CategoryPage({ params }: Props) {
+export default function CategoryPage() {
+  const params = useParams();
   const slugPath = Array.isArray(params.slug) ? params.slug.join('/') : (params.slug || '');
   return <ClientCategory slug={slugPath} />;
 }
