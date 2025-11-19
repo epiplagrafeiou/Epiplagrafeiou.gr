@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
@@ -67,13 +68,32 @@ export default function XmlImporterPage() {
   
   const applyMarkup = (price: number, rules: MarkupRule[] = []): number => {
     const sortedRules = [...rules].sort((a, b) => a.from - b.from);
+    let markedUpPrice = price;
+    let ruleApplied = false;
+
     for (const rule of sortedRules) {
         if (price >= rule.from && price <= rule.to) {
-            return price * (1 + rule.markup / 100);
+            markedUpPrice = price * (1 + rule.markup / 100);
+            ruleApplied = true;
+            break;
         }
     }
-    const defaultRule = sortedRules.find(r => r.from === 0) || { markup: 0 };
-    return price * (1 + defaultRule.markup / 100);
+
+    if (!ruleApplied) {
+        const defaultRule = sortedRules.find(r => r.from === 0) || { markup: 0 };
+        markedUpPrice = price * (1 + defaultRule.markup / 100);
+    }
+    
+    // Add fixed amount based on the *original* price range
+    if (price >= 0 && price <= 2) {
+      markedUpPrice += 0.65;
+    } else if (price >= 2.01 && price <= 5) {
+      markedUpPrice += 1.30;
+    } else if (price >= 5.01 && price <= 14) {
+      markedUpPrice += 1.70;
+    }
+
+    return markedUpPrice;
   };
   
   const processAndAddProducts = (productsToProcess: XmlProduct[], supplier: (typeof suppliers)[0]) => {
