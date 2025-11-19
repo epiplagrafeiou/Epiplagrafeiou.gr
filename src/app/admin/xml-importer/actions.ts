@@ -5,11 +5,11 @@ import { megapapParser, type XmlProduct } from '@/lib/xml-parsers/megapap-parser
 import { b2bportalParser } from '@/lib/xml-parsers/b2bportal-parser';
 import { zougrisParser } from '@/lib/xml-parsers/zougris-parser';
 
-// A map to associate lowercase supplier names with their specific parsers.
+// A strict map to associate lowercase supplier names with their specific parsers.
 const parserMap: { [key: string]: (url: string) => Promise<XmlProduct[]> } = {
   'zougris': zougrisParser,
   'b2b portal': b2bportalParser,
-  // Add other specific suppliers here if needed
+  // Add other specific suppliers here. Megapap will be the fallback.
 };
 
 export async function syncProductsFromXml(
@@ -19,7 +19,6 @@ export async function syncProductsFromXml(
   const normalizedSupplierName = supplierName.trim().toLowerCase();
 
   // Find a specific parser key that is included in the supplier name.
-  // This allows for variations like "Zougris" or "Zougris AE" to match "zougris".
   const parserKey = Object.keys(parserMap).find(key => normalizedSupplierName.includes(key));
   
   // If a specific key is found, use its parser. Otherwise, default to megapapParser.
