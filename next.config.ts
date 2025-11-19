@@ -55,25 +55,6 @@ const nextConfig: NextConfig = {
       }
     ],
   },
-  webpack: (config, { isServer }) => {
-    // Add a watchOptions configuration to ignore specific directories.
-    // This prevents the Next.js development server from getting stuck in a restart loop
-    // when files in these directories are modified.
-    config.watchOptions = {
-      ...config.watchOptions,
-      ignored: [
-        '**/.git/**',
-        '**/.next/**',
-        '**/node_modules/**',
-        '**/vercel/**',
-        '**/usr/**',
-        '**/workspace/**',
-        '**/functions/**',
-      ],
-    };
-    
-    return config;
-  },
 };
 
 export default nextConfig;
