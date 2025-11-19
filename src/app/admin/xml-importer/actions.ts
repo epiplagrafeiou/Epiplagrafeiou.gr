@@ -1,7 +1,9 @@
+
 'use server';
 
 import { megapapParser, type XmlProduct } from '@/lib/xml-parsers/megapap-parser';
 import { b2bportalParser } from '@/lib/xml-parsers/b2bportal-parser';
+import { zougrisParser } from '@/lib/xml-parsers/zougris-parser';
 
 // In the future, we can add more parsers here.
 const parsers: { [key: string]: (url: string) => Promise<XmlProduct[]> } = {
@@ -10,14 +12,21 @@ const parsers: { [key: string]: (url: string) => Promise<XmlProduct[]> } = {
   'milano furnishings': megapapParser,
   'office solutions inc.': megapapParser,
   'b2b portal': b2bportalParser,
+  'zougris': zougrisParser,
 };
 
 export async function syncProductsFromXml(url: string, supplierName: string): Promise<XmlProduct[]> {
   // Try to find a specific parser for the supplier name
   const normalizedSupplierName = supplierName.toLowerCase();
   
-  let parser = Object.keys(parsers).find(key => normalizedSupplierName.includes(key));
-  const parserFn = parser ? parsers[parser] : b2bportalParser; // Fallback to b2bportal or a generic one
+  let parserKey = Object.keys(parsers).find(key => normalizedSupplierName.includes(key));
+  
+  // A specific fallback for 'zougris.gr' if the supplier name is just the domain
+  if (!parserKey && url.includes('zougris.gr')) {
+      parserKey = 'zougris';
+  }
+  
+  const parserFn = parserKey ? parsers[parserKey] : b2bportalParser; // Fallback to b2bportal or a generic one
 
   if (!parserFn) {
     throw new Error(`No suitable parser found for supplier: ${supplierName}`);
