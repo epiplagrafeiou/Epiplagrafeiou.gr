@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Logo } from '@/components/icons/Logo';
@@ -18,7 +18,9 @@ import {
   ChevronRight
 } from 'lucide-react';
 import { useCart } from '@/lib/cart-context';
-import { useUser } from '@/firebase';
+import { useUser, useFirestore, useMemoFirebase } from '@/firebase';
+import { useCollection } from '@/firebase/firestore/use-collection';
+import { collection } from 'firebase/firestore';
 import { LoginDialog } from '@/components/layout/LoginDialog';
 import {
   Collapsible,
@@ -26,58 +28,75 @@ import {
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
 import { createSlug } from '@/lib/utils';
-import { useProducts } from '@/lib/products-context';
 import { useWishlist } from '@/lib/wishlist-context';
-
-const mainNavLinks = [
-    { name: 'Προϊόντα', slug: '/products' },
-    { name: 'Δωμάτια', slug: '/category/rooms' },
-    { name: 'Είδη Σπιτιού', slug: '/category/home-goods' },
-    { name: 'Έμπνευση', slug: '/blog' },
-]
+import type { StoreCategory } from '@/components/admin/CategoryManager';
 
 export default function Header() {
   const { itemCount } = useCart();
   const { wishlistCount } = useWishlist();
-  const { user, isUserLoading } = useUser();
+  const { user } = useUser();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const { allCategories } = useProducts();
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
+  
+  const firestore = useFirestore();
+  const categoriesQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return collection(firestore, 'categories');
+  }, [firestore]);
+  const { data: fetchedCategories } = useCollection<Omit<StoreCategory, 'children'>>(categoriesQuery);
+
+  const { categoryTree, mainNavLinks } = useMemo(() => {
+    if (!fetchedCategories) return { categoryTree: [], mainNavLinks: [] };
+
+    const categoriesById: Record<string, StoreCategory> = {};
+    const rootCategories: StoreCategory[] = [];
+
+    fetchedCategories.forEach(cat => {
+        categoriesById[cat.id] = { ...cat, children: [] };
+    });
+
+    fetchedCategories.forEach(cat => {
+        if (cat.parentId && categoriesById[cat.parentId]) {
+            categoriesById[cat.parentId].children.push(categoriesById[cat.id]);
+        } else {
+            rootCategories.push(categoriesById[cat.id]);
+        }
+    });
+    
+    const sortRecursive = (categories: StoreCategory[]) => {
+        categories.sort((a,b) => a.order - b.order);
+        categories.forEach(c => sortRecursive(c.children));
+    }
+    
+    sortRecursive(rootCategories);
+    
+    const navLinks = rootCategories.map(cat => ({
+        name: cat.name,
+        slug: `/category/${createSlug(cat.name)}`
+    }));
+
+    return { categoryTree: rootCategories, mainNavLinks: navLinks };
+  }, [fetchedCategories]);
+
 
   const handleSearch = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!searchQuery.trim()) return;
     router.push(`/products?q=${encodeURIComponent(searchQuery)}`);
+    setSearchQuery('');
   };
 
   const handleLinkClick = () => {
     setIsMobileMenuOpen(false);
   }
-
-  // This part remains for the mobile slide-out menu logic
-  const categoryTree = allCategories.reduce((acc, categoryPath) => {
-    let currentLevel = acc;
-    const parts = categoryPath.split(' > ');
-    parts.forEach((part, index) => {
-      let existingNode = currentLevel.find(node => node.name === part);
-      if (!existingNode) {
-        existingNode = { name: part, children: [] };
-        currentLevel.push(existingNode);
-      }
-      if (index < parts.length - 1) {
-        currentLevel = existingNode.children;
-      }
-    });
-    return acc;
-  }, [] as { name: string; children: any[] }[]);
   
-  const renderCategoryTree = (nodes: { name: string; children: any[] }[], parentSlug = '') => {
+  const renderCategoryTree = (nodes: StoreCategory[], parentSlug = '') => {
     return nodes.map(node => {
       const currentSlug = `${parentSlug}/${createSlug(node.name)}`;
-      if (node.children.length > 0) {
+      if (node.children && node.children.length > 0) {
         return (
-          <Collapsible key={node.name} className="group">
+          <Collapsible key={node.id} className="group">
             <CollapsibleTrigger className="flex w-full items-center justify-between py-2 text-left text-sm font-medium">
               <span>{node.name}</span>
               <ChevronRight className="h-4 w-4 transition-transform duration-200 group-data-[state=open]:rotate-90" />
@@ -91,7 +110,7 @@ export default function Header() {
         );
       }
       return (
-        <li key={node.name}>
+        <li key={node.id}>
           <Link href={`/category${currentSlug}`} onClick={handleLinkClick} className="block py-2 text-sm">
             {node.name}
           </Link>
@@ -110,7 +129,7 @@ export default function Header() {
                 <X className="h-6 w-6 text-foreground" />
             </Button>
         </div>
-        <div className="p-4">
+        <div className="p-4 overflow-y-auto h-[calc(100vh-4rem)]">
             <nav className="flex flex-col divide-y">
                 {renderCategoryTree(categoryTree)}
             </nav>
