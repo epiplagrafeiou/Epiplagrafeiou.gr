@@ -15,7 +15,6 @@ import {
   SortableContext,
   verticalListSortingStrategy,
   useSortable,
-  arrayMove,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { GripVertical, PlusCircle, Trash2, GitMerge } from 'lucide-react';
@@ -159,7 +158,7 @@ const StoreCategoryItem = ({
                   </SortableContext>
                 )}
 
-                {category.children.length === 0 && category.rawCategories.length === 0 && <p className="text-xs text-muted-foreground py-2">Drag raw categories or other categories here</p>}
+                {category.children.length === 0 && category.rawCategories.length === 0 && <p className="text-xs text-muted-foreground py-2">Drag supplier categories or other categories here</p>}
             </div>
         </div>
     )
@@ -174,7 +173,7 @@ export default function CategoryManager() {
         if (!firestore) return null;
         return collection(firestore, 'categories');
     }, [firestore]);
-    const { data: fetchedCategories, isLoading } = useCollection<Omit<StoreCategory, 'children'>>(categoriesQuery);
+    const { data: fetchedCategories } = useCollection<Omit<StoreCategory, 'children'>>(categoriesQuery);
 
     const [storeCategories, setStoreCategories] = useState<StoreCategory[]>([]);
     const [newCategoryName, setNewCategoryName] = useState('');
@@ -185,12 +184,10 @@ export default function CategoryManager() {
             const categoriesById: Record<string, StoreCategory> = {};
             const rootCategories: StoreCategory[] = [];
 
-            // Initialize all categories with children arrays
             fetchedCategories.forEach(cat => {
                 categoriesById[cat.id] = { ...cat, children: [] };
             });
 
-            // Populate children arrays and find root categories
             fetchedCategories.forEach(cat => {
                 if (cat.parentId && categoriesById[cat.parentId]) {
                     categoriesById[cat.parentId].children.push(categoriesById[cat.id]);
@@ -232,7 +229,6 @@ export default function CategoryManager() {
         const flatListToSave = flattenCategories(categoriesToSave);
         const idsToKeep = new Set(flatListToSave.map(c => c.id));
 
-        // Delete categories that are no longer present
         fetchedCategories?.forEach(oldCat => {
             if (!idsToKeep.has(oldCat.id)) {
                 const docRef = doc(firestore, 'categories', oldCat.id);
@@ -240,7 +236,6 @@ export default function CategoryManager() {
             }
         });
 
-        // Set (create or update) the current categories
         flatListToSave.forEach(cat => {
             const docRef = doc(firestore, 'categories', cat.id);
             batch.set(docRef, cat);
@@ -260,7 +255,7 @@ export default function CategoryManager() {
     const allRawCategories = useMemo(() => {
         const set = new Set<string>();
         adminProducts.forEach(p => p.category && set.add(p.category));
-        return Array.from(set);
+        return Array.from(set).sort();
     }, [adminProducts]);
 
     const findCategory = useCallback((id: string, categories: StoreCategory[]): StoreCategory | undefined => {
@@ -282,19 +277,12 @@ export default function CategoryManager() {
         }
         return undefined;
     }, []);
-
-
-    const uncategorized = useMemo(() => {
-        const assignedRaw = new Set<string>();
-        const collectAssigned = (categories: StoreCategory[]) => {
-            categories.forEach(sc => {
-                sc.rawCategories.forEach(rc => assignedRaw.add(rc));
-                if (sc.children) collectAssigned(sc.children);
-            });
-        }
-        collectAssigned(storeCategories);
-        return allRawCategories.filter(rc => !assignedRaw.has(rc));
-    }, [allRawCategories, storeCategories]);
+    
+    const withUpdatedCategories = (updater: (cats: StoreCategory[]) => StoreCategory[]) => {
+        const newCategories = updater(storeCategories);
+        setStoreCategories(newCategories);
+        saveCategories(newCategories);
+    }
 
     const handleAddCategory = () => {
         if (newCategoryName.trim() === '') return;
@@ -306,9 +294,7 @@ export default function CategoryManager() {
             parentId: null,
             order: storeCategories.length,
         };
-        const newCategories = [...storeCategories, newCategory];
-        setStoreCategories(newCategories);
-        saveCategories(newCategories);
+        withUpdatedCategories(prev => [...prev, newCategory]);
         setNewCategoryName('');
     };
 
@@ -322,7 +308,7 @@ export default function CategoryManager() {
             rawCategories: [],
             children: [],
             parentId,
-            order: 0 // Will be corrected on save
+            order: 0
         };
 
         withUpdatedCategories(prev => {
@@ -340,12 +326,6 @@ export default function CategoryManager() {
             return addSubToParent(prev);
         });
     };
-    
-    const withUpdatedCategories = (updater: (cats: StoreCategory[]) => StoreCategory[]) => {
-        const newCategories = updater(storeCategories);
-        setStoreCategories(newCategories);
-        saveCategories(newCategories);
-    }
     
     const handleDeleteStoreCategory = (categoryId: string) => {
         withUpdatedCategories(prev => {
@@ -393,7 +373,6 @@ export default function CategoryManager() {
             };
             let newCategories = mergeIntoTarget(prev);
             
-            // If the source was a store category, remove it from the tree
             if ('id' in sourceCategory) {
                  const removeCategory = (id: string, categories: StoreCategory[]): StoreCategory[] => {
                     return categories.filter(category => {
@@ -469,7 +448,6 @@ export default function CategoryManager() {
         
                 let activeCategory: StoreCategory | undefined;
         
-                // Find and remove the active category from its original position
                 const removeCategory = (cats: StoreCategory[]): StoreCategory[] => {
                     for (let i = 0; i < cats.length; i++) {
                         if (cats[i].id === activeId) {
@@ -484,14 +462,13 @@ export default function CategoryManager() {
                     return cats;
                 };
         
-                const newCategories = removeCategory(JSON.parse(JSON.stringify(categories))); // Deep copy to avoid mutation issues
+                const newCategories = removeCategory(JSON.parse(JSON.stringify(categories)));
         
-                if (!activeCategory) return categories; // Should not happen
+                if (!activeCategory) return categories;
         
-                // Find where to insert the active category
                 const overIsContainer = over.data.current?.isContainer;
                 
-                if (overIsContainer) { // Dropped inside another category
+                if (overIsContainer) {
                     const findAndInsertAsChild = (cats: StoreCategory[]): boolean => {
                         for (let cat of cats) {
                             if (cat.id === overId) {
@@ -505,12 +482,12 @@ export default function CategoryManager() {
                         return false;
                     };
                     findAndInsertAsChild(newCategories);
-                } else { // Dropped on another category item (reordering)
+                } else {
                     let inserted = false;
                     const findAndInsertSibling = (cats: StoreCategory[]): boolean => {
                         for (let i = 0; i < cats.length; i++) {
                             if (cats[i].id === overId) {
-                                const parent = findParentCategory(overId, categories); // find in original tree
+                                const parent = findParentCategory(overId, categories);
                                 activeCategory!.parentId = parent ? parent.id : null;
                                 cats.splice(i, 0, activeCategory!);
                                 inserted = true;
@@ -524,7 +501,7 @@ export default function CategoryManager() {
                     };
                     findAndInsertSibling(newCategories);
                     
-                    if(!inserted) { // Dropped at root level
+                    if(!inserted) {
                          activeCategory!.parentId = null;
                          newCategories.push(activeCategory!);
                     }
@@ -548,14 +525,14 @@ export default function CategoryManager() {
                 <div className="mt-6 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
                     <Card className="lg:col-span-1">
                         <CardHeader>
-                            <CardTitle>Uncategorized</CardTitle>
-                            <CardDescription>Raw categories from suppliers. Drag them to a store category.</CardDescription>
+                            <CardTitle>Supplier Categories</CardTitle>
+                            <CardDescription>Drag a category to map it to one of your store categories.</CardDescription>
                         </CardHeader>
                         <CardContent>
-                            {uncategorized.map(cat => (
+                            {allRawCategories.map(cat => (
                                 <RawCategoryItem key={cat} category={cat} />
                             ))}
-                             {uncategorized.length === 0 && <p className="text-sm text-muted-foreground">All categories are organized!</p>}
+                             {allRawCategories.length === 0 && <p className="text-sm text-muted-foreground">No supplier categories found. Try syncing products first.</p>}
                         </CardContent>
                     </Card>
 
