@@ -1,6 +1,5 @@
-
 'use client';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import {
   Table,
   TableBody,
@@ -125,25 +124,35 @@ export default function AdminProductsPage() {
 
   const productsBySupplier = useMemo(() => {
     const map: Record<string, Product[]> = {};
-    suppliers.forEach(supplier => {
-        map[supplier.id] = adminProducts.filter(p => p.supplierId === supplier.id);
+
+    suppliers.forEach((supplier) => {
+        map[supplier.id] = [];
     });
-    // Add a category for manually added products
-    map['manual'] = adminProducts.filter(p => !suppliers.some(s => s.id === p.supplierId));
+
+    if (!map['manual']) {
+        map['manual'] = [];
+    }
+
+    adminProducts.forEach((p) => {
+        const key = p.supplierId || 'manual';
+        if (!map[key]) map[key] = [];
+        map[key].push(p);
+    });
+
     return map;
   }, [adminProducts, suppliers]);
 
   const displayedProducts = activeTab === 'all' ? adminProducts : productsBySupplier[activeTab] || [];
 
-  const handleSelectAll = (checked: boolean) => {
+  const handleSelectAll = useCallback((checked: boolean) => {
     if (checked) {
       setSelectedProducts(new Set(displayedProducts.map(p => p.id)));
     } else {
       setSelectedProducts(new Set());
     }
-  };
+  }, [displayedProducts]);
 
-  const handleSelectProduct = (productId: string, checked: boolean) => {
+  const handleSelectProduct = useCallback((productId: string, checked: boolean) => {
     setSelectedProducts(prev => {
       const newSet = new Set(prev);
       if (checked) {
@@ -153,7 +162,7 @@ export default function AdminProductsPage() {
       }
       return newSet;
     });
-  };
+  }, []);
   
   const handleDeleteSelected = () => {
     deleteProducts(Array.from(selectedProducts));
@@ -165,13 +174,15 @@ export default function AdminProductsPage() {
   }
 
   const handleDeleteAllFromSupplier = (supplierId: string) => {
-    const productsToDelete = productsBySupplier[supplierId].map(p => p.id);
-    deleteProducts(productsToDelete);
-    const supplierName = suppliers.find(s => s.id === supplierId)?.name || 'the supplier';
-    toast({
-        title: `All products from ${supplierName} deleted`,
-        description: `${productsToDelete.length} products have been removed.`
-    });
+    const productsToDelete = productsBySupplier[supplierId]?.map(p => p.id) || [];
+    if(productsToDelete.length > 0) {
+      deleteProducts(productsToDelete);
+      const supplierName = suppliers.find(s => s.id === supplierId)?.name || 'the supplier';
+      toast({
+          title: `All products from ${supplierName} deleted`,
+          description: `${productsToDelete.length} products have been removed.`
+      });
+    }
   }
 
   const handleTabChange = (value: string) => {
@@ -249,7 +260,12 @@ export default function AdminProductsPage() {
                     </AlertDialogContent>
                  </AlertDialog>
             )}
-             <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
+             <Dialog open={isFormOpen} onOpenChange={(open) => {
+                setIsFormOpen(open);
+                if (!open) {
+                    setEditingProduct(null);
+                }
+             }}>
                 <DialogTrigger asChild>
                     <Button onClick={() => handleOpenForm()}>
                         <PlusCircle className="mr-2 h-4 w-4" />
