@@ -17,7 +17,7 @@ import {
   useSortable,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { GripVertical, PlusCircle, Trash2, GitMerge, Pencil } from 'lucide-react';
+import { GripVertical, PlusCircle, Trash2, GitMerge, Pencil, Save } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { useCollection } from '@/firebase/firestore/use-collection';
 import { useFirestore, useMemoFirebase } from '@/firebase';
@@ -299,7 +299,7 @@ export default function CategoryManager() {
     const withUpdatedCategories = (updater: (cats: StoreCategory[]) => StoreCategory[]) => {
         const newCategories = updater(storeCategories);
         setStoreCategories(newCategories);
-        saveCategories(newCategories);
+        // We will now call saveCategories manually via a button
     }
 
     const handleAddCategory = () => {
@@ -554,6 +554,10 @@ export default function CategoryManager() {
             <div className="p-8 pt-6">
                 <div className="flex items-center justify-between">
                     <h2 className="text-3xl font-bold tracking-tight">Categories</h2>
+                     <Button onClick={() => saveCategories(storeCategories)}>
+                        <Save className="mr-2 h-4 w-4"/>
+                        Save All Changes
+                    </Button>
                 </div>
 
                 <div className="mt-6 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
