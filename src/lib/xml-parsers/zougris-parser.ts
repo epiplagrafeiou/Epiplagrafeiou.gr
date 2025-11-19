@@ -5,17 +5,21 @@ import { XMLParser } from 'fast-xml-parser';
 import type { XmlProduct } from './megapap-parser';
 import { mapCategory } from '../category-mapper';
 
+// Utility: strip out unwanted <script> tags
+function cleanXml(xml: string): string {
+  return xml.replace(/<script[\s\S]*?<\/script>/gi, "");
+}
+
 export async function zougrisParser(url: string): Promise<XmlProduct[]> {
-  console.log("Running Zougris parser"); // Defensive logging
+  console.log("▶ Running Zougris parser");
+
   const response = await fetch(url, { cache: 'no-store' });
   if (!response.ok) {
     throw new Error(`Failed to fetch XML: ${response.statusText}`);
   }
 
   const xmlText = await response.text();
-  
-  // As suggested, remove the script tag that could interfere with parsing.
-  const cleanXml = xmlText.replace(/<script[\s\S]*?<\/script>/gi, "");
+  const cleanXmlText = cleanXml(xmlText);
 
   const parser = new XMLParser({
     ignoreAttributes: true,
@@ -33,53 +37,36 @@ export async function zougrisParser(url: string): Promise<XmlProduct[]> {
     }
   });
 
-  const parsed = parser.parse(cleanXml);
-  const productArray = parsed.Products?.Product;
+  const parsed = parser.parse(cleanXmlText);
+  const productsNode = parsed?.Products?.Product;
 
-  if (!productArray) {
-    console.error('Zougris Parser: Parsed product data is not an array or is missing at Products.Product:', productArray);
-    throw new Error(
-      'The XML feed does not have the expected structure for Zougris format. Could not find a product array at `Products.Product`.'
-    );
+  if (!productsNode) {
+    throw new Error("❌ Zougris XML does not contain <Products><Product> nodes.");
   }
-  
-  const productsToParse = Array.isArray(productArray) ? productArray : [productArray];
 
-  const products: XmlProduct[] = productsToParse.map((p: any) => {
-    
-    const allImages: string[] = [];
-    for (let i = 1; i <= 5; i++) {
-      const imgKey = `B2BImage${i > 1 ? i : ''}`;
-      if (p[imgKey] && typeof p[imgKey] === 'string') {
-        allImages.push(p[imgKey]);
-      }
-    }
+  const productArray = Array.isArray(productsNode) ? productsNode : [productsNode];
 
-    const mainImage = allImages[0] || null;
-
-    const rawCategoryParts = [p.Category1, p.Category2, p.Category3].filter(
-      (value, index, self) => value && self.indexOf(value) === index
-    );
-    const rawCategory = rawCategoryParts.join(' > ');
+  return productArray.map((p: any) => {
+    const images = [p.B2BImage, p.B2BImage2, p.B2BImage3, p.B2BImage4, p.B2BImage5].filter(Boolean);
+    const rawCategory = [p.Category1, p.Category2, p.Category3].filter(Boolean).join(' > ');
     
-    const stock = Number(p.Quantity) || 0;
-    
-    const retailPrice = p.RetailPrice?.toString().replace(',', '.') || '0';
-    const wholesalePrice = p.WholesalePrice?.toString().replace(',', '.') || '0';
-    const webOfferPrice = retailPrice !== '0' ? retailPrice : wholesalePrice;
+    // Determine the most appropriate price, falling back if retail is zero
+    const retailPrice = parseFloat(p.RetailPrice?.toString().replace(',', '.') || '0');
+    const wholesalePrice = parseFloat(p.WholesalePrice?.toString().replace(',', '.') || '0');
+    const webOfferPrice = retailPrice > 0 ? retailPrice : wholesalePrice;
 
     return {
-      id: p.Code?.toString() || `temp-id-${Math.random()}`,
-      name: p.Title || 'No Name',
-      retailPrice: retailPrice,
-      webOfferPrice: webOfferPrice,
-      description: p.Description || '',
-      category: mapCategory(rawCategory),
-      mainImage: mainImage,
-      images: allImages,
-      stock: stock,
+        id: p.Code?.toString() || `zougris-${Math.random()}`,
+        name: p.Title || 'No Name',
+        retailPrice: retailPrice.toString(),
+        webOfferPrice: webOfferPrice.toString(),
+        description: p.Description || '',
+        category: mapCategory(rawCategory),
+        mainImage: images[0] || null,
+        images: images,
+        stock: parseInt(p.Quantity, 10) || 0,
+        // You can add the extra fields to the XmlProduct interface if needed
+        // For now, we map to the existing structure.
     };
   });
-
-  return products;
 }
