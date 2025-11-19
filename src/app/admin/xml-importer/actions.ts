@@ -41,3 +41,4 @@ export async function syncProductsFromXml(url: string, supplierName: string): Pr
     throw new Error('An unknown error occurred during XML sync.');
   }
 }
+
