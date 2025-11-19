@@ -2,12 +2,13 @@
 'use client';
 
 import { useMemo } from 'react';
+import Image from 'next/image';
 import { useParams, notFound } from 'next/navigation';
 import { useCollection } from '@/firebase/firestore/use-collection';
 import { useFirestore, useMemoFirebase } from '@/firebase';
 import { collection } from 'firebase/firestore';
 import { ProductCard } from '@/components/products/ProductCard';
-import { useProducts, type Product } from '@/lib/products-context';
+import { useProducts } from '@/lib/products-context';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -126,13 +127,27 @@ export default function CategoryPage() {
       
       {currentCategory && currentCategory.children.length > 0 && (
         <section className="mb-12">
-            <div className="flex flex-wrap items-center gap-4">
-            {currentCategory.children.map(subCat => (
-                <Button asChild variant="outline" key={subCat.id}>
-                    <Link href={`${breadcrumbs[breadcrumbs.length - 1].href}/${createSlug(subCat.name)}`}>
-                        {subCat.name}
-                    </Link>
-                </Button>
+            <h2 className="mb-8 text-center font-headline text-2xl font-bold">
+              Εξερευνήστε τις Υποκατηγορίες
+            </h2>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-6 md:gap-8">
+            {currentCategory.children.map((subCat, index) => (
+              <Link 
+                href={`${breadcrumbs[breadcrumbs.length - 1].href}/${createSlug(subCat.name)}`} 
+                key={subCat.id} 
+                className="group flex flex-col items-center gap-3 transition-transform duration-200 hover:-translate-y-2 text-center"
+              >
+                <div className="relative w-full aspect-square overflow-hidden rounded-lg shadow-md transition-shadow group-hover:shadow-xl">
+                  <Image
+                    src={`https://picsum.photos/seed/${createSlug(subCat.name)}/300/300`}
+                    alt={subCat.name}
+                    fill
+                    className="object-cover transition-transform duration-300 group-hover:scale-110"
+                    data-ai-hint={`${subCat.name} furniture`}
+                  />
+                </div>
+                <span className="font-medium text-foreground">{subCat.name}</span>
+              </Link>
             ))}
             </div>
         </section>
