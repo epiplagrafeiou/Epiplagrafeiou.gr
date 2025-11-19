@@ -1,3 +1,4 @@
+
 'use client';
 import { useState, useMemo, useCallback, useEffect } from 'react';
 import {
@@ -58,12 +59,14 @@ const StoreCategoryItem = ({
     onDelete, 
     onRemoveRawCategory,
     onMerge,
+    onAddSubCategory,
     isOverlay,
 }: { 
     category: StoreCategory, 
     onDelete: (categoryId: string) => void, 
     onRemoveRawCategory: (categoryId: string, rawCategory: string) => void,
     onMerge: (targetCategoryId: string, sourceCategory: StoreCategory | { name: string, rawCategories: string[] }) => void,
+    onAddSubCategory: (parentId: string) => void,
     isOverlay?: boolean,
 }) => {
     const [isMerging, setIsMerging] = useState(false);
@@ -105,6 +108,9 @@ const StoreCategoryItem = ({
                     <span className="font-semibold">{category.name}</span>
                 </div>
                 <div className="flex items-center gap-1">
+                     <Button variant="ghost" size="icon" onClick={() => onAddSubCategory(category.id)}>
+                        <PlusCircle className="h-4 w-4 text-muted-foreground" />
+                    </Button>
                     <Button variant="ghost" size="icon" onClick={() => setIsMerging(!isMerging)}>
                         <GitMerge className={cn("h-4 w-4", isMerging ? "text-primary" : "text-muted-foreground")} />
                     </Button>
@@ -146,6 +152,7 @@ const StoreCategoryItem = ({
                                 onDelete={onDelete} 
                                 onRemoveRawCategory={onRemoveRawCategory}
                                 onMerge={onMerge}
+                                onAddSubCategory={onAddSubCategory}
                             />
                         ))}
                     </div>
@@ -303,6 +310,35 @@ export default function CategoryManager() {
         setStoreCategories(newCategories);
         saveCategories(newCategories);
         setNewCategoryName('');
+    };
+
+    const handleAddSubCategory = (parentId: string) => {
+        const newCategoryName = prompt("Enter name for new subcategory:");
+        if (!newCategoryName || newCategoryName.trim() === '') return;
+
+        const newCategory: StoreCategory = {
+            id: `cat-${Date.now()}`,
+            name: newCategoryName,
+            rawCategories: [],
+            children: [],
+            parentId,
+            order: 0 // Will be corrected on save
+        };
+
+        withUpdatedCategories(prev => {
+             const addSubToParent = (categories: StoreCategory[]): StoreCategory[] => {
+                return categories.map(cat => {
+                    if (cat.id === parentId) {
+                        return { ...cat, children: [...cat.children, newCategory] };
+                    }
+                    if (cat.children?.length) {
+                        return { ...cat, children: addSubToParent(cat.children) };
+                    }
+                    return cat;
+                });
+            };
+            return addSubToParent(prev);
+        });
     };
     
     const withUpdatedCategories = (updater: (cats: StoreCategory[]) => StoreCategory[]) => {
@@ -548,6 +584,7 @@ export default function CategoryManager() {
                                           onDelete={handleDeleteStoreCategory}
                                           onRemoveRawCategory={handleRemoveRawCategory} 
                                           onMerge={handleMerge}
+                                          onAddSubCategory={handleAddSubCategory}
                                       />
                                   ))}
                                 </div>
@@ -559,7 +596,7 @@ export default function CategoryManager() {
             </div>
             <DragOverlay>
                 {activeRawCategory ? <div className="flex cursor-grabbing items-center rounded-md border bg-card p-3 shadow-lg"><GripVertical className="mr-2 h-5 w-5 text-muted-foreground" /> {activeRawCategory}</div> : null}
-                {activeStoreCategoryData ? <StoreCategoryItem category={activeStoreCategoryData} onDelete={()=>{}} onRemoveRawCategory={()=>{}} onMerge={()=>{}} isOverlay /> : null}
+                {activeStoreCategoryData ? <StoreCategoryItem category={activeStoreCategoryData} onDelete={()=>{}} onRemoveRawCategory={()=>{}} onMerge={()=>{}} onAddSubCategory={()=>{}} isOverlay /> : null}
             </DragOverlay>
         </DndContext>
     );
