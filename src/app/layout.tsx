@@ -1,4 +1,3 @@
-
 'use client';
 
 import type { Metadata } from 'next';
@@ -22,13 +21,28 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   useEffect(() => {
-    // This script runs on the client to clean up attributes injected by browser extensions
-    // that can cause React hydration errors.
-    if (typeof window !== 'undefined') {
-      document.querySelectorAll('[fdprocessedid]').forEach((el) => {
-        el.removeAttribute('fdprocessedid');
+    // Array of attributes commonly injected by browser extensions that can cause hydration mismatches.
+    const attrsToRemove = [
+      'fdprocessedid',      // McAfee WebAdvisor, Feather DevTools
+      'data-avast-orig-ctx',// Avast Online Security
+      'data-avast-is-processed',
+      'data-mcafeescript',    // Older McAfee
+      'data-blocked',         // Generic privacy blockers
+      // Add any other problematic attributes here
+    ];
+
+    const cleanDOM = () => {
+      attrsToRemove.forEach(attr => {
+        document.querySelectorAll(`[${attr}]`).forEach(el => {
+          el.removeAttribute(attr);
+        });
       });
-    }
+    };
+
+    // Run the cleanup script as soon as the client-side code executes.
+    // This cleans the DOM before React's hydration process begins, preventing mismatches.
+    cleanDOM();
+    
   }, []);
 
   return (
