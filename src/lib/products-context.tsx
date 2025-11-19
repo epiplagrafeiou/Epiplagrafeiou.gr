@@ -1,10 +1,10 @@
 
 'use client';
 
-import { createContext, useContext, useMemo, useEffect } from 'react';
-import { createSlug } from './utils';
+import { createContext, useContext, useMemo } from 'react';
+import { createSlug, normalizeCategory } from './utils';
 import { useCollection } from '@/firebase/firestore/use-collection';
-import { collection, writeBatch, doc, updateDoc, getDocs } from 'firebase/firestore';
+import { collection, writeBatch, doc, updateDoc } from 'firebase/firestore';
 import { useFirestore, useMemoFirebase, FirestorePermissionError, errorEmitter } from '@/firebase';
 import { PlaceHolderImages } from './placeholder-images';
 
@@ -22,71 +22,6 @@ export interface Product {
   stock?: number;
   supplierId: string;
 }
-
-const manualProducts: Product[] = [
-    {
-      id: "manual-001",
-      name: "Σετ 5τμχ Ρόδες Για Καρέκλα Γραφείου",
-      slug: "set-5tmch-rodes-gia-karekla-grafeiou",
-      price: 12.99,
-      originalPrice: 13.99,
-      description: "Ρόδες σετ 5 τεμαχίων για καρέκλες γραφείου.",
-      imageId: "https://www.zougris.gr/content/images/thumbs/0008329.jpeg",
-      category: "Ανταλλακτικά Για Καρέκλες Γραφείου",
-      images: ["https://www.zougris.gr/content/images/thumbs/0008329.jpeg"],
-      stock: 177,
-      supplierId: "manual"
-    },
-    {
-      id: "11.2213",
-      name: "ΑΜΟΡΤΙΣΕΡ ΜΑΥΡΟ ΚΑΡ.ΓΡΑΦΕΙΟΥ 26/35εκ.",
-      slug: "amortiser-mayro-kargrafeiou-2635ek",
-      price: 18.99,
-      description: "Αμορτισέρ μαύρο για καρέκλες γραφείου 26/35εκ.",
-      imageId: "https://www.zougris.gr/content/images/thumbs/0004662.jpeg",
-      category: "Ανταλλακτικά Για Καρέκλες Γραφείου",
-      images: ["https://www.zougris.gr/content/images/thumbs/0004662.jpeg"],
-      stock: 350,
-      supplierId: "manual"
-    },
-    {
-      id: "01.0942",
-      name: "ΠΟΔΙ Φ62εκ. ΧΡΩΜΙΟΥ ΓΙΑ ΚΑΡΕΚΛΑ ΓΡΑΦΕΙΟΥ",
-      slug: "podi-f62ek-chromiou-gia-karekla-grafeiou",
-      price: 28.99,
-      description: "Πόδι χρωμίου Φ62εκ. για απόλυτη ανθεκτικότητα στο βάρος.",
-      imageId: "https://www.zougris.gr/content/images/thumbs/0010615.jpeg",
-      category: "Ανταλλακτικά Για Καρέκλες Γραφείου",
-      images: ["https://www.zougris.gr/content/images/thumbs/0010615.jpeg", "https://www.zougris.gr/content/images/thumbs/0010616.jpeg"],
-      stock: 98,
-      supplierId: "manual"
-    },
-    {
-      id: "manual-pelmata",
-      name: "Σέτ 5τμχ Πέλματα Για Καρέκλα Γραφείου",
-      slug: "set-5tmch-pelmata-gia-karekla-grafeiou",
-      price: 12.99,
-      description: "Πέλματα, κάντε τις καρέκλες σας σταθερές αντικαθιστώντας εύκολα τις ρόδες με τα πέλματα.",
-      imageId: "https://www.zougris.gr/content/images/thumbs/0008499.jpeg",
-      category: "Ανταλλακτικά Για Καρέκλες Γραφείου",
-      images: ["https://www.zougris.gr/content/images/thumbs/0008499.jpeg"],
-      stock: 61,
-      supplierId: "manual"
-    },
-    {
-      id: "manual-pro-wheels",
-      name: "Σετ 5τμχ Ρόδες Pro 63χιλ. Ελαστικής Πολυουρεθάνης Για Καρέκλα Γραφείου",
-      slug: "set-5tmch-rodes-pro-63chil-elastikis-polyourethanis-gia-karekla-grafeiou",
-      price: 28.99,
-      description: "Ρόδες Pro σετ 5 τεμαχίων για καρέκλες γραφείου.Από ελαστική πολυουρεθάνη για ομαλότερη κύλιση χωρίς να αφήνει σημάδια στο δάπεδο.Κατάλληλες για καρέκλες με πείρο 11 χιλιοστών.",
-      imageId: "https://www.zougris.gr/content/images/thumbs/0010300.jpeg",
-      category: "Ανταλλακτικά Για Καρέκλες Γραφείου",
-      images: ["https://www.zougris.gr/content/images/thumbs/0010300.jpeg"],
-      stock: 214,
-      supplierId: "manual"
-    }
-];
-
 
 interface ProductsContextType {
   products: Product[];
@@ -111,32 +46,12 @@ export const ProductsProvider = ({ children }: { children: React.ReactNode }) =>
     return collection(firestore, 'products');
   }, [firestore]);
 
-  // Seed initial manual products into Firestore if the collection is empty.
-  useEffect(() => {
-    const seedProducts = async () => {
-      if (firestore) {
-        const productsCollection = collection(firestore, 'products');
-        const snapshot = await getDocs(productsCollection);
-        if (snapshot.empty) {
-          console.log('Products collection is empty, seeding manual products...');
-          const batch = writeBatch(firestore);
-          manualProducts.forEach((product) => {
-            const docRef = doc(firestore, 'products', product.id);
-            batch.set(docRef, product);
-          });
-          await batch.commit();
-          console.log('Seeding complete.');
-        }
-      }
-    };
-    seedProducts();
-  }, [firestore]);
-  
-
-  const { data: fetchedProducts, isLoading } = useCollection<Product>(productsQuery);
+  const { data: fetchedProducts, isLoading } = useCollection<Omit<Product, 'id'>>(productsQuery);
   
   const products = useMemo(() => {
-    return fetchedProducts || [];
+    const combined = [...(fetchedProducts || [])];
+    const uniqueProducts = Array.from(new Map(combined.map(p => [p.id, p])).values());
+    return uniqueProducts;
   }, [fetchedProducts]);
   
   const resolveImageUrl = (idOrUrl: string | undefined): string => {
@@ -178,7 +93,7 @@ export const ProductsProvider = ({ children }: { children: React.ReactNode }) =>
           imageId: imageId, // Save the URL
           images: sortedImages,
           price: p.price,
-          category: p.category,
+          category: normalizeCategory(p.category), // SAFE NORMALIZATION
           description: p.description,
           stock: Number(p.stock) || 0,
         };
@@ -206,7 +121,7 @@ export const ProductsProvider = ({ children }: { children: React.ReactNode }) =>
     const productRef = doc(firestore, 'products', product.id);
     const { id, ...productData } = product;
 
-    updateDoc(productRef, productData).catch(error => {
+    updateDoc(productRef, {...productData, category: normalizeCategory(productData.category) }).catch(error => {
         const permissionError = new FirestorePermissionError({
             path: productRef.path,
             operation: 'update',
@@ -245,7 +160,8 @@ export const ProductsProvider = ({ children }: { children: React.ReactNode }) =>
         return {
             ...p,
             imageId: mainImageUrl,
-            images: Array.from(new Set([mainImageUrl, ...allImageUrls])).filter(Boolean)
+            images: Array.from(new Set([mainImageUrl, ...allImageUrls])).filter(Boolean),
+            category: normalizeCategory(p.category)
         };
     });
   }, [products]);
@@ -255,7 +171,7 @@ export const ProductsProvider = ({ children }: { children: React.ReactNode }) =>
     return Array.from(
       new Set(
         publicFacingProducts
-          .map((p) => p.category.split(' > ').pop()!)
+          .map((p) => normalizeCategory(p.category).split(' > ').pop()!)
           .filter(Boolean)
       )
     ).sort();
@@ -264,7 +180,7 @@ export const ProductsProvider = ({ children }: { children: React.ReactNode }) =>
   const allCategories = useMemo(() => {
     const publicFacingProducts = allProducts.filter((p) => (p.stock ?? 0) > 0);
     return Array.from(
-      new Set(publicFacingProducts.map((p) => p.category).filter(Boolean))
+      new Set(publicFacingProducts.map((p) => normalizeCategory(p.category)).filter(Boolean))
     ).sort();
   }, [allProducts]);
 

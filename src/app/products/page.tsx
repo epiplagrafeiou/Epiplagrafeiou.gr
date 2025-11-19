@@ -20,6 +20,8 @@ import { Slider } from "@/components/ui/slider"
 import { formatCurrency } from '@/lib/utils';
 import { PackageSearch } from 'lucide-react';
 import { Card } from '@/components/ui/card';
+import { normalizeCategory } from '@/lib/utils';
+
 
 function ProductsPageContent() {
   const { products, isLoaded } = useProducts();
@@ -36,7 +38,22 @@ function ProductsPageContent() {
     setSearchTerm(querySearchTerm);
   }, [querySearchTerm]);
 
-  // --- IMPORTANT FIX: don't run filtering until Firebase finished ---
+  const safePrices = useMemo(() => {
+    if (!isLoaded) return [0];
+    return products.map(p => Number(p.price) || 0);
+  }, [products, isLoaded]);
+
+  const maxPrice = useMemo(() => {
+    if (!isLoaded) return 1000;
+    return Math.ceil(Math.max(...safePrices, 1000));
+  }, [safePrices, isLoaded]);
+
+  useEffect(() => {
+    if (isLoaded) {
+      setPriceRange([0, maxPrice]);
+    }
+  }, [isLoaded, maxPrice]);
+
   const filteredAndSortedProducts = useMemo(() => {
     if (!isLoaded) return [];
 
@@ -52,7 +69,7 @@ function ProductsPageContent() {
 
     if (selectedCategories.length > 0) {
       filtered = filtered.filter(p => {
-        const productTopCategory = p.category.split(' > ')[0];
+        const productTopCategory = normalizeCategory(p.category).split(' > ')[0];
         return selectedCategories.includes(productTopCategory);
       });
     }
@@ -64,7 +81,7 @@ function ProductsPageContent() {
         filtered.sort((a, b) => a.price - b.price);
         break;
       case 'price-desc':
-        filtered.sort((a, b) => b.price - a.price);
+        filtered.sort((a, b) => b.price - b.price);
         break;
       case 'name-asc':
         filtered.sort((a, b) => a.name.localeCompare(b.name));
@@ -74,10 +91,9 @@ function ProductsPageContent() {
     return filtered;
   }, [products, isLoaded, searchTerm, selectedCategories, priceRange, sortBy, inStockOnly]);
   
-  // --- FIX: compute categories only when loaded ---
   const topLevelCategories = useMemo(() => {
     if (!isLoaded) return [];
-    const cats = new Set(products.map(p => p.category.split(' > ')[0]));
+    const cats = new Set(products.map(p => normalizeCategory(p.category).split(' > ')[0]));
     return Array.from(cats);
   }, [products, isLoaded]);
 
@@ -86,18 +102,7 @@ function ProductsPageContent() {
       checked ? [...prev, category] : prev.filter(c => c !== category)
     );
   };
-
-  const maxPrice = useMemo(() => {
-    if (!isLoaded || products.length === 0) return 1000;
-    return Math.ceil(Math.max(...products.map(p => p.price), 1000));
-  }, [products, isLoaded]);
-
-  useEffect(() => {
-    if (isLoaded) {
-      const maxProductPrice = Math.ceil(Math.max(...products.map(p => p.price), 1000));
-      setPriceRange([0, maxProductPrice]);
-    }
-  }, [isLoaded, products]);
+  
 
   return (
     <div className="container mx-auto px-4 py-8">

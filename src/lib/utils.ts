@@ -1,3 +1,4 @@
+
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
 
@@ -11,7 +12,6 @@ export function formatCurrency(amount: number, currency: string = "EUR") {
     currency: currency,
   }).format(amount);
 }
-
 
 // Helper to create a URL-friendly slug that supports Greek characters
 export const createSlug = (name: string) => {
@@ -32,3 +32,13 @@ export const createSlug = (name: string) => {
     .replace(/\s+/g, '-') // Replace spaces with hyphens
     .replace(/-+/g, '-'); // Replace multiple hyphens with a single one
 };
+
+// Safe category normalizer
+export function normalizeCategory(cat?: string): string {
+    if (!cat) return "Uncategorized";
+    return cat
+        .split('>')
+        .map(c => c.trim())
+        .filter(Boolean)
+        .join(' > ');
+}
