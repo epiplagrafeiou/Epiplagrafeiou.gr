@@ -1,10 +1,10 @@
 
 'use client';
 
-import { createContext, useContext, useMemo } from 'react';
+import { createContext, useContext, useMemo, useEffect } from 'react';
 import { createSlug } from './utils';
 import { useCollection } from '@/firebase/firestore/use-collection';
-import { collection, writeBatch, doc, updateDoc } from 'firebase/firestore';
+import { collection, writeBatch, doc, updateDoc, getDocs } from 'firebase/firestore';
 import { useFirestore, useMemoFirebase, FirestorePermissionError, errorEmitter } from '@/firebase';
 import { PlaceHolderImages } from './placeholder-images';
 
@@ -111,12 +111,32 @@ export const ProductsProvider = ({ children }: { children: React.ReactNode }) =>
     return collection(firestore, 'products');
   }, [firestore]);
 
+  // Seed initial manual products into Firestore if the collection is empty.
+  useEffect(() => {
+    const seedProducts = async () => {
+      if (firestore) {
+        const productsCollection = collection(firestore, 'products');
+        const snapshot = await getDocs(productsCollection);
+        if (snapshot.empty) {
+          console.log('Products collection is empty, seeding manual products...');
+          const batch = writeBatch(firestore);
+          manualProducts.forEach((product) => {
+            const docRef = doc(firestore, 'products', product.id);
+            batch.set(docRef, product);
+          });
+          await batch.commit();
+          console.log('Seeding complete.');
+        }
+      }
+    };
+    seedProducts();
+  }, [firestore]);
+  
+
   const { data: fetchedProducts, isLoading } = useCollection<Product>(productsQuery);
   
   const products = useMemo(() => {
-    const combined = [...manualProducts, ...(fetchedProducts || [])];
-    const uniqueProducts = Array.from(new Map(combined.map(p => [p.id, p])).values());
-    return uniqueProducts;
+    return fetchedProducts || [];
   }, [fetchedProducts]);
   
   const resolveImageUrl = (idOrUrl: string | undefined): string => {
