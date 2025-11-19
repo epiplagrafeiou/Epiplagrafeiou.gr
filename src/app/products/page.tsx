@@ -81,7 +81,7 @@ function ProductsPageContent() {
         filtered.sort((a, b) => a.price - b.price);
         break;
       case 'price-desc':
-        filtered.sort((a, b) => b.price - b.price);
+        filtered.sort((a, b) => b.price - a.price);
         break;
       case 'name-asc':
         filtered.sort((a, b) => a.name.localeCompare(b.name));
