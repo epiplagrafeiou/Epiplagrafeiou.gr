@@ -1,4 +1,3 @@
-
 'use server';
 
 import { megapapParser, type XmlProduct } from '@/lib/xml-parsers/megapap-parser';
@@ -23,6 +22,8 @@ function normalize(str: string): string {
 }
 
 export async function syncProductsFromXml(url: string, supplierName: string): Promise<XmlProduct[]> {
+  // DEBUG LOG as requested to see the exact input value.
+  console.log("RAW SUPPLIER NAME RECEIVED:", supplierName);
 
   const key = normalize(supplierName);
   
