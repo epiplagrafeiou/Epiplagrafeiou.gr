@@ -17,12 +17,13 @@ import {
   arrayMove,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { GripVertical, PlusCircle, Trash2 } from 'lucide-react';
+import { GripVertical, PlusCircle, Trash2, GitMerge } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { useCollection } from '@/firebase/firestore/use-collection';
 import { useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, doc, writeBatch } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
+import { cn } from '@/lib/utils';
 
 const RawCategoryItem = ({ category }: { category: string }) => {
     const { attributes, listeners, setNodeRef } = useDraggable({
@@ -56,13 +57,16 @@ const StoreCategoryItem = ({
     category, 
     onDelete, 
     onRemoveRawCategory,
+    onMerge,
     isOverlay,
 }: { 
     category: StoreCategory, 
     onDelete: (categoryId: string) => void, 
     onRemoveRawCategory: (categoryId: string, rawCategory: string) => void,
+    onMerge: (targetCategoryId: string, sourceCategory: StoreCategory | { name: string, rawCategories: string[] }) => void,
     isOverlay?: boolean,
 }) => {
+    const [isMerging, setIsMerging] = useState(false);
     const {
         attributes,
         listeners,
@@ -76,9 +80,14 @@ const StoreCategoryItem = ({
         transition,
     };
     
-    const { isOver, setNodeRef: droppableRef } = useDroppable({
+    const { isOver: isOverContainer, setNodeRef: droppableRef } = useDroppable({
         id: category.id,
         data: { type: 'store-category-droppable', categoryId: category.id, isContainer: true },
+    });
+
+    const { isOver: isOverMerge, setNodeRef: mergeDroppableRef } = useDroppable({
+        id: `merge-${category.id}`,
+        data: { type: 'merge-droppable', categoryId: category.id }
     });
 
     const combinedRef = (node: HTMLElement | null) => {
@@ -87,7 +96,7 @@ const StoreCategoryItem = ({
     };
 
     return (
-        <div ref={combinedRef} style={style} className={`rounded-lg border p-4 ${isOver && !isOverlay ? 'bg-green-100' : 'bg-secondary/50'}`}>
+        <div ref={combinedRef} style={style} className={`rounded-lg border p-4 ${isOverContainer && !isOverlay ? 'bg-green-100' : 'bg-secondary/50'}`}>
             <div className="flex items-center justify-between">
                 <div className="flex items-center">
                     <span {...attributes} {...listeners} className="cursor-grab p-2 active:cursor-grabbing">
@@ -95,10 +104,28 @@ const StoreCategoryItem = ({
                     </span>
                     <span className="font-semibold">{category.name}</span>
                 </div>
-                <Button variant="ghost" size="icon" onClick={() => onDelete(category.id)}>
-                    <Trash2 className="h-4 w-4 text-destructive" />
-                </Button>
+                <div className="flex items-center gap-1">
+                    <Button variant="ghost" size="icon" onClick={() => setIsMerging(!isMerging)}>
+                        <GitMerge className={cn("h-4 w-4", isMerging ? "text-primary" : "text-muted-foreground")} />
+                    </Button>
+                    <Button variant="ghost" size="icon" onClick={() => onDelete(category.id)}>
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                    </Button>
+                </div>
             </div>
+
+            {isMerging && (
+                <div 
+                    ref={mergeDroppableRef}
+                    className={cn(
+                        "mt-2 ml-8 p-4 border-2 border-dashed rounded-md text-center text-sm",
+                        isOverMerge ? "bg-blue-100 border-blue-400" : "bg-background border-border"
+                    )}
+                >
+                    {isOverMerge ? 'Drop to Merge' : `Drag a category here to merge into "${category.name}"`}
+                </div>
+            )}
+
             <div className="ml-8 mt-2 space-y-1 pl-4 border-l-2">
                 {category.rawCategories.map(raw => (
                     <div key={raw} className="flex items-center justify-between rounded-md bg-white p-2 text-sm">
@@ -118,6 +145,7 @@ const StoreCategoryItem = ({
                                 category={child} 
                                 onDelete={onDelete} 
                                 onRemoveRawCategory={onRemoveRawCategory}
+                                onMerge={onMerge}
                             />
                         ))}
                     </div>
@@ -304,6 +332,35 @@ export default function CategoryManager() {
          });
     };
 
+    const handleMerge = (targetCategoryId: string, sourceCategory: StoreCategory | { name: string, rawCategories: string[] }) => {
+        withUpdatedCategories(prev => {
+            const mergeIntoTarget = (categories: StoreCategory[]): StoreCategory[] => {
+                return categories.map(cat => {
+                    if (cat.id === targetCategoryId) {
+                        const newRawCategories = [...cat.rawCategories, ...sourceCategory.rawCategories];
+                        return { ...cat, rawCategories: Array.from(new Set(newRawCategories)) };
+                    }
+                    return { ...cat, children: mergeIntoTarget(cat.children) };
+                });
+            };
+            let newCategories = mergeIntoTarget(prev);
+            
+            // If the source was a store category, remove it from the tree
+            if ('id' in sourceCategory) {
+                 const removeCategory = (id: string, categories: StoreCategory[]): StoreCategory[] => {
+                    return categories.filter(category => {
+                        if (category.id === id) return false;
+                        category.children = removeCategory(id, category.children);
+                        return true;
+                    });
+                };
+                newCategories = removeCategory((sourceCategory as StoreCategory).id, newCategories);
+            }
+            
+            return newCategories;
+        });
+    };
+
     const handleDragStart = (event: DragStartEvent) => {
         setActiveId(event.active.id);
     };
@@ -315,6 +372,21 @@ export default function CategoryManager() {
         if (!over) return;
     
         const activeIsRaw = active.data.current?.type === 'raw-category';
+        const activeIsStore = active.data.current?.type === 'store-category';
+
+        if(over.data.current?.type === 'merge-droppable') {
+            const targetCategoryId = over.data.current.categoryId;
+            if(activeIsRaw) {
+                const rawCategoryName = active.data.current.category;
+                handleMerge(targetCategoryId, { name: rawCategoryName, rawCategories: [rawCategoryName] });
+            } else if (activeIsStore) {
+                const sourceCategory = active.data.current.category;
+                if(targetCategoryId !== sourceCategory.id) { // Prevent merging a category with itself
+                    handleMerge(targetCategoryId, sourceCategory);
+                }
+            }
+            return;
+        }
         
         if (activeIsRaw) {
              const overIsDroppable = over.data.current?.type === 'store-category-droppable';
@@ -342,7 +414,6 @@ export default function CategoryManager() {
              return;
         }
 
-        const activeIsStore = active.data.current?.type === 'store-category';
         const overIsStore = over.data.current?.type === 'store-category' || over.data.current?.type === 'store-category-droppable';
         
         if (active.id !== over.id && activeIsStore && overIsStore) {
@@ -442,6 +513,7 @@ export default function CategoryManager() {
                                           category={cat} 
                                           onDelete={handleDeleteStoreCategory}
                                           onRemoveRawCategory={handleRemoveRawCategory} 
+                                          onMerge={handleMerge}
                                       />
                                   ))}
                                 </div>
@@ -453,7 +525,7 @@ export default function CategoryManager() {
             </div>
             <DragOverlay>
                 {activeRawCategory ? <div className="flex cursor-grabbing items-center rounded-md border bg-card p-3 shadow-lg"><GripVertical className="mr-2 h-5 w-5 text-muted-foreground" /> {activeRawCategory}</div> : null}
-                {activeStoreCategoryData ? <StoreCategoryItem category={activeStoreCategoryData} onDelete={()=>{}} onRemoveRawCategory={()=>{}} isOverlay /> : null}
+                {activeStoreCategoryData ? <StoreCategoryItem category={activeStoreCategoryData} onDelete={()=>{}} onRemoveRawCategory={()=>{}} onMerge={()=>{}} isOverlay /> : null}
             </DragOverlay>
         </DndContext>
     );
