@@ -1,4 +1,3 @@
-'use server';
 
 export interface UnifiedCategory {
   main: string;
