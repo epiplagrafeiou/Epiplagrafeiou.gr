@@ -17,7 +17,7 @@ import {
   useSortable,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { GripVertical, PlusCircle, Trash2, GitMerge } from 'lucide-react';
+import { GripVertical, PlusCircle, Trash2, GitMerge, Pencil } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { useCollection } from '@/firebase/firestore/use-collection';
 import { useFirestore, useMemoFirebase } from '@/firebase';
@@ -59,6 +59,7 @@ const StoreCategoryItem = ({
     onRemoveRawCategory,
     onMerge,
     onAddSubCategory,
+    onRename,
     isOverlay,
 }: { 
     category: StoreCategory, 
@@ -66,6 +67,7 @@ const StoreCategoryItem = ({
     onRemoveRawCategory: (categoryId: string, rawCategory: string) => void,
     onMerge: (targetCategoryId: string, sourceCategory: StoreCategory | { name: string, rawCategories: string[] }) => void,
     onAddSubCategory: (parentId: string) => void,
+    onRename: (categoryId: string) => void,
     isOverlay?: boolean,
 }) => {
     const [isMerging, setIsMerging] = useState(false);
@@ -110,6 +112,9 @@ const StoreCategoryItem = ({
                      <Button variant="ghost" size="icon" onClick={() => onAddSubCategory(category.id)}>
                         <PlusCircle className="h-4 w-4 text-muted-foreground" />
                     </Button>
+                    <Button variant="ghost" size="icon" onClick={() => onRename(category.id)}>
+                        <Pencil className="h-4 w-4 text-muted-foreground" />
+                    </Button>
                     <Button variant="ghost" size="icon" onClick={() => setIsMerging(!isMerging)}>
                         <GitMerge className={cn("h-4 w-4", isMerging ? "text-primary" : "text-muted-foreground")} />
                     </Button>
@@ -152,6 +157,7 @@ const StoreCategoryItem = ({
                                 onRemoveRawCategory={onRemoveRawCategory}
                                 onMerge={onMerge}
                                 onAddSubCategory={onAddSubCategory}
+                                onRename={onRename}
                             />
                         ))}
                     </div>
@@ -257,6 +263,18 @@ export default function CategoryManager() {
         adminProducts.forEach(p => p.category && set.add(p.category));
         return Array.from(set).sort();
     }, [adminProducts]);
+    
+    const uncategorized = useMemo(() => {
+        const assignedRaw = new Set<string>();
+        const collectAssigned = (categories: StoreCategory[]) => {
+            categories.forEach(sc => {
+                sc.rawCategories.forEach(rc => assignedRaw.add(rc));
+                collectAssigned(sc.children);
+            });
+        }
+        collectAssigned(storeCategories);
+        return allRawCategories.filter(rc => !assignedRaw.has(rc));
+    }, [allRawCategories, storeCategories]);
 
     const findCategory = useCallback((id: string, categories: StoreCategory[]): StoreCategory | undefined => {
         for (const category of categories) {
@@ -339,6 +357,22 @@ export default function CategoryManager() {
             return removeCategory(categoryId, prev);
         });
     };
+    
+    const handleRenameCategory = (categoryId: string) => {
+        withUpdatedCategories(prev => {
+            const renameCategory = (categories: StoreCategory[]): StoreCategory[] => {
+                return categories.map(cat => {
+                    if (cat.id === categoryId) {
+                        const newName = prompt("Enter new category name:", cat.name);
+                        return { ...cat, name: newName || cat.name };
+                    }
+                    return { ...cat, children: renameCategory(cat.children) };
+                });
+            };
+            return renameCategory(prev);
+        });
+    };
+
 
     const handleRemoveRawCategory = (storeCategoryId: string, rawCategory: string) => {
          withUpdatedCategories(prev => {
@@ -562,6 +596,7 @@ export default function CategoryManager() {
                                           onRemoveRawCategory={handleRemoveRawCategory} 
                                           onMerge={handleMerge}
                                           onAddSubCategory={handleAddSubCategory}
+                                          onRename={handleRenameCategory}
                                       />
                                   ))}
                                 </div>
@@ -573,7 +608,7 @@ export default function CategoryManager() {
             </div>
             <DragOverlay>
                 {activeRawCategory ? <div className="flex cursor-grabbing items-center rounded-md border bg-card p-3 shadow-lg"><GripVertical className="mr-2 h-5 w-5 text-muted-foreground" /> {activeRawCategory}</div> : null}
-                {activeStoreCategoryData ? <StoreCategoryItem category={activeStoreCategoryData} onDelete={()=>{}} onRemoveRawCategory={()=>{}} onMerge={()=>{}} onAddSubCategory={()=>{}} isOverlay /> : null}
+                {activeStoreCategoryData ? <StoreCategoryItem category={activeStoreCategoryData} onDelete={()=>{}} onRemoveRawCategory={()=>{}} onMerge={()=>{}} onAddSubCategory={()=>{}} onRename={()=>{}} isOverlay /> : null}
             </DragOverlay>
         </DndContext>
     );
