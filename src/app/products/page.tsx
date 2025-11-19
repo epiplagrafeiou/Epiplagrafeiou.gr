@@ -45,14 +45,17 @@ function ProductsPageContent() {
 
   const maxPrice = useMemo(() => {
     if (!isLoaded) return 1000;
+    const safePrices = products.map(p => Number(p.price) || 0);
     return Math.ceil(Math.max(...safePrices, 1000));
-  }, [safePrices, isLoaded]);
+  }, [products, isLoaded]);
 
   useEffect(() => {
     if (isLoaded) {
-      setPriceRange([0, maxPrice]);
+      const safePrices = products.map(p => Number(p.price) || 0);
+      const maxProductPrice = Math.ceil(Math.max(...safePrices, 1000));
+      setPriceRange([0, maxProductPrice]);
     }
-  }, [isLoaded, maxPrice]);
+  }, [isLoaded, products]);
 
   const filteredAndSortedProducts = useMemo(() => {
     if (!isLoaded) return [];
@@ -114,7 +117,7 @@ function ProductsPageContent() {
       <div className="grid grid-cols-1 gap-8 md:grid-cols-4">
         {/* Filters */}
         <aside className="md:col-span-1">
-          <div className="sticky top-24 space-y-6">
+          <div className="sticky top-24 max-h-[calc(100vh-6rem)] overflow-y-auto space-y-6 pr-2">
             <h2 className="text-2xl font-semibold">Φίλτρα</h2>
 
             {/* Search */}
@@ -133,9 +136,11 @@ function ProductsPageContent() {
               <h3 className="font-semibold mb-2">Κατηγορίες</h3>
 
               {!isLoaded ? (
-                Array.from({ length: 6 }).map((_, i) => (
-                  <Skeleton key={i} className="h-4 w-32" />
-                ))
+                <div className="space-y-2">
+                  {Array.from({ length: 6 }).map((_, i) => (
+                    <Skeleton key={i} className="h-6 w-32" />
+                  ))}
+                </div>
               ) : (
                 <div className="space-y-2">
                   {topLevelCategories.map(cat => (
