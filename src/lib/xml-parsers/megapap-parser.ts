@@ -57,8 +57,10 @@ export async function megapapParser(url: string): Promise<XmlProduct[]> {
         'The XML feed does not have the expected structure for Megapap format. Could not find a product array at `megapap.products.product`.'
       );
     }
+    
+    const productsToParse = Array.isArray(productArray) ? productArray : [productArray];
 
-    const products: XmlProduct[] = productArray.map((p: any) => {
+    const products: XmlProduct[] = productsToParse.map((p: any) => {
       let allImages: string[] = [];
       if (p.images && p.images.image) {
         if (Array.isArray(p.images.image)) {

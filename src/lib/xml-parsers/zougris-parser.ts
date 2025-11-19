@@ -13,6 +13,9 @@ export async function zougrisParser(url: string): Promise<XmlProduct[]> {
   }
 
   const xmlText = await response.text();
+  
+  // As suggested, remove the script tag that could interfere with parsing.
+  const cleanXml = xmlText.replace(/<script[\s\S]*?<\/script>/gi, "");
 
   const parser = new XMLParser({
     ignoreAttributes: true,
@@ -22,8 +25,6 @@ export async function zougrisParser(url: string): Promise<XmlProduct[]> {
     cdataPropName: '__cdata',
     trimValues: true,
     parseNodeValue: true,
-    parseAttributeValue: true,
-    parseTrueNumberOnly: true,
     tagValueProcessor: (tagName, tagValue, jPath, isLeafNode, isAttribute) => {
         if (typeof tagValue === 'string' && tagValue.startsWith('<![CDATA[')) {
             return tagValue.substring(9, tagValue.length - 3);
@@ -32,17 +33,19 @@ export async function zougrisParser(url: string): Promise<XmlProduct[]> {
     }
   });
 
-  const parsed = parser.parse(xmlText);
+  const parsed = parser.parse(cleanXml);
   const productArray = parsed.Products?.Product;
 
-  if (!productArray || !Array.isArray(productArray)) {
+  if (!productArray) {
     console.error('Zougris Parser: Parsed product data is not an array or is missing at Products.Product:', productArray);
     throw new Error(
       'The XML feed does not have the expected structure for Zougris format. Could not find a product array at `Products.Product`.'
     );
   }
+  
+  const productsToParse = Array.isArray(productArray) ? productArray : [productArray];
 
-  const products: XmlProduct[] = productArray.map((p: any) => {
+  const products: XmlProduct[] = productsToParse.map((p: any) => {
     
     const allImages: string[] = [];
     for (let i = 1; i <= 5; i++) {
