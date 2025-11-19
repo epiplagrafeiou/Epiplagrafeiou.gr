@@ -17,6 +17,7 @@ export interface XmlProduct {
 }
 
 export async function megapapParser(url: string): Promise<XmlProduct[]> {
+    console.log("Running Megapap parser"); // Defensive logging
     const response = await fetch(url, { cache: 'no-store' });
     if (!response.ok) {
       throw new Error(`Failed to fetch XML: ${response.statusText}`);
@@ -51,7 +52,7 @@ export async function megapapParser(url: string): Promise<XmlProduct[]> {
     const productArray = deCdata(parsed).megapap?.products?.product;
 
     if (!productArray || !Array.isArray(productArray)) {
-      console.error('Parsed product data is not an array or is missing:', productArray);
+      console.error('Megapap Parser: Parsed product data is not an array or is missing at megapap.products.product:', productArray);
       throw new Error(
         'The XML feed does not have the expected structure for Megapap format. Could not find a product array at `megapap.products.product`.'
       );
@@ -87,7 +88,6 @@ export async function megapapParser(url: string): Promise<XmlProduct[]> {
         0;
       const stock = Number(rawStock) || 0;
       
-      // For megapap, correctly combine category and subcategory
       const rawCategory = [p.category, p.subcategory].filter(Boolean).join(' > ');
 
       let finalWebOfferPrice = parseFloat(p.weboffer_price_with_vat || p.retail_price_with_vat || '0');

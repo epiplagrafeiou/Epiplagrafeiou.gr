@@ -6,6 +6,7 @@ import type { XmlProduct } from './megapap-parser';
 import { mapCategory } from '../category-mapper';
 
 export async function zougrisParser(url: string): Promise<XmlProduct[]> {
+  console.log("Running Zougris parser"); // Defensive logging
   const response = await fetch(url, { cache: 'no-store' });
   if (!response.ok) {
     throw new Error(`Failed to fetch XML: ${response.statusText}`);
@@ -24,7 +25,6 @@ export async function zougrisParser(url: string): Promise<XmlProduct[]> {
     parseAttributeValue: true,
     parseTrueNumberOnly: true,
     tagValueProcessor: (tagName, tagValue, jPath, isLeafNode, isAttribute) => {
-        // The CDATA values are not parsed correctly by default, so we do it manually.
         if (typeof tagValue === 'string' && tagValue.startsWith('<![CDATA[')) {
             return tagValue.substring(9, tagValue.length - 3);
         }
@@ -36,7 +36,7 @@ export async function zougrisParser(url: string): Promise<XmlProduct[]> {
   const productArray = parsed.Products?.Product;
 
   if (!productArray || !Array.isArray(productArray)) {
-    console.error('Parsed product data is not an array or is missing:', productArray);
+    console.error('Zougris Parser: Parsed product data is not an array or is missing at Products.Product:', productArray);
     throw new Error(
       'The XML feed does not have the expected structure for Zougris format. Could not find a product array at `Products.Product`.'
     );
@@ -44,7 +44,6 @@ export async function zougrisParser(url: string): Promise<XmlProduct[]> {
 
   const products: XmlProduct[] = productArray.map((p: any) => {
     
-    // Collect all available images
     const allImages: string[] = [];
     for (let i = 1; i <= 5; i++) {
       const imgKey = `B2BImage${i > 1 ? i : ''}`;
@@ -55,7 +54,6 @@ export async function zougrisParser(url: string): Promise<XmlProduct[]> {
 
     const mainImage = allImages[0] || null;
 
-    // Combine categories, filtering out duplicates and empty values
     const rawCategoryParts = [p.Category1, p.Category2, p.Category3].filter(
       (value, index, self) => value && self.indexOf(value) === index
     );
@@ -65,7 +63,6 @@ export async function zougrisParser(url: string): Promise<XmlProduct[]> {
     
     const retailPrice = p.RetailPrice?.toString().replace(',', '.') || '0';
     const wholesalePrice = p.WholesalePrice?.toString().replace(',', '.') || '0';
-    // Use RetailPrice as the primary price, fallback to WholesalePrice
     const webOfferPrice = retailPrice !== '0' ? retailPrice : wholesalePrice;
 
     return {
