@@ -92,12 +92,27 @@ export default function CategoryPage() {
   }, [slugPath, categoryTree]);
 
   const filteredProducts = useMemo(() => {
-    if (!isLoaded) return [];
+    if (!isLoaded || !currentCategory) return [];
+    
+    const allChildCategories = new Set<string>();
+    const collectRawCategories = (category: StoreCategory) => {
+        category.rawCategories.forEach(rc => allChildCategories.add(rc));
+        category.children.forEach(collectRawCategories);
+    };
+    collectRawCategories(currentCategory);
+    
+    // If no specific raw categories, just filter by slug path
+    if (allChildCategories.size === 0) {
+        return products.filter(product => {
+            const productCategoryPath = normalizeCategory(product.category).split(' > ').map(createSlug).join('/');
+            return productCategoryPath.startsWith(slugPath);
+        });
+    }
+
     return products.filter(product => {
-      const productCategoryPath = normalizeCategory(product.category).split(' > ').map(createSlug).join('/');
-      return productCategoryPath.startsWith(slugPath);
+      return allChildCategories.has(product.category);
     });
-  }, [isLoaded, products, slugPath]);
+  }, [isLoaded, products, slugPath, currentCategory]);
   
   if (isLoaded && !areCategoriesLoading && !currentCategory) {
     notFound();
@@ -131,7 +146,7 @@ export default function CategoryPage() {
               Εξερευνήστε τις Υποκατηγορίες
             </h2>
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-6 md:gap-8">
-            {currentCategory.children.map((subCat, index) => (
+            {currentCategory.children.map((subCat) => (
               <Link 
                 href={`${breadcrumbs[breadcrumbs.length - 1].href}/${createSlug(subCat.name)}`} 
                 key={subCat.id} 
