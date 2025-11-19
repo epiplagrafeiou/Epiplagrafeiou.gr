@@ -36,7 +36,10 @@ function ProductsPageContent() {
     setSearchTerm(querySearchTerm);
   }, [querySearchTerm]);
 
+  // --- IMPORTANT FIX: don't run filtering until Firebase finished ---
   const filteredAndSortedProducts = useMemo(() => {
+    if (!isLoaded) return [];
+
     let filtered = products;
 
     if (inStockOnly) {
@@ -50,7 +53,7 @@ function ProductsPageContent() {
     if (selectedCategories.length > 0) {
       filtered = filtered.filter(p => {
         const productTopCategory = p.category.split(' > ')[0];
-        return selectedCategories.some(sc => productTopCategory.includes(sc));
+        return selectedCategories.includes(productTopCategory);
       });
     }
 
@@ -69,21 +72,26 @@ function ProductsPageContent() {
     }
 
     return filtered;
-  }, [products, searchTerm, selectedCategories, priceRange, sortBy, inStockOnly]);
+  }, [products, isLoaded, searchTerm, selectedCategories, priceRange, sortBy, inStockOnly]);
   
+  // --- FIX: compute categories only when loaded ---
   const topLevelCategories = useMemo(() => {
+    if (!isLoaded) return [];
     const cats = new Set(products.map(p => p.category.split(' > ')[0]));
     return Array.from(cats);
-  }, [products]);
+  }, [products, isLoaded]);
 
   const handleCategoryChange = (category: string, checked: boolean) => {
     setSelectedCategories(prev => 
       checked ? [...prev, category] : prev.filter(c => c !== category)
     );
   };
-  
-  const maxPrice = useMemo(() => Math.ceil(Math.max(...products.map(p => p.price), 1000)), [products]);
-   
+
+  const maxPrice = useMemo(() => {
+    if (!isLoaded || products.length === 0) return 1000;
+    return Math.ceil(Math.max(...products.map(p => p.price), 1000));
+  }, [products, isLoaded]);
+
   useEffect(() => {
     if (isLoaded) {
       const maxProductPrice = Math.ceil(Math.max(...products.map(p => p.price), 1000));
@@ -99,11 +107,12 @@ function ProductsPageContent() {
       </header>
 
       <div className="grid grid-cols-1 gap-8 md:grid-cols-4">
-        {/* Filters Sidebar */}
+        {/* Filters */}
         <aside className="md:col-span-1">
           <div className="sticky top-24 space-y-6">
             <h2 className="text-2xl font-semibold">Φίλτρα</h2>
-            {/* Search Filter */}
+
+            {/* Search */}
             <div>
               <Label htmlFor="search">Αναζήτηση</Label>
               <Input
@@ -114,24 +123,31 @@ function ProductsPageContent() {
               />
             </div>
 
-            {/* Category Filter */}
+            {/* Categories */}
             <div>
               <h3 className="font-semibold mb-2">Κατηγορίες</h3>
-              <div className="space-y-2">
-                {topLevelCategories.map(cat => (
-                  <div key={cat} className="flex items-center space-x-2">
-                    <Checkbox 
-                      id={`cat-${cat}`} 
-                      onCheckedChange={(checked) => handleCategoryChange(cat, !!checked)}
-                      checked={selectedCategories.includes(cat)}
-                    />
-                    <Label htmlFor={`cat-${cat}`}>{cat}</Label>
-                  </div>
-                ))}
-              </div>
+
+              {!isLoaded ? (
+                Array.from({ length: 6 }).map((_, i) => (
+                  <Skeleton key={i} className="h-4 w-32" />
+                ))
+              ) : (
+                <div className="space-y-2">
+                  {topLevelCategories.map(cat => (
+                    <div key={cat} className="flex items-center space-x-2">
+                      <Checkbox 
+                        id={`cat-${cat}`} 
+                        onCheckedChange={(checked) => handleCategoryChange(cat, !!checked)}
+                        checked={selectedCategories.includes(cat)}
+                      />
+                      <Label htmlFor={`cat-${cat}`}>{cat}</Label>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
-            {/* Price Filter */}
+            {/* Price Range */}
             <div>
               <h3 className="font-semibold mb-2">Εύρος Τιμής</h3>
               <Slider
@@ -146,22 +162,24 @@ function ProductsPageContent() {
                 <span>{formatCurrency(priceRange[1])}</span>
               </div>
             </div>
-            
-            {/* Availability Filter */}
+
+            {/* Availability */}
             <div>
               <div className="flex items-center space-x-2">
                 <Checkbox id="in-stock" checked={inStockOnly} onCheckedChange={checked => setInStockOnly(!!checked)} />
                 <Label htmlFor="in-stock">Μόνο Διαθέσιμα</Label>
               </div>
             </div>
-
           </div>
         </aside>
 
-        {/* Products Grid */}
+        {/* Products */}
         <main className="md:col-span-3">
           <div className="flex justify-between items-center mb-6">
-            <p className="text-muted-foreground">{filteredAndSortedProducts.length} προϊόντα βρέθηκαν</p>
+            <p className="text-muted-foreground">
+              {!isLoaded ? 'Φόρτωση...' : `${filteredAndSortedProducts.length} προϊόντα βρέθηκαν`}
+            </p>
+
             <Select value={sortBy} onValueChange={setSortBy}>
               <SelectTrigger className="w-[180px]">
                 <SelectValue placeholder="Ταξινόμηση" />
@@ -174,7 +192,8 @@ function ProductsPageContent() {
             </Select>
           </div>
 
-          {!isLoaded ? (
+          {/* Loading */}
+          {!isLoaded && (
             <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
               {Array.from({ length: 9 }).map((_, index) => (
                  <Card key={index}>
@@ -182,17 +201,23 @@ function ProductsPageContent() {
                  </Card>
               ))}
             </div>
-          ) : filteredAndSortedProducts.length > 0 ? (
+          )}
+
+          {/* Products */}
+          {isLoaded && filteredAndSortedProducts.length > 0 && (
             <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
               {filteredAndSortedProducts.map(product => (
                 <ProductCard key={product.id} product={product} />
               ))}
             </div>
-          ) : (
+          )}
+
+          {/* Empty */}
+          {isLoaded && filteredAndSortedProducts.length === 0 && (
             <div className="flex flex-col items-center justify-center text-center py-16">
                 <PackageSearch className="h-24 w-24 text-muted-foreground/50"/>
                 <h2 className="mt-6 text-2xl font-semibold">Δεν βρέθηκαν προϊόντα</h2>
-                <p className="mt-2 text-muted-foreground">Δοκιμάστε να αλλάξετε τα φίλτρα σας για να δείτε περισσότερα αποτελέσματα.</p>
+                <p className="mt-2 text-muted-foreground">Δοκιμάστε να αλλάξετε τα φίλτρα σας.</p>
             </div>
           )}
         </main>
@@ -202,7 +227,5 @@ function ProductsPageContent() {
 }
 
 export default function ProductsPage() {
-  return (
-      <ProductsPageContent />
-  );
+  return <ProductsPageContent />;
 }
