@@ -23,17 +23,40 @@ import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import type { XmlProduct } from '@/lib/xml-parsers/megapap-parser';
+import { useCollection } from '@/firebase/firestore/use-collection';
+import { collection } from 'firebase/firestore';
+import { useFirestore, useMemoFirebase } from '@/firebase';
+import type { StoreCategory } from '@/components/admin/CategoryManager';
 
 export default function XmlImporterPage() {
   const { suppliers } = useSuppliers();
   const { addProducts } = useProducts();
   const { toast } = useToast();
+  const firestore = useFirestore();
+
   const [loadingSupplier, setLoadingSupplier] = useState<string | null>(null);
   const [quickSyncingSupplier, setQuickSyncingSupplier] = useState<string | null>(null);
   const [activeSupplierId, setActiveSupplierId] = useState<string | null>(null);
   const [syncedProducts, setSyncedProducts] = useState<XmlProduct[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [lastSyncCategories, setLastSyncCategories] = useState<Record<string, string[]>>({});
+
+  const categoriesQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return collection(firestore, 'categories');
+  }, [firestore]);
+  const { data: storeCategories } = useCollection<StoreCategory>(categoriesQuery);
+
+  const categoryMap = useMemo(() => {
+    if (!storeCategories) return new Map();
+    const map = new Map<string, string>(); // rawCategory -> storeCategoryId
+    storeCategories.forEach(cat => {
+        cat.rawCategories?.forEach(rawCat => {
+            map.set(rawCat, cat.id);
+        });
+    });
+    return map;
+  }, [storeCategories]);
 
   useEffect(() => {
     const loadedCategories: Record<string, string[]> = {};
@@ -57,7 +80,6 @@ export default function XmlImporterPage() {
     try {
       const products = await syncProductsFromXml(url, name);
       setSyncedProducts(products);
-      // Reset categories based on new sync
       setSelectedCategories(new Set(['all']));
     } catch (e: any) {
       setError(e.message);
@@ -84,7 +106,6 @@ export default function XmlImporterPage() {
         markedUpPrice = price * (1 + defaultRule.markup / 100);
     }
     
-    // Add fixed amount based on the *original* price range
     if (price >= 0 && price <= 2) {
       markedUpPrice += 0.65;
     } else if (price >= 2.01 && price <= 5) {
@@ -100,7 +121,7 @@ export default function XmlImporterPage() {
      const productsToAdd = productsToProcess.map(p => {
         const retailPrice = parseFloat(p.webOfferPrice) || 0;
         const finalPrice = applyMarkup(retailPrice, supplier.markupRules);
-        const categoryPath = p.category.split('>').map(c => c.trim()).join(' > ');
+        const categoryId = categoryMap.get(p.category) || null;
 
         return {
             id: p.id,
@@ -108,7 +129,8 @@ export default function XmlImporterPage() {
             name: p.name,
             price: finalPrice,
             description: p.description,
-            category: categoryPath,
+            categoryId: categoryId,
+            rawCategory: p.category, // Keep the raw category for reference
             images: p.images,
             mainImage: p.mainImage,
             stock: p.stock,
@@ -134,7 +156,6 @@ export default function XmlImporterPage() {
         return;
     }
     
-    // Save categories for quick sync
     const categoriesToSave = Array.from(selectedCategories);
     localStorage.setItem(`lastSyncCategories_${activeSupplier.id}`, JSON.stringify(categoriesToSave));
     setLastSyncCategories(prev => ({...prev, [activeSupplier.id]: categoriesToSave}));
@@ -202,7 +223,7 @@ export default function XmlImporterPage() {
       } else {
         if (newSet.has(category)) {
           newSet.delete(category);
-          newSet.delete('all'); // Uncheck "all" if a specific item is unchecked
+          newSet.delete('all');
         } else {
           newSet.add(category);
           if (newSet.size === allCategories.length) {

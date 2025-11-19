@@ -18,13 +18,15 @@ import {
 import { Card, CardContent } from "@/components/ui/card"
 import { Truck, Award, Star, ShieldCheck } from 'lucide-react';
 import { PaymentIcons } from '@/components/icons/PaymentIcons';
+import type { StoreCategory } from '@/components/admin/CategoryManager';
 
 interface ProductViewProps {
     product: Product;
     allProducts: Product[];
+    categoryPath: StoreCategory[];
 }
 
-export function ProductView({ product, allProducts }: ProductViewProps) {
+export function ProductView({ product, allProducts, categoryPath }: ProductViewProps) {
   const [api, setApi] = useState<CarouselApi>()
   const [current, setCurrent] = useState(0)
  
@@ -49,15 +51,17 @@ export function ProductView({ product, allProducts }: ProductViewProps) {
     api?.scrollTo(index)
   }, [api])
 
-  const categoryParts = product ? product.category.split(' > ') : [];
-  let currentPath = '';
-  const breadcrumbs = categoryParts.map((part, index) => {
-    currentPath += `${currentPath ? '/' : ''}${createSlug(part)}`;
-    return {
-      name: part,
-      href: `/category/${currentPath}`
-    };
-  });
+  const breadcrumbs = useMemo(() => {
+      let path = '/category';
+      return categoryPath.map(cat => {
+          path += `/${createSlug(cat.name)}`;
+          return {
+              name: cat.name,
+              href: path
+          };
+      });
+  }, [categoryPath]);
+
 
   const productSchema = product ? {
     '@context': 'https://schema.org',

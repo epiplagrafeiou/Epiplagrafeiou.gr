@@ -67,13 +67,13 @@
         "originalPrice": {
           "type": "number"
         },
-        "category": {
-          "type": "string",
-          "description": "The product's raw category from the supplier (e.g., Tables)."
+        "categoryId": {
+          "type": ["string", "null"],
+          "description": "The ID of the curated category this product belongs to."
         },
         "imageId": {
             "type": "string",
-            "description": "ID of the primary placeholder image."
+            "description": "URL of the primary product image."
         },
         "images": {
             "type": "array",
@@ -90,6 +90,10 @@
         "supplierId": {
           "type": "string",
           "description": "Reference to the supplier for this product."
+        },
+         "rawCategory": {
+          "type": "string",
+          "description": "The original, unprocessed category string from the supplier's XML feed."
         }
       },
       "required": [
@@ -97,7 +101,6 @@
         "slug",
         "description",
         "price",
-        "category",
         "imageId",
         "images",
         "stock",

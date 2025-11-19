@@ -1,6 +1,7 @@
 
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
+import type { StoreCategory } from "@/components/admin/CategoryManager";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -15,6 +16,7 @@ export function formatCurrency(amount: number, currency: string = "EUR") {
 
 // Helper to create a URL-friendly slug that supports Greek characters
 export const createSlug = (name: string) => {
+  if (!name) return '';
   const greekChars: { [key: string]: string } = {
     'α': 'a', 'β': 'v', 'γ': 'g', 'δ': 'd', 'ε': 'e', 'ζ': 'z', 'η': 'i', 'θ': 'th',
     'ι': 'i', 'κ': 'k', 'λ': 'l', 'μ': 'm', 'ν': 'n', 'ξ': 'x', 'ο': 'o', 'π': 'p',
@@ -33,7 +35,7 @@ export const createSlug = (name: string) => {
     .replace(/-+/g, '-'); // Replace multiple hyphens with a single one
 };
 
-// Safe category normalizer
+// Safe category normalizer - DEPRECATED for display, still used by parsers
 export function normalizeCategory(cat?: string): string {
     if (!cat) return "Uncategorized";
     return cat
@@ -41,4 +43,28 @@ export function normalizeCategory(cat?: string): string {
         .map(c => c.trim())
         .filter(Boolean)
         .join(' > ');
+}
+
+// New function to recursively find the category path
+export function findCategoryPath(categoryId: string | null, categories: StoreCategory[]): StoreCategory[] {
+    if (!categoryId) return [];
+    
+    let path: StoreCategory[] = [];
+    
+    const find = (cats: StoreCategory[], currentPath: StoreCategory[]): boolean => {
+        for (const cat of cats) {
+            const newPath = [...currentPath, cat];
+            if (cat.id === categoryId) {
+                path = newPath;
+                return true;
+            }
+            if (cat.children && find(cat.children, newPath)) {
+                return true;
+            }
+        }
+        return false;
+    }
+    
+    find(categories, []);
+    return path;
 }

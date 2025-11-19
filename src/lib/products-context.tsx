@@ -2,7 +2,7 @@
 'use client';
 
 import { createContext, useContext, useMemo } from 'react';
-import { createSlug, normalizeCategory } from './utils';
+import { createSlug } from './utils';
 import { useCollection } from '@/firebase/firestore/use-collection';
 import { collection, writeBatch, doc, updateDoc } from 'firebase/firestore';
 import { useFirestore, useMemoFirebase, FirestorePermissionError, errorEmitter } from '@/firebase';
@@ -16,24 +16,24 @@ export interface Product {
   price: number;
   originalPrice?: number;
   description: string;
-  imageId: string; // This is now the URL of the main image
-  category: string;
+  imageId: string; 
+  categoryId: string | null;
+  rawCategory?: string;
   images?: string[];
   stock?: number;
   supplierId: string;
+  category?: string; // This is now a display-only field, not for logic
 }
 
 interface ProductsContextType {
   products: Product[];
   adminProducts: Product[];
   addProducts: (
-    newProducts: (Partial<Omit<Product, 'slug' | 'imageId'>> & { id: string; supplierId: string; images: string[]; mainImage?: string | null; name: string; price: number; category: string; description: string; stock: number })[]
+    newProducts: (Partial<Omit<Product, 'slug' | 'imageId'>> & { id: string; supplierId: string; images: string[]; mainImage?: string | null; name: string; price: number; categoryId: string | null; rawCategory: string; description: string; stock: number })[]
   ) => void;
   updateProduct: (product: Product) => void;
   deleteProducts: (productIds: string[]) => void;
   isLoaded: boolean;
-  categories: string[];
-  allCategories: string[];
 }
 
 const ProductsContext = createContext<ProductsContextType | undefined>(undefined);
@@ -90,10 +90,9 @@ export const ProductsProvider = ({ children }: { children: React.ReactNode }) =>
           ...p,
           id: productId,
           slug: productSlug,
-          imageId: imageId, // Save the URL
+          imageId: imageId,
           images: sortedImages,
           price: p.price,
-          category: normalizeCategory(p.category), // SAFE NORMALIZATION
           description: p.description,
           stock: Number(p.stock) || 0,
         };
@@ -108,7 +107,7 @@ export const ProductsProvider = ({ children }: { children: React.ReactNode }) =>
        productBatchData.forEach(item => {
          const permissionError = new FirestorePermissionError({
            path: item.path,
-           operation: 'create', // This will cover create/update due to merge:true
+           operation: 'create',
            requestResourceData: item.data,
          });
          errorEmitter.emit('permission-error', permissionError);
@@ -121,7 +120,7 @@ export const ProductsProvider = ({ children }: { children: React.ReactNode }) =>
     const productRef = doc(firestore, 'products', product.id);
     const { id, ...productData } = product;
 
-    updateDoc(productRef, {...productData, category: normalizeCategory(productData.category) }).catch(error => {
+    updateDoc(productRef, {...productData }).catch(error => {
         const permissionError = new FirestorePermissionError({
             path: productRef.path,
             operation: 'update',
@@ -161,28 +160,10 @@ export const ProductsProvider = ({ children }: { children: React.ReactNode }) =>
             ...p,
             imageId: mainImageUrl,
             images: Array.from(new Set([mainImageUrl, ...allImageUrls])).filter(Boolean),
-            category: normalizeCategory(p.category)
         };
     });
   }, [products]);
 
-  const categories = useMemo(() => {
-    const publicFacingProducts = allProducts.filter((p) => (p.stock ?? 0) > 0);
-    return Array.from(
-      new Set(
-        publicFacingProducts
-          .map((p) => normalizeCategory(p.category).split(' > ').pop()!)
-          .filter(Boolean)
-      )
-    ).sort();
-  }, [allProducts]);
-  
-  const allCategories = useMemo(() => {
-    const publicFacingProducts = allProducts.filter((p) => (p.stock ?? 0) > 0);
-    return Array.from(
-      new Set(publicFacingProducts.map((p) => normalizeCategory(p.category)).filter(Boolean))
-    ).sort();
-  }, [allProducts]);
 
   return (
     <ProductsContext.Provider
@@ -193,8 +174,6 @@ export const ProductsProvider = ({ children }: { children: React.ReactNode }) =>
         updateProduct,
         deleteProducts,
         isLoaded: !isLoading,
-        categories: categories,
-        allCategories: allCategories,
       }}
     >
       {children}

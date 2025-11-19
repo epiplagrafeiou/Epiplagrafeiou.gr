@@ -6,24 +6,24 @@ import Image from 'next/image';
 import { useParams, notFound } from 'next/navigation';
 import { useCollection } from '@/firebase/firestore/use-collection';
 import { useFirestore, useMemoFirebase } from '@/firebase';
-import { collection } from 'firebase/firestore';
+import { collection, query, where, getDocs } from 'firebase/firestore';
 import { ProductCard } from '@/components/products/ProductCard';
 import { useProducts } from '@/lib/products-context';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { createSlug, normalizeCategory } from '@/lib/utils';
+import { createSlug } from '@/lib/utils';
 import Link from 'next/link';
 import type { StoreCategory } from '@/components/admin/CategoryManager';
 
 const featuredCategories = [
-    { name: 'Γραφεία', href: '/category/grafeio/grafeia' },
-    { name: 'Καρέκλες Γραφείου', href: '/category/grafeio/karekles-grafeiou' },
-    { name: 'Βιβλιοθήκες', href: '/category/grafeio/bibliothikes' },
+    { name: 'Γραφεία', href: '/category/grafeia' },
+    { name: 'Καρέκλες Γραφείου', href: '/category/karekles-grafeiou' },
+    { name: 'Βιβλιοθήκες', href: '/category/bibliothikes' },
 ]
 
 export default function CategoryPage() {
-  const { products, isLoaded } = useProducts();
+  const { products: allProducts, isLoaded: areProductsLoaded } = useProducts();
   const params = useParams();
   const firestore = useFirestore();
 
@@ -33,88 +33,83 @@ export default function CategoryPage() {
   }, [firestore]);
   const { data: fetchedCategories, isLoading: areCategoriesLoading } = useCollection<Omit<StoreCategory, 'children'>>(categoriesQuery);
 
-  const categoryTree = useMemo(() => {
-    if (!fetchedCategories) return [];
+  const { categoryTree, categoryMap } = useMemo(() => {
+    if (!fetchedCategories) return { categoryTree: [], categoryMap: new Map() };
 
     const categoriesById: Record<string, StoreCategory> = {};
     const rootCategories: StoreCategory[] = [];
+    const mapBySlug = new Map<string, StoreCategory>();
 
     fetchedCategories.forEach(cat => {
         categoriesById[cat.id] = { ...cat, children: [] };
     });
 
     fetchedCategories.forEach(cat => {
+        let path = createSlug(cat.name);
         if (cat.parentId && categoriesById[cat.parentId]) {
             categoriesById[cat.parentId].children.push(categoriesById[cat.id]);
+            const parent = fetchedCategories.find(p => p.id === cat.parentId);
+             // This is a simplified path builder; a recursive one would be better
+            if (parent) {
+                path = `${createSlug(parent.name)}/${path}`;
+            }
         } else {
             rootCategories.push(categoriesById[cat.id]);
         }
+        mapBySlug.set(path, categoriesById[cat.id]);
     });
     
-    const sortRecursive = (categories: StoreCategory[]) => {
-        categories.sort((a,b) => a.order - b.order);
-        categories.forEach(c => sortRecursive(c.children));
-    }
-    
-    sortRecursive(rootCategories);
-    return rootCategories;
+    return { categoryTree: rootCategories, categoryMap };
   }, [fetchedCategories]);
   
   const slugPath = useMemo(() => Array.isArray(params.slug) ? params.slug.join('/') : (params.slug || ''), [params.slug]);
 
   const { currentCategory, breadcrumbs } = useMemo(() => {
-    if (categoryTree.length === 0) return { currentCategory: null, breadcrumbs: [] };
+    if (!fetchedCategories) return { currentCategory: null, breadcrumbs: [] };
 
-    const slugParts = slugPath.split('/');
     let category: StoreCategory | null = null;
-    let currentChildren = categoryTree;
     let breadcrumbs: { name: string; href: string; isLast: boolean }[] = [];
     let currentHref = '/category';
-
-    for (const part of slugParts) {
-      const found = currentChildren.find(c => createSlug(c.name) === part);
-      if (found) {
-        category = found;
-        currentHref += `/${part}`;
-        breadcrumbs.push({ name: found.name, href: currentHref, isLast: false });
-        currentChildren = found.children;
-      } else {
-        category = null;
-        break;
-      }
-    }
     
-    if (breadcrumbs.length > 0) {
-        breadcrumbs[breadcrumbs.length - 1].isLast = true;
+    let pathParts = slugPath.split('/');
+    let currentChildren = categoryTree;
+
+    for (const part of pathParts) {
+        const found = currentChildren.find(c => createSlug(c.name) === part);
+        if (found) {
+            category = found;
+            currentHref += `/${part}`;
+            breadcrumbs.push({ name: found.name, href: currentHref, isLast: false });
+            currentChildren = found.children;
+        } else {
+            category = null;
+            break;
+        }
     }
+
+    if (breadcrumbs.length > 0) breadcrumbs[breadcrumbs.length - 1].isLast = true;
 
     return { currentCategory: category, breadcrumbs };
-  }, [slugPath, categoryTree]);
+
+  }, [slugPath, fetchedCategories, categoryTree]);
+
 
   const filteredProducts = useMemo(() => {
-    if (!isLoaded || !currentCategory) return [];
-    
-    const allChildCategories = new Set<string>();
-    const collectRawCategories = (category: StoreCategory) => {
-        category.rawCategories.forEach(rc => allChildCategories.add(rc));
-        category.children.forEach(collectRawCategories);
-    };
-    collectRawCategories(currentCategory);
-    
-    // If no specific raw categories, just filter by slug path
-    if (allChildCategories.size === 0) {
-        return products.filter(product => {
-            const productCategoryPath = normalizeCategory(product.category).split(' > ').map(createSlug).join('/');
-            return productCategoryPath.startsWith(slugPath);
-        });
-    }
+    if (!areProductsLoaded || !currentCategory) return [];
 
-    return products.filter(product => {
-      return allChildCategories.has(product.category);
-    });
-  }, [isLoaded, products, slugPath, currentCategory]);
+    const allChildCategoryIds = new Set<string>();
+    const collectCategoryIds = (category: StoreCategory) => {
+        allChildCategoryIds.add(category.id);
+        category.children.forEach(collectCategoryIds);
+    };
+    collectCategoryIds(currentCategory);
+
+    return allProducts.filter(product => product.categoryId && allChildCategoryIds.has(product.categoryId));
+  }, [areProductsLoaded, allProducts, currentCategory]);
   
-  if (isLoaded && !areCategoriesLoading && !currentCategory) {
+  const isLoading = areProductsLoaded === false || areCategoriesLoading === true;
+
+  if (!isLoading && !currentCategory) {
     notFound();
   }
   
@@ -148,7 +143,7 @@ export default function CategoryPage() {
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-6 md:gap-8">
             {currentCategory.children.map((subCat) => (
               <Link 
-                href={`${breadcrumbs[breadcrumbs.length - 1].href}/${createSlug(subCat.name)}`} 
+                href={`${breadcrumbs.length > 0 ? breadcrumbs[breadcrumbs.length-1].href : ''}/${createSlug(subCat.name)}`} 
                 key={subCat.id} 
                 className="group flex flex-col items-center gap-3 transition-transform duration-200 hover:-translate-y-2 text-center"
               >
@@ -170,7 +165,7 @@ export default function CategoryPage() {
 
 
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-        {!isLoaded ? (
+        {isLoading ? (
           Array.from({ length: 12 }).map((_, index) => (
             <Card key={index}>
               <Skeleton className="h-64 w-full" />
@@ -190,7 +185,7 @@ export default function CategoryPage() {
         )}
       </div>
 
-      {isLoaded && filteredProducts.length === 0 && (
+      {!isLoading && filteredProducts.length === 0 && (
         <div className="text-center col-span-full py-16">
             <h2 className="text-xl font-semibold">No Products Found</h2>
             <p className="text-muted-foreground mt-2">There are no products in this category yet.</p>
