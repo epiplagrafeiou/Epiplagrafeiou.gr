@@ -7,6 +7,7 @@ import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { createSlug } from '@/lib/utils';
 import Link from 'next/link';
+import { notFound } from 'next/navigation';
 
 const featuredCategories = [
     { name: 'Γραφεία', href: '/category/grafeia' },
@@ -19,7 +20,8 @@ export default function ClientCategory({ slug }: { slug: string }) {
   
   const categoryPath = isLoaded ? allCategories.find(cat => {
       const catSlug = cat.split(' > ').map(createSlug).join('/');
-      return catSlug === slug;
+      // Match if the slug is the same or if the category is a parent of the current slug
+      return slug.startsWith(catSlug);
   }) : undefined;
 
   const filteredProducts = products.filter(product => {
@@ -27,7 +29,11 @@ export default function ClientCategory({ slug }: { slug: string }) {
     return productCategoryPath.startsWith(slug);
   });
   
-  const categoryParts = categoryPath ? categoryPath.split(' > ') : slug.split('/').map(s => s.replace(/-/g, ' '));
+  if (isLoaded && filteredProducts.length === 0 && !categoryPath) {
+    notFound();
+  }
+
+  const categoryParts = categoryPath ? slug.split('/').map(s => s.replace(/-/g, ' ')) : slug.split('/').map(s => s.replace(/-/g, ' '));
   let currentPath = '';
   const breadcrumbs = categoryParts.map((part, index) => {
     currentPath += `${currentPath ? '/' : ''}${createSlug(part)}`;
@@ -38,18 +44,6 @@ export default function ClientCategory({ slug }: { slug: string }) {
       isLast: isLast
     };
   });
-
-  if (isLoaded && filteredProducts.length === 0 && !categoryPath) {
-    return (
-        <div className="container mx-auto px-4 py-16 text-center">
-            <h1 className="text-3xl font-bold">Κατηγορία δεν βρέθηκε</h1>
-            <p className="mt-4 text-muted-foreground">Δεν μπορέσαμε να βρούμε την κατηγορία που ψάχνετε.</p>
-            <Button asChild className="mt-6">
-                <Link href="/">Επιστροφή στην αρχική σελίδα</Link>
-            </Button>
-        </div>
-    );
-  }
 
   const breadcrumbSchema = {
     '@context': 'https://schema.org',
