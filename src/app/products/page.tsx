@@ -19,8 +19,9 @@ import { Input } from '@/components/ui/input';
 import { Slider } from "@/components/ui/slider"
 import { formatCurrency } from '@/lib/utils';
 import { PackageSearch } from 'lucide-react';
+import { Card } from '@/components/ui/card';
 
-function ProductsContent() {
+function ProductsPageContent() {
   const { products, isLoaded } = useProducts();
   const searchParams = useSearchParams();
   const querySearchTerm = searchParams.get('q') || '';
@@ -176,7 +177,9 @@ function ProductsContent() {
           {!isLoaded ? (
             <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
               {Array.from({ length: 9 }).map((_, index) => (
-                <Skeleton key={index} className="h-96 w-full" />
+                 <Card key={index}>
+                    <Skeleton className="h-64 w-full" />
+                 </Card>
               ))}
             </div>
           ) : filteredAndSortedProducts.length > 0 ? (
@@ -201,8 +204,7 @@ function ProductsContent() {
 export default function ProductsPage() {
   return (
     <Suspense fallback={<div>Loading...</div>}>
-      <ProductsContent />
+      <ProductsPageContent />
     </Suspense>
   );
 }
-
