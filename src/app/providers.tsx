@@ -12,6 +12,8 @@ import Footer from '@/components/layout/Footer';
 import TopBar from '@/components/layout/TopBar';
 import { Toaster } from "@/components/ui/toaster";
 import NewsletterPopup from "@/components/layout/NewsletterPopup";
+import { SidebarProvider, SidebarInset, Sidebar } from '@/components/ui/sidebar';
+import AdminSidebar from '@/components/admin/AdminSidebar';
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -24,7 +26,12 @@ export function Providers({ children }: { children: React.ReactNode }) {
           <CartProvider>
             <WishlistProvider>
               {isAdminPage ? (
-                <main>{children}</main>
+                <SidebarProvider>
+                  <Sidebar>
+                    <AdminSidebar />
+                  </Sidebar>
+                  <SidebarInset>{children}</SidebarInset>
+                </SidebarProvider>
               ) : (
                 <div className="flex min-h-screen flex-col">
                   <TopBar />
@@ -33,10 +40,10 @@ export function Providers({ children }: { children: React.ReactNode }) {
                     {children}
                   </main>
                   <Footer />
+                  <NewsletterPopup />
                 </div>
               )}
               <Toaster />
-              {!isAdminPage && <NewsletterPopup />}
             </WishlistProvider>
           </CartProvider>
         </ProductsProvider>
