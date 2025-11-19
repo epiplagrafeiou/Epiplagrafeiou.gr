@@ -1,3 +1,4 @@
+
 'use client';
 
 import { ProductCard } from '@/components/products/ProductCard';
@@ -16,30 +17,26 @@ const featuredCategories = [
 ]
 
 export default function ClientCategory({ slug }: { slug: string }) {
-  const { products, isLoaded, allCategories } = useProducts();
+  const { products, isLoaded } = useProducts();
   
-  const categoryPath = isLoaded ? allCategories.find(cat => {
-      const catSlug = cat.split(' > ').map(createSlug).join('/');
-      // Match if the slug is the same or if the category is a parent of the current slug
-      return slug.startsWith(catSlug);
-  }) : undefined;
-
   const filteredProducts = products.filter(product => {
     const productCategoryPath = product.category.split(' > ').map(createSlug).join('/');
     return productCategoryPath.startsWith(slug);
   });
   
-  if (isLoaded && filteredProducts.length === 0 && !categoryPath) {
+  // Simplified logic: If after loading there are no products for this slug, show not found.
+  // This is more robust than trying to pre-validate the category path.
+  if (isLoaded && filteredProducts.length === 0) {
     notFound();
   }
 
-  const categoryParts = categoryPath ? slug.split('/').map(s => s.replace(/-/g, ' ')) : slug.split('/').map(s => s.replace(/-/g, ' '));
+  const categoryParts = slug.split('/');
   let currentPath = '';
   const breadcrumbs = categoryParts.map((part, index) => {
-    currentPath += `${currentPath ? '/' : ''}${createSlug(part)}`;
+    currentPath += `${currentPath ? '/' : ''}${part}`;
     const isLast = index === categoryParts.length - 1;
     return {
-      name: part,
+      name: part.replace(/-/g, ' '),
       href: `/category/${currentPath}`,
       isLast: isLast
     };
