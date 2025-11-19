@@ -1,3 +1,4 @@
+
 import { Logo } from '@/components/icons/Logo';
 import { Mail, MapPin, Phone } from 'lucide-react';
 import Link from 'next/link';
@@ -18,13 +19,13 @@ export default function Footer() {
                 <Link href="/blog" className="text-sm text-muted-foreground hover:text-foreground">
                     Blog
                 </Link>
-                <Link href="/privacy-policy" className="text-sm text-muted-foreground hover:text-foreground">
+                <Link href="/privacy-policy" className="text-sm text-muted-foreground hover:text-foreground" prefetch={false}>
                     Πολιτική απορρήτου
                 </Link>
-                <Link href="/refund-policy" className="text-sm text-muted-foreground hover:text-foreground">
+                <Link href="/refund-policy" className="text-sm text-muted-foreground hover:text-foreground" prefetch={false}>
                     Πολιτική επιστροφής χρημάτων
                 </Link>
-                <Link href="/terms-of-service" className="text-sm text-muted-foreground hover:text-foreground">
+                <Link href="/terms-of-service" className="text-sm text-muted-foreground hover:text-foreground" prefetch={false}>
                     Όροι παροχής υπηρεσιών
                 </Link>
                 <Link href="/admin" className="text-sm text-muted-foreground hover:text-foreground">
