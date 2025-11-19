@@ -10,13 +10,13 @@ const parserMap: Record<string, (url: string) => Promise<XmlProduct[]>> = {
   "zougris": zougrisParser,
   "b2bportal": b2bportalParser,
   "megapap": megapapParser,
-  // Add other aliases here if needed
-  "zougrissa": zougrisParser, 
 };
 
 // Normalization function to create a clean key from the supplier name.
 function normalizeKey(name: string): string {
   if (!name) return '';
+  // This removes all non-alphanumeric characters and converts to lowercase.
+  // e.g., "Zougris S.A." becomes "zougrissa"
   return name.trim().toLowerCase().replace(/[^a-z0-9]/g, "");
 }
 
@@ -24,13 +24,13 @@ export async function syncProductsFromXml(
   url: string,
   supplierName: string
 ): Promise<XmlProduct[]> {
-
-  console.log("RAW SUPPLIER NAME RECEIVED:", supplierName);
+  // Use a fallback key to handle potential variations
   const key = normalizeKey(supplierName);
-  console.log("NORMALIZED KEY:", key);
-  console.log("AVAILABLE PARSER KEYS:", Object.keys(parserMap));
-
-  const parserFn = parserMap[key] || megapapParser; // Fallback to megapap if no exact match
+  
+  // Attempt to find the parser using the normalized key.
+  const parserFn = Object.keys(parserMap).find(parserKey => key.includes(parserKey)) 
+    ? parserMap[Object.keys(parserMap).find(parserKey => key.includes(parserKey))!]
+    : megapapParser; // Fallback to a default parser
 
   if (!parserFn) {
       throw new Error(
