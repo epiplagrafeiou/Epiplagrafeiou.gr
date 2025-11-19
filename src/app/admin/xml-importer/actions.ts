@@ -16,19 +16,22 @@ const parsers: { [key: string]: (url: string) => Promise<XmlProduct[]> } = {
 };
 
 export async function syncProductsFromXml(url: string, supplierName: string): Promise<XmlProduct[]> {
-  // Try to find a specific parser for the supplier name
   const normalizedSupplierName = supplierName.toLowerCase();
   
+  // Find a parser key that is included in the supplier's name.
   let parserKey = Object.keys(parsers).find(key => normalizedSupplierName.includes(key));
   
-  // A specific fallback for 'zougris.gr' if the supplier name is just the domain
-  if (!parserKey && url.includes('zougris.gr')) {
-      parserKey = 'zougris';
+  // If no key is found, check if the URL contains a key (e.g., 'zougris.gr').
+  // This is a robust fallback.
+  if (!parserKey) {
+    parserKey = Object.keys(parsers).find(key => url.includes(key));
   }
-  
-  const parserFn = parserKey ? parsers[parserKey] : b2bportalParser; // Fallback to b2bportal or a generic one
+
+  // Use the found parser, or default to a generic one if no specific parser is matched.
+  const parserFn = parserKey ? parsers[parserKey] : b2bportalParser;
 
   if (!parserFn) {
+    // This case should ideally not be reached if there's a fallback.
     throw new Error(`No suitable parser found for supplier: ${supplierName}`);
   }
 
@@ -37,10 +40,12 @@ export async function syncProductsFromXml(url: string, supplierName: string): Pr
   } catch (error) {
     console.error(`Error syncing products for ${supplierName} from XML:`, error);
     if (error instanceof Error) {
+      // Re-throw with a more user-friendly message, but include original error details.
       throw new Error(
         `Could not parse XML for ${supplierName}. Please check the URL and XML format. Details: ${error.message}`
       );
     }
+    // Handle non-Error objects being thrown.
     throw new Error('An unknown error occurred during XML sync.');
   }
 }
