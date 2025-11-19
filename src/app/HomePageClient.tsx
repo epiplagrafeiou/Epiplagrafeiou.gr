@@ -15,8 +15,6 @@ import {
   CarouselNext,
   CarouselPrevious,
 } from "@/components/ui/carousel";
-import { Card, CardContent } from '@/components/ui/card';
-
 
 const mainCategories = [
     { name: 'Καρέκλες', slug: 'karekles-grafeiou', Icon: Armchair },
@@ -34,12 +32,12 @@ export default function HomePageClient() {
 
   return (
     <div className="flex flex-col">
-       <Carousel className="w-full shadow-lg px-4 sm:px-6 lg:px-8 py-6 md:py-8" opts={{ loop: true }}>
+       <Carousel className="w-full" opts={{ loop: true }}>
         <CarouselContent>
           {heroSlides.length > 0 ? (
             heroSlides.map((slide) => (
               <CarouselItem key={slide.id}>
-                <div className="relative h-[250px] md:h-[350px] lg:h-[450px] rounded-lg overflow-hidden">
+                <div className="relative h-[250px] md:h-[350px] lg:h-[450px]">
                   <Image
                     src={slide.imageUrl}
                     alt={slide.description}
@@ -63,7 +61,7 @@ export default function HomePageClient() {
             ))
           ) : (
             <CarouselItem>
-              <div className="relative h-[250px] md:h-[350px] lg:h-[450px] bg-secondary flex items-center justify-center rounded-lg">
+              <div className="relative h-[250px] md:h-[350px] lg:h-[450px] bg-secondary flex items-center justify-center">
                 <p className="text-muted-foreground">Hero images are loading...</p>
               </div>
             </CarouselItem>
