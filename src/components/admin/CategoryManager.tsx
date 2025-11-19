@@ -210,7 +210,7 @@ export default function CategoryManager() {
         }
         const batch = writeBatch(firestore);
 
-        const flattenCategories = (categories: StoreCategory[], parentId: string | null = null, order = 0): Omit<StoreCategory, 'children'>[] => {
+        const flattenCategories = (categories: StoreCategory[], parentId: string | null = null): Omit<StoreCategory, 'children'>[] => {
             let flatList: Omit<StoreCategory, 'children'>[] = [];
             categories.forEach((cat, index) => {
                 const { children, ...rest } = cat;
@@ -264,6 +264,18 @@ export default function CategoryManager() {
         }
         return undefined;
     }, []);
+    
+    const findParentCategory = useCallback((childId: string, categories: StoreCategory[]): StoreCategory | undefined => {
+        for (const category of categories) {
+            if (category.children.some(child => child.id === childId)) {
+                return category;
+            }
+            const parent = findParentCategory(childId, category.children);
+            if (parent) return parent;
+        }
+        return undefined;
+    }, []);
+
 
     const uncategorized = useMemo(() => {
         const assignedRaw = new Set<string>();
@@ -373,33 +385,33 @@ export default function CategoryManager() {
     
         const activeIsRaw = active.data.current?.type === 'raw-category';
         const activeIsStore = active.data.current?.type === 'store-category';
-
-        if(over.data.current?.type === 'merge-droppable') {
+        
+        if (over.data.current?.type === 'merge-droppable') {
             const targetCategoryId = over.data.current.categoryId;
-            if(activeIsRaw) {
+            if (activeIsRaw) {
                 const rawCategoryName = active.data.current.category;
                 handleMerge(targetCategoryId, { name: rawCategoryName, rawCategories: [rawCategoryName] });
             } else if (activeIsStore) {
                 const sourceCategory = active.data.current.category;
-                if(targetCategoryId !== sourceCategory.id) { // Prevent merging a category with itself
+                if (targetCategoryId !== sourceCategory.id) {
                     handleMerge(targetCategoryId, sourceCategory);
                 }
             }
             return;
         }
-        
+
         if (activeIsRaw) {
-             const overIsDroppable = over.data.current?.type === 'store-category-droppable';
-             if (overIsDroppable) {
+            const overIsDroppable = over.data.current?.type === 'store-category-droppable';
+            if (overIsDroppable) {
                 const rawCategory = active.data.current?.category as string;
                 const storeCategoryId = over.data.current?.categoryId as string;
                 
-                 withUpdatedCategories(prev => {
+                withUpdatedCategories(prev => {
                     const addRawToTarget = (categories: StoreCategory[]): StoreCategory[] => {
                         return categories.map(sc => {
                             if (sc.id === storeCategoryId) {
                                 if (!sc.rawCategories.includes(rawCategory)) {
-                                     return { ...sc, rawCategories: [...sc.rawCategories, rawCategory] };
+                                    return { ...sc, rawCategories: [...sc.rawCategories, rawCategory] };
                                 }
                             }
                             if (sc.children?.length > 0) {
@@ -410,57 +422,79 @@ export default function CategoryManager() {
                     }
                     return addRawToTarget(prev);
                 });
-             }
-             return;
+            }
+            return;
         }
 
-        const overIsStore = over.data.current?.type === 'store-category' || over.data.current?.type === 'store-category-droppable';
-        
-        if (active.id !== over.id && activeIsStore && overIsStore) {
-             withUpdatedCategories(categories => {
-                let activeCategory: StoreCategory | undefined;
-                let parentOfActive: StoreCategory | undefined;
-
-                const findAndRemove = (cats: StoreCategory[], parent?: StoreCategory): StoreCategory[] => {
-                    return cats.filter(c => {
-                        if (c.id === active.id) {
-                            activeCategory = c;
-                            parentOfActive = parent;
-                            return false;
-                        }
-                        c.children = findAndRemove(c.children, c);
-                        return true;
-                    })
-                }
-                const newTree = findAndRemove(categories);
-                if (!activeCategory) return categories;
-
+        if (active.id !== over.id && activeIsStore) {
+            withUpdatedCategories(categories => {
+                const activeId = active.id.toString();
                 const overId = over.id.toString();
-                
-                const findAndInsert = (cats: StoreCategory[], newParentId: string | null): boolean => {
+        
+                let activeCategory: StoreCategory | undefined;
+        
+                // Find and remove the active category from its original position
+                const removeCategory = (cats: StoreCategory[]): StoreCategory[] => {
                     for (let i = 0; i < cats.length; i++) {
-                        const cat = cats[i];
-                        if (cat.id === overId) { // Dropped ON another category item
-                            if (over.data.current?.isContainer) { // Dropped inside the container part
-                                 cat.children.unshift({ ...activeCategory, parentId: cat.id });
-                            } else { // Dropped on the item itself, insert before or after
-                                const newIndex = i;
-                                cats.splice(newIndex, 0, { ...activeCategory, parentId: newParentId });
-                            }
-                            return true;
+                        if (cats[i].id === activeId) {
+                            activeCategory = cats[i];
+                            cats.splice(i, 1);
+                            return cats;
                         }
-                        if (findAndInsert(cat.children, cat.id)) return true;
+                        if (cats[i].children) {
+                            cats[i].children = removeCategory(cats[i].children);
+                        }
                     }
-                     if (overId === "root" || over.data.current?.root) {
-                        cats.push({ ...activeCategory, parentId: null });
-                        return true;
+                    return cats;
+                };
+        
+                const newCategories = removeCategory(JSON.parse(JSON.stringify(categories))); // Deep copy to avoid mutation issues
+        
+                if (!activeCategory) return categories; // Should not happen
+        
+                // Find where to insert the active category
+                const overIsContainer = over.data.current?.isContainer;
+                
+                if (overIsContainer) { // Dropped inside another category
+                    const findAndInsertAsChild = (cats: StoreCategory[]): boolean => {
+                        for (let cat of cats) {
+                            if (cat.id === overId) {
+                                cat.children.unshift({ ...activeCategory!, parentId: cat.id });
+                                return true;
+                            }
+                            if (cat.children && findAndInsertAsChild(cat.children)) {
+                                return true;
+                            }
+                        }
+                        return false;
+                    };
+                    findAndInsertAsChild(newCategories);
+                } else { // Dropped on another category item (reordering)
+                    let inserted = false;
+                    const findAndInsertSibling = (cats: StoreCategory[]): boolean => {
+                        for (let i = 0; i < cats.length; i++) {
+                            if (cats[i].id === overId) {
+                                const parent = findParentCategory(overId, categories); // find in original tree
+                                activeCategory!.parentId = parent ? parent.id : null;
+                                cats.splice(i, 0, activeCategory!);
+                                inserted = true;
+                                return true;
+                            }
+                            if (cats[i].children && findAndInsertSibling(cats[i].children)) {
+                                return true;
+                            }
+                        }
+                        return false;
+                    };
+                    findAndInsertSibling(newCategories);
+                    
+                    if(!inserted) { // Dropped at root level
+                         activeCategory!.parentId = null;
+                         newCategories.push(activeCategory!);
                     }
-                    return false;
                 }
-                
-                findAndInsert(newTree, null);
-                
-                return newTree;
+        
+                return newCategories;
             });
         }
     };
