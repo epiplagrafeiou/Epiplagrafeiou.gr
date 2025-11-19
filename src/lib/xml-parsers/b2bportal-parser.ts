@@ -6,7 +6,7 @@ import type { XmlProduct } from './megapap-parser';
 import { mapCategory } from '../category-mapper';
 
 export async function b2bportalParser(url: string): Promise<XmlProduct[]> {
-  console.log("Running B2B Portal parser"); // Defensive logging
+  console.log("▶ Running B2B Portal parser");
   const response = await fetch(url, { cache: 'no-store' });
   if (!response.ok) {
     throw new Error(`Failed to fetch XML: ${response.statusText}`);

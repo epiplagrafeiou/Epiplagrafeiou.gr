@@ -17,7 +17,7 @@ export interface XmlProduct {
 }
 
 export async function megapapParser(url: string): Promise<XmlProduct[]> {
-    console.log("Running Megapap parser"); // Defensive logging
+    console.log("▶ Running Megapap parser");
     const response = await fetch(url, { cache: 'no-store' });
     if (!response.ok) {
       throw new Error(`Failed to fetch XML: ${response.statusText}`);
