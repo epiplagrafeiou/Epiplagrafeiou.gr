@@ -65,8 +65,6 @@ export async function zougrisParser(url: string): Promise<XmlProduct[]> {
         mainImage: images[0] || null,
         images: images,
         stock: parseInt(p.Quantity, 10) || 0,
-        // You can add the extra fields to the XmlProduct interface if needed
-        // For now, we map to the existing structure.
     };
   });
 }
