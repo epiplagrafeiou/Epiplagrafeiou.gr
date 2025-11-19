@@ -4,50 +4,47 @@ import { megapapParser, type XmlProduct } from '@/lib/xml-parsers/megapap-parser
 import { b2bportalParser } from '@/lib/xml-parsers/b2bportal-parser';
 import { zougrisParser } from '@/lib/xml-parsers/zougris-parser';
 
-// Map supplier ID → parser
+// Map supplier ID/aliases → parser
+// This allows for flexible matching of supplier names.
 const parserMap: Record<string, (url: string) => Promise<XmlProduct[]>> = {
-  zougris: zougrisParser,
-  'b2b portal': b2bportalParser, // Kept the space for the existing key
-  megapap: megapapParser,
+  // Aliases for Zougris
+  "zougris": zougrisParser,
+  "zougrisgr": zougrisParser,
+
+  // Aliases for B2B Portal
+  "b2bportal": b2bportalParser,
+  "b2b": b2bportalParser,
+
+  // Alias for Megapap (also the fallback)
+  "megapap": megapapParser,
 };
 
 export async function syncProductsFromXml(
   url: string,
   supplierName: string
 ): Promise<XmlProduct[]> {
+  // Bullet-proof key normalization: lowercase, remove all spaces and special characters.
+  // This makes matching robust against variations like "Zougris.gr", "Zougris AE", etc.
+  const key = supplierName
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, "");
 
-  // ALWAYS work with clean IDs, not fuzzy matching
-  // First, try a direct match
-  let key = supplierName.trim().toLowerCase();
-  let parserFn = parserMap[key];
+  const parserFn = parserMap[key] || megapapParser; // Fallback to megapap if no key matches
 
-  // If direct match fails, try replacing spaces to match keys like "b2b portal"
-  if (!parserFn) {
-      key = key.replace(/\s+/g, ' ');
-      parserFn = parserMap[key];
-  }
-
-  if (!parserFn) {
-    // If still no match, fallback to a version without spaces, e.g. "b2bportal"
-    key = key.replace(/\s+/g, '');
-    parserFn = parserMap[key];
-  }
+  console.log(`DEBUG: Original Supplier Name: "${supplierName}", Normalized Key: "${key}", Parser Selected: ${parserFn.name}`);
   
-  // Final check before defaulting
-  if (!parserFn) {
-      // Fallback to megapap if no specific parser is found
-      console.warn(`No specific parser found for supplier "${supplierName}". Defaulting to megapap parser.`);
-      parserFn = megapapParser;
+  if (!parserMap[key]) {
+      console.warn(`No specific parser found for supplier key "${key}". Defaulting to megapapParser.`);
   }
-
 
   try {
-    console.log(`Using parser for key: ${key} for supplier: "${supplierName}"`);
     return await parserFn(url);
   } catch (error: any) {
-    console.error(`❌ XML sync failed for "${supplierName}"`, error);
+    console.error(`❌ XML sync failed for "${supplierName}" with parser ${parserFn.name}`, error);
     throw new Error(
       `Could not parse XML for supplier "${supplierName}". 
+       Parser Used: ${parserFn.name}. 
        Details: ${error?.message || 'Unknown error.'}`
     );
   }
