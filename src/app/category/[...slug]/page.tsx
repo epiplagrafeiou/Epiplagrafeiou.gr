@@ -1,14 +1,19 @@
 
 'use client';
 
+import { useMemo } from 'react';
+import { useParams, notFound } from 'next/navigation';
+import { useCollection } from '@/firebase/firestore/use-collection';
+import { useFirestore, useMemoFirebase } from '@/firebase';
+import { collection } from 'firebase/firestore';
 import { ProductCard } from '@/components/products/ProductCard';
 import { useProducts, type Product } from '@/lib/products-context';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { useParams, notFound } from 'next/navigation';
 import { createSlug, normalizeCategory } from '@/lib/utils';
 import Link from 'next/link';
+import type { StoreCategory } from '@/components/admin/CategoryManager';
 
 const featuredCategories = [
     { name: 'Γραφεία', href: '/category/grafeio/grafeia' },
@@ -19,8 +24,71 @@ const featuredCategories = [
 export default function CategoryPage() {
   const { products, isLoaded } = useProducts();
   const params = useParams();
+  const firestore = useFirestore();
+
+  const categoriesQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return collection(firestore, 'categories');
+  }, [firestore]);
+  const { data: fetchedCategories, isLoading: areCategoriesLoading } = useCollection<Omit<StoreCategory, 'children'>>(categoriesQuery);
+
+  const categoryTree = useMemo(() => {
+    if (!fetchedCategories) return [];
+
+    const categoriesById: Record<string, StoreCategory> = {};
+    const rootCategories: StoreCategory[] = [];
+
+    fetchedCategories.forEach(cat => {
+        categoriesById[cat.id] = { ...cat, children: [] };
+    });
+
+    fetchedCategories.forEach(cat => {
+        if (cat.parentId && categoriesById[cat.parentId]) {
+            categoriesById[cat.parentId].children.push(categoriesById[cat.id]);
+        } else {
+            rootCategories.push(categoriesById[cat.id]);
+        }
+    });
+    
+    const sortRecursive = (categories: StoreCategory[]) => {
+        categories.sort((a,b) => a.order - b.order);
+        categories.forEach(c => sortRecursive(c.children));
+    }
+    
+    sortRecursive(rootCategories);
+    return rootCategories;
+  }, [fetchedCategories]);
   
   const slugPath = useMemo(() => Array.isArray(params.slug) ? params.slug.join('/') : (params.slug || ''), [params.slug]);
+
+  const { currentCategory, breadcrumbs } = useMemo(() => {
+    if (categoryTree.length === 0) return { currentCategory: null, breadcrumbs: [] };
+
+    const slugParts = slugPath.split('/');
+    let category: StoreCategory | null = null;
+    let currentChildren = categoryTree;
+    let breadcrumbs: { name: string; href: string; isLast: boolean }[] = [];
+    let currentHref = '/category';
+
+    for (const part of slugParts) {
+      const found = currentChildren.find(c => createSlug(c.name) === part);
+      if (found) {
+        category = found;
+        currentHref += `/${part}`;
+        breadcrumbs.push({ name: found.name, href: currentHref, isLast: false });
+        currentChildren = found.children;
+      } else {
+        category = null;
+        break;
+      }
+    }
+    
+    if (breadcrumbs.length > 0) {
+        breadcrumbs[breadcrumbs.length - 1].isLast = true;
+    }
+
+    return { currentCategory: category, breadcrumbs };
+  }, [slugPath, categoryTree]);
 
   const filteredProducts = useMemo(() => {
     if (!isLoaded) return [];
@@ -30,47 +98,14 @@ export default function CategoryPage() {
     });
   }, [isLoaded, products, slugPath]);
   
-  const categoryParts = useMemo(() => slugPath.split('/').map(s => s.replace(/-/g, ' ')), [slugPath]);
+  if (isLoaded && !areCategoriesLoading && !currentCategory) {
+    notFound();
+  }
   
-  let currentPath = '';
-  const breadcrumbs = categoryParts.map((part, index) => {
-    currentPath += `${currentPath ? '/' : ''}${createSlug(part)}`;
-    const isLast = index === categoryParts.length - 1;
-    return {
-      name: part,
-      href: `/category/${currentPath}`,
-      isLast: isLast
-    };
-  });
-
-  const breadcrumbSchema = {
-    '@context': 'https://schema.org',
-    '@type': 'BreadcrumbList',
-    itemListElement: [
-        {
-            '@type': 'ListItem',
-            position: 1,
-            name: 'Home',
-            item: typeof window !== 'undefined' ? window.location.origin : '',
-        },
-        {
-            '@type': 'ListItem',
-            position: 2,
-            name: 'Products',
-            item: typeof window !== 'undefined' ? `${window.location.origin}/products` : '',
-        },
-        ...breadcrumbs.map((crumb, index) => ({
-            '@type': 'ListItem',
-            position: index + 3,
-            name: crumb.name,
-            item: typeof window !== 'undefined' ? `${window.location.origin}${crumb.href}` : '',
-        }))
-    ],
-  };
+  const pageTitle = currentCategory?.name || slugPath.split('/').pop()?.replace(/-/g, ' ') || 'Products';
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }} />
       <div className="mb-6 flex items-center space-x-2 text-sm text-muted-foreground">
         <Link href="/" className="hover:text-foreground">Home</Link>
         <span>/</span>
@@ -79,15 +114,30 @@ export default function CategoryPage() {
           <span key={index} className="flex items-center space-x-2">
             <span>/</span>
             {crumb.isLast ? (
-              <span className="text-foreground capitalize">{crumb.name.replace(/-/g, ' ')}</span>
+              <span className="text-foreground capitalize">{crumb.name}</span>
             ) : (
-              <Link href={crumb.href} className="hover:text-foreground capitalize">{crumb.name.replace(/-/g, ' ')}</Link>
+              <Link href={crumb.href} className="hover:text-foreground capitalize">{crumb.name}</Link>
             )}
           </span>
         ))}
       </div>
 
-      <h1 className="mb-8 text-3xl font-bold capitalize">{categoryParts[categoryParts.length - 1]?.replace(/-/g, ' ') || 'Products'}</h1>
+      <h1 className="mb-8 text-3xl font-bold capitalize">{pageTitle}</h1>
+      
+      {currentCategory && currentCategory.children.length > 0 && (
+        <section className="mb-12">
+            <div className="flex flex-wrap items-center gap-4">
+            {currentCategory.children.map(subCat => (
+                <Button asChild variant="outline" key={subCat.id}>
+                    <Link href={`${breadcrumbs[breadcrumbs.length - 1].href}/${createSlug(subCat.name)}`}>
+                        {subCat.name}
+                    </Link>
+                </Button>
+            ))}
+            </div>
+        </section>
+      )}
+
 
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
         {!isLoaded ? (
