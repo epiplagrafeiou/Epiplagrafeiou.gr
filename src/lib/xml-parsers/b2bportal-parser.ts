@@ -11,7 +11,7 @@ function cleanXml(xml: string): string {
 }
 
 export async function b2bportalParser(url: string): Promise<XmlProduct[]> {
-  console.log("▶ Running B2B Portal parser (v4 - Final Corrected Version)");
+  console.log("▶ Running B2B Portal parser (v5 - Final Corrected Version)");
 
   const response = await fetch(url, { cache: 'no-store' });
   if (!response.ok) {
@@ -22,8 +22,7 @@ export async function b2bportalParser(url: string): Promise<XmlProduct[]> {
   const cleanText = cleanXml(xmlText);
 
   const parser = new XMLParser({
-    ignoreAttributes: false,
-    attributeNamePrefix: '',
+    ignoreAttributes: true,
     cdataPropName: "__cdata",
     textNodeName: "_text",
     trimValues: true,
@@ -61,8 +60,8 @@ export async function b2bportalParser(url: string): Promise<XmlProduct[]> {
     const category = getText(p.category);
     const rawCategory = [subcategory, category].filter(Boolean).join(" > ");
     
-    // Correctly determine stock status
-    const stock = Number(p.availability) === 1 ? 10 : 0;
+    // Correctly determine stock status. Use the availability value directly.
+    const stock = Number(p.availability) === 1 ? 1 : 0;
     
     // Correctly parse prices, with fallback
     const retailPrice = parseFloat(String(p.retail_price || '0').replace(',', '.'));
@@ -74,7 +73,7 @@ export async function b2bportalParser(url: string): Promise<XmlProduct[]> {
     const mainImage = allImages[0] || null;
 
     return {
-      id: getText(p.code) || `b2b-${p.id}`,
+      id: getText(p.code) || `b2b-${Math.random()}`,
       name: getText(p.name) || "Unnamed Product",
       retailPrice: retailPrice.toString(),
       webOfferPrice: finalPrice.toString(),
@@ -88,3 +87,4 @@ export async function b2bportalParser(url: string): Promise<XmlProduct[]> {
 
   return products;
 }
+
