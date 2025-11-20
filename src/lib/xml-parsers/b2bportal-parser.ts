@@ -10,8 +10,22 @@ function cleanXml(xml: string): string {
   return xml.replace(/<script[\s\S]*?<\/script>/gi, "");
 }
 
+// UNIVERSAL XML TEXT EXTRACTOR
+function getText(node: any): string {
+  if (!node) return "";
+  if (typeof node === "string" || typeof node === "number") {
+    return String(node).trim();
+  }
+  if (Array.isArray(node)) {
+    return getText(node[0]);
+  }
+  // fast-xml-parser can nest text in these properties
+  return (node.__cdata || node._text || node || "").trim();
+}
+
+
 export async function b2bportalParser(url: string): Promise<XmlProduct[]> {
-  console.log("▶ Running B2B Portal parser (v6 - Final Corrected Version)");
+  console.log("▶ Running B2B Portal parser (v7 - Final Corrected Version)");
 
   const response = await fetch(url, { cache: 'no-store' });
   if (!response.ok) {
@@ -45,25 +59,22 @@ export async function b2bportalParser(url: string): Promise<XmlProduct[]> {
   }
   
   const products: XmlProduct[] = productArray.map((p: any) => {
-    // Helper to safely extract text from CDATA or plain text nodes
-    const getText = (node: any): string => {
-        if (!node) return "";
-        if (typeof node === 'string' || typeof node === 'number') return String(node).trim();
-        return (node.__cdata || node._text || "").trim();
-    }
     
-    // Combine subcategory and category for a full path
+    // Correctly combine subcategory and category
     const subcategory = getText(p.subcategory);
     const category = getText(p.category);
     const rawCategory = [subcategory, category].filter(Boolean).join(" > ");
     
+    // Correct stock logic: '1' means in stock, otherwise out of stock.
     const stock = Number(p.availability) === 1 ? 1 : 0;
     
-    const retailPrice = parseFloat(String(p.retail_price || '0').replace(',', '.'));
-    const wholesalePrice = parseFloat(String(p.price || '0').replace(',', '.'));
+    // Correct price logic with fallback
+    const retailPrice = parseFloat(String(getText(p.retail_price) || '0').replace(',', '.'));
+    const wholesalePrice = parseFloat(String(getText(p.price) || '0').replace(',', '.'));
     const finalPrice = retailPrice > 0 ? retailPrice : wholesalePrice;
 
-    const allImages = [p.image, ...(Array.isArray(p.gallery?.image) ? p.gallery.image : p.gallery?.image ? [p.gallery.image] : [])].filter(Boolean);
+    // Image handling
+    const allImages = [p.image, ...(Array.isArray(p.gallery?.image) ? p.gallery.image : p.gallery?.image ? [p.gallery.image] : [])].filter(Boolean).map(getText);
     const mainImage = allImages[0] || null;
 
     return {
