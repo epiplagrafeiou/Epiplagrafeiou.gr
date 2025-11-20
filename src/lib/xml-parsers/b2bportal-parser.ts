@@ -15,8 +15,7 @@ export async function b2bportalParser(url: string): Promise<XmlProduct[]> {
   const xmlText = await response.text();
 
   const parser = new XMLParser({
-    ignoreAttributes: false,
-    attributeNamePrefix: '',
+    ignoreAttributes: true,
     isArray: (name, jpath, isLeafNode, isAttribute) => {
       return jpath === 'b2bportal.products.product' || jpath.endsWith('.gallery.image');
     },
@@ -25,6 +24,14 @@ export async function b2bportalParser(url: string): Promise<XmlProduct[]> {
     trimValues: true,
     parseNodeValue: true,
     parseAttributeValue: true,
+    removeNSPrefix: true,
+    tagValueProcessor: (tagName, tagValue, jPath, isLeafNode, isAttribute) => {
+        // This processor helps to unwrap CDATA sections automatically.
+        if (typeof tagValue === 'string' && tagValue.startsWith('<![CDATA[')) {
+            return tagValue.substring(9, tagValue.length - 3).trim();
+        }
+        return tagValue;
+    }
   });
 
   const parsed = parser.parse(xmlText);
@@ -54,8 +61,11 @@ export async function b2bportalParser(url: string): Promise<XmlProduct[]> {
 
     const mainImage = allImages[0] || null;
 
-    const category = p.category?.__cdata || p.category || '';
-    const subcategory = p.subcategory?.__cdata || p.subcategory || '';
+    // Correctly extract category and subcategory, preferring the more general as the parent
+    const subcategory = p.subcategory || ''; // e.g., Οικιακές Συσκευές
+    const category = p.category || '';      // e.g., Αυτόνομες Εστίες
+    
+    // Create a hierarchical string: Parent > Child
     const rawCategory = [subcategory, category].filter(Boolean).join(' > ');
     
     const stock = Number(p.availability) > 0 ? Number(p.availability) : 0;
@@ -66,11 +76,11 @@ export async function b2bportalParser(url: string): Promise<XmlProduct[]> {
     const webOfferPrice = retailPrice > 0 ? retailPrice : wholesalePrice;
 
     return {
-      id: p.id?.toString() || p.code?.toString() || `b2b-id-${Math.random()}`,
-      name: p.name?.__cdata || p.name || 'No Name',
+      id: p.code?.toString() || p.sku?.toString() || `b2b-id-${Math.random()}`,
+      name: p.name || 'No Name',
       retailPrice: retailPrice.toString(),
       webOfferPrice: webOfferPrice.toString(),
-      description: p.descr?.__cdata || p.descr || '',
+      description: p.descr || '',
       category: mapCategory(rawCategory),
       mainImage: mainImage,
       images: allImages,
