@@ -60,7 +60,8 @@ export async function b2bportalParser(url: string): Promise<XmlProduct[]> {
 
     const rawCategory = [p.category_name, p.subcategory_name].filter(Boolean).join(' > ');
     
-    const stock = p.availability?.toLowerCase() === 'ναι' ? 10 : 0;
+    // Correctly handle numeric availability
+    const stock = Number(p.availability) > 0 ? 10 : 0;
     
     const finalWebOfferPrice = parseFloat(p.price_vat?.toString().replace(',', '.') || '0');
 
