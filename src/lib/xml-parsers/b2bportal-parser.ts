@@ -11,7 +11,7 @@ function cleanXml(xml: string): string {
 }
 
 export async function b2bportalParser(url: string): Promise<XmlProduct[]> {
-  console.log("▶ Running B2B Portal parser (v5 - Final Corrected Version)");
+  console.log("▶ Running B2B Portal parser (v6 - Final Corrected Version)");
 
   const response = await fetch(url, { cache: 'no-store' });
   if (!response.ok) {
@@ -29,10 +29,7 @@ export async function b2bportalParser(url: string): Promise<XmlProduct[]> {
     parseNodeValue: true,
     parseAttributeValue: true,
     isArray: (name, jpath, isLeafNode, isAttribute) => {
-      if (jpath === "b2bportal.products.product" || jpath.endsWith(".gallery.image")) {
-        return true;
-      }
-      return false;
+      return jpath === 'b2bportal.products.product' || jpath.endsWith('.gallery.image');
     },
   });
   
@@ -60,15 +57,12 @@ export async function b2bportalParser(url: string): Promise<XmlProduct[]> {
     const category = getText(p.category);
     const rawCategory = [subcategory, category].filter(Boolean).join(" > ");
     
-    // Correctly determine stock status. Use the availability value directly.
     const stock = Number(p.availability) === 1 ? 1 : 0;
     
-    // Correctly parse prices, with fallback
     const retailPrice = parseFloat(String(p.retail_price || '0').replace(',', '.'));
     const wholesalePrice = parseFloat(String(p.price || '0').replace(',', '.'));
     const finalPrice = retailPrice > 0 ? retailPrice : wholesalePrice;
 
-    // Collect all images
     const allImages = [p.image, ...(Array.isArray(p.gallery?.image) ? p.gallery.image : p.gallery?.image ? [p.gallery.image] : [])].filter(Boolean);
     const mainImage = allImages[0] || null;
 
@@ -87,4 +81,3 @@ export async function b2bportalParser(url: string): Promise<XmlProduct[]> {
 
   return products;
 }
-

@@ -8,7 +8,7 @@ export interface UnifiedCategory {
 function normalize(str: string): string {
   if (!str) return "";
   return str.trim().toLowerCase()
-    .replace(/[ά]/g, 'α')
+    .replace(/[ά]/g, 'a')
     .replace(/[έ]/g, 'ε')
     .replace(/[ή]/g, 'η')
     .replace(/[ίϊΐ]/g, 'ι')
