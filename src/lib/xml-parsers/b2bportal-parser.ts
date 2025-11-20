@@ -5,10 +5,15 @@ import { XMLParser } from 'fast-xml-parser';
 import type { XmlProduct } from './megapap-parser';
 import { mapCategory } from '../category-mapper';
 
+// Utility: strip out unwanted <script> tags
+function cleanXml(xml: string): string {
+  return xml.replace(/<script[\s\S]*?<\/script>/gi, "");
+}
+
 // Helper function to safely extract text from a node that might be a string or a CDATA object
 function getText(node: any): string {
-    if (typeof node === 'string') {
-        return node;
+    if (typeof node === 'string' || typeof node === 'number') {
+        return String(node);
     }
     if (node && typeof node === 'object') {
         // fast-xml-parser can produce __cdata or _text depending on configuration and input
@@ -26,6 +31,7 @@ export async function b2bportalParser(url: string): Promise<XmlProduct[]> {
   }
 
   const xmlText = await response.text();
+  const cleanXmlText = cleanXml(xmlText);
 
   const parser = new XMLParser({
     ignoreAttributes: true,
@@ -40,7 +46,7 @@ export async function b2bportalParser(url: string): Promise<XmlProduct[]> {
     removeNSPrefix: true,
   });
 
-  const parsed = parser.parse(xmlText);
+  const parsed = parser.parse(cleanXmlText);
   const productArray = parsed.b2bportal?.products?.product;
 
   if (!productArray || !Array.isArray(productArray)) {

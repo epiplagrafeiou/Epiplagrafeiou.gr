@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import {
   Card,
   CardContent,
@@ -40,6 +40,7 @@ export default function XmlImporterPage() {
   const [syncedProducts, setSyncedProducts] = useState<XmlProduct[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [lastSyncCategories, setLastSyncCategories] = useState<Record<string, string[]>>({});
+  const [selectedCategories, setSelectedCategories] = useState<Set<string>>(new Set());
 
   const categoriesQuery = useMemoFirebase(() => {
     if (!firestore) return null;
@@ -69,18 +70,16 @@ export default function XmlImporterPage() {
     setLastSyncCategories(loadedCategories);
   }, [suppliers]);
 
-
-  const [selectedCategories, setSelectedCategories] = useState<Set<string>>(new Set());
-
   const handleSync = async (supplierId: string, url: string, name: string) => {
     setLoadingSupplier(supplierId);
     setActiveSupplierId(supplierId);
     setError(null);
-    setSyncedProducts([]);
+    setSyncedProducts([]); // Clear previous products immediately
+    setSelectedCategories(new Set()); // Clear selected categories
     try {
       const products = await syncProductsFromXml(url, name);
       setSyncedProducts(products);
-      setSelectedCategories(new Set(['all']));
+      setSelectedCategories(new Set(['all'])); // Select all by default for the new sync
     } catch (e: any) {
       setError(e.message);
     } finally {
@@ -236,6 +235,7 @@ export default function XmlImporterPage() {
   };
 
   const filteredProducts = useMemo(() => {
+    if (!syncedProducts.length) return [];
     if (selectedCategories.has('all') || selectedCategories.size === 0 || (allCategories.length > 0 && selectedCategories.size === allCategories.length)) {
       return syncedProducts;
     }
