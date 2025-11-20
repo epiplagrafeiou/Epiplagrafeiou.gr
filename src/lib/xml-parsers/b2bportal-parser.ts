@@ -5,108 +5,126 @@ import { XMLParser } from 'fast-xml-parser';
 import type { XmlProduct } from './megapap-parser';
 import { mapCategory } from '../category-mapper';
 
-// Utility: strip out unwanted <script> tags
+// Utility: remove script tags
 function cleanXml(xml: string): string {
   return xml.replace(/<script[\s\S]*?<\/script>/gi, "");
 }
 
-// Helper function to safely extract text from a node that might be a string, a CDATA object, or an array.
-// This makes the parser resilient to variations in the XML structure.
+// UNIVERSAL XML TEXT EXTRACTOR
 function getText(node: any): string {
-    if (!node) {
-        return "";
-    }
-    if (Array.isArray(node)) {
-        // If it's an array, recursively call getText on the first element.
-        return getText(node[0]);
-    }
-    if (typeof node === 'object') {
-        // fast-xml-parser uses '__cdata' or '_text' for text content within tags.
-        // We check for both to be safe.
-        return node.__cdata || node._text || '';
-    }
-    // If it's already a string or number, convert it to a string.
+  if (!node) return "";
+
+  if (typeof node === "string" || typeof node === "number") {
     return String(node);
+  }
+
+  if (Array.isArray(node)) {
+    return getText(node[0]);
+  }
+
+  // fast-xml-parser uses these
+  return (
+    node.__cdata ||
+    node._text ||
+    node._ ||
+    ""
+  );
 }
 
 export async function b2bportalParser(url: string): Promise<XmlProduct[]> {
   console.log("▶ Running B2B Portal parser");
-  const response = await fetch(url, { cache: 'no-store' });
+
+  const response = await fetch(url, { cache: "no-store" });
   if (!response.ok) {
     throw new Error(`Failed to fetch XML: ${response.statusText}`);
   }
 
   const xmlText = await response.text();
-  const cleanXmlText = cleanXml(xmlText);
+  const cleanText = cleanXml(xmlText);
 
   const parser = new XMLParser({
-    ignoreAttributes: true, // Switched to true as we are not using attributes like `id` from the product tag.
-    isArray: (name, jpath, isLeafNode, isAttribute) => {
-      // Ensure products and gallery images are always arrays.
-      return jpath === 'b2bportal.products.product' || jpath.endsWith('.gallery.image');
-    },
-    cdataPropName: '__cdata', // The property name for CDATA content.
-    textNodeName: '_text', // The property name for regular text content.
+    ignoreAttributes: false,
+    cdataPropName: "__cdata",
+    textNodeName: "_text",
     trimValues: true,
-    parseNodeValue: true,
-    parseAttributeValue: true,
-    removeNSPrefix: true,
+    isArray: (name, jpath) => {
+      if (jpath === "b2bportal.products.product") return true;
+      if (jpath.endsWith(".gallery.image")) return true;
+      if (name === "category") return true;
+      if (name === "subcategory") return true;
+      return false;
+    },
   });
 
-  const parsed = parser.parse(cleanXmlText);
-  const productArray = parsed.b2bportal?.products?.product;
+  const parsed = parser.parse(cleanText);
+
+  console.log("🔍 Parsed B2B ROOT KEYS:", Object.keys(parsed));
+
+  const productArray =
+    parsed.b2bportal?.products?.product ||
+    parsed.mywebstore?.products?.product; // fallback for alt feeds
 
   if (!productArray || !Array.isArray(productArray)) {
-    console.error('B2B Portal Parser: Parsed product data is not an array or is missing at b2bportal.products.product:', productArray);
+    console.error("❌ Product array not found. Parsed structure:", parsed);
     throw new Error(
-      'The XML feed does not have the expected structure for b2bportal format. Could not find a product array at `b2bportal.products.product`.'
+      "The XML feed does not contain a valid product array at b2bportal.products.product"
     );
   }
 
+  // 🔥 Debug ONE product to see final XML format
+  console.log(
+    "🧪 Example Parsed Product:",
+    JSON.stringify(productArray[0], null, 2)
+  );
+
   const products: XmlProduct[] = productArray.map((p: any) => {
-    // Use the robust `getText` helper for all fields
+    // IMAGES
     const mainImg = getText(p.image);
-    let allImages: string[] = [];
-    if (mainImg) {
-        allImages.push(mainImg);
-    }
-    
-    if (p.gallery && p.gallery.image) {
-      const galleryImages = (Array.isArray(p.gallery.image) ? p.gallery.image : [p.gallery.image])
-        .map(getText) // Use helper for gallery images as well
-        .filter(Boolean);
-      allImages.push(...galleryImages);
-    }
-    
-    allImages = Array.from(new Set(allImages)); 
+    const gallery = Array.isArray(p.gallery?.image)
+      ? p.gallery.image.map(getText)
+      : p.gallery?.image
+      ? [getText(p.gallery.image)]
+      : [];
+
+    const allImages = Array.from(new Set([mainImg, ...gallery].filter(Boolean)));
     const mainImage = allImages[0] || null;
 
-    const subcategory = getText(p.subcategory);
-    const category = getText(p.category);
-    const rawCategory = [subcategory, category].filter(Boolean).join(' > ');
-    
-    const availabilityText = getText(p.availability);
-    const stock = Number(availabilityText) > 0 ? Number(availabilityText) : 0;
-    
-    const retailPriceText = getText(p.retail_price);
-    const wholesalePriceText = getText(p.price);
+    // CATEGORY FIX: join ALL supplier categories
+    const supplierCategories = [
+      ...(p.subcategory || []),
+      ...(p.category || []),
+    ].map((c: any) => getText(c));
 
-    const retailPrice = parseFloat(retailPriceText.replace(',', '.') || '0');
-    const wholesalePrice = parseFloat(wholesalePriceText.replace(',', '.') || '0');
-    
-    // Use retail price if available, otherwise fall back to wholesale.
-    const webOfferPrice = retailPrice > 0 ? retailPrice : wholesalePrice;
+    const rawCategory = supplierCategories.filter(Boolean).join(" > ");
+
+    // STOCK FIX
+    const availability = getText(p.availability).replace(/\D/g, "");
+    const stock = availability ? Number(availability) : 0;
+
+    // PRICE FIX
+    const retailPrice = parseFloat(
+      getText(p.retail_price).replace(",", ".") || "0"
+    );
+    const wholesalePrice = parseFloat(
+      getText(p.price).replace(",", ".") || "0"
+    );
+
+    const finalPrice =
+      retailPrice > 0 ? retailPrice : wholesalePrice > 0 ? wholesalePrice : 0;
 
     return {
-      id: getText(p.code) || getText(p.sku) || `b2b-id-${Math.random()}`,
-      name: getText(p.name) || 'No Name',
+      id:
+        getText(p.code) ||
+        getText(p.sku) ||
+        `b2b-${Math.random().toString(36).slice(2)}`,
+      name: getText(p.name) || "Unnamed Product",
       retailPrice: retailPrice.toString(),
-      webOfferPrice: webOfferPrice.toString(),
-      description: getText(p.descr) || '',
-      category: mapCategory(rawCategory), // mapCategory returns a unified string
-      mainImage: mainImage,
+      webOfferPrice: finalPrice.toString(),
+      description: getText(p.descr) || "",
+      category: mapCategory(rawCategory),
+      mainImage,
       images: allImages,
-      stock: stock,
+      stock,
     };
   });
 
