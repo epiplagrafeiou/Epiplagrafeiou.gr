@@ -1,88 +1,155 @@
-
 'use server';
 
 import { XMLParser } from 'fast-xml-parser';
-import type { XmlProduct } from './megapap-parser';
-import { mapCategory } from '../category-mapper';
+import type { XmlProduct } from '../types/product';
+import { mapCategory } from '../utils/category-mapper';
 
-// Utility: remove script tags
-function cleanXml(xml: string): string {
-  return xml.replace(/<script[\s\S]*?<\/script>/gi, "");
-}
-
-// UNIVERSAL XML TEXT EXTRACTOR
 const getText = (node: any): string => {
-  if (node == null) return "";
-  if (typeof node === "string" || typeof node === "number") {
-    return String(node).trim();
+  if (node == null) return '';
+  if (typeof node === 'string' || typeof node === 'number') return String(node).trim();
+  if (typeof node === 'object') {
+    if ('__cdata' in node) return String((node as any).__cdata).trim();
+    if ('_text' in node) return String((node as any)._text).trim();
   }
-  if (typeof node === "object") {
-    if ("__cdata" in node) return String(node.__cdata).trim();
-    if ("_text" in node) return String(node._text).trim();
-  }
-  return "";
+  return '';
 };
 
+// Build a full category path by scanning product keys
+const extractCategoryPath = (p: Record<string, any>): string => {
+  const parts: { key: string; level: number; value: string }[] = [];
+
+  for (const key of Object.keys(p)) {
+    const lower = key.toLowerCase();
+
+    // Match keys like "category", "category_name"
+    if (lower === 'category' || lower === 'category_name') {
+      const v = getText(p[key]);
+      if (v) parts.push({ key, level: 0, value: v });
+      continue;
+    }
+
+    // Match "subcategory", "subcategory_name"
+    if (lower === 'subcategory' || lower === 'subcategory_name') {
+      const v = getText(p[key]);
+      if (v) parts.push({ key, level: 1, value: v });
+      continue;
+    }
+
+    // Match "subcategory2", "subcategory_level2", etc.
+    const subNumMatch = lower.match(/^subcategory(\d+)$/);
+    if (subNumMatch) {
+      const lvl = Number(subNumMatch[1]);
+      const v = getText(p[key]);
+      if (v) parts.push({ key, level: lvl, value: v });
+      continue;
+    }
+
+    const subLevelMatch = lower.match(/^subcategory[_-]?level(\d+)$/);
+    if (subLevelMatch) {
+      const lvl = Number(subLevelMatch[1]);
+      const v = getText(p[key]);
+      if (v) parts.push({ key, level: lvl, value: v });
+      continue;
+    }
+  }
+
+  // Sort: category (level 0) first, then subcategory, then subcategory2/3...
+  parts.sort((a, b) => a.level - b.level);
+
+  // Deduplicate while preserving order
+  const seen = new Set<string>();
+  const orderedValues = parts
+    .map(p => p.value)
+    .filter(v => {
+      const key = v.toLowerCase();
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+
+  return orderedValues.join(' > ');
+};
 
 export async function b2bportalParser(url: string): Promise<XmlProduct[]> {
-  console.log("▶ Running B2B Portal parser (v8 - Safe Text Extraction)");
-
   const response = await fetch(url, { cache: 'no-store' });
   if (!response.ok) {
     throw new Error(`Failed to fetch XML: ${response.statusText}`);
   }
 
   const xmlText = await response.text();
-  const cleanText = cleanXml(xmlText);
 
   const parser = new XMLParser({
-    ignoreAttributes: true,
-    cdataPropName: "__cdata",
-    textNodeName: "_text",
+    ignoreAttributes: false,
+    attributeNamePrefix: '',
+    isArray: (name, jpath) => {
+      return jpath === 'b2bportal.products.product' ||
+             jpath === 'mywebstore.products.product' ||
+             jpath.endsWith('.gallery.image');
+    },
+    textNodeName: '_text',
     trimValues: true,
+    cdataPropName: '__cdata',
     parseNodeValue: true,
     parseAttributeValue: true,
-    isArray: (name, jpath, isLeafNode, isAttribute) => {
-      return jpath === 'b2bportal.products.product' || jpath.endsWith('.gallery.image');
-    },
+    parseTrueNumberOnly: true,
   });
-  
-  const parsed = parser.parse(cleanText);
 
-  const productArray = parsed?.b2bportal?.products?.product;
+  const parsed = parser.parse(xmlText);
+
+  const productArray =
+    parsed?.b2bportal?.products?.product ||
+    parsed?.mywebstore?.products?.product;
 
   if (!productArray || !Array.isArray(productArray)) {
-    console.error("❌ Product array not found in B2B Portal feed. Parsed structure:", parsed);
+    console.error('Parsed product data is not an array or is missing:', productArray);
     throw new Error(
-      "The XML feed does not contain a valid product array at b2bportal.products.product"
+      'The XML feed does not have the expected structure. Could not find a product array at `b2bportal.products.product` or `mywebstore.products.product`.'
     );
   }
-  
-  const products: XmlProduct[] = productArray.map((p: any) => {
-    
-    const subcategory = getText(p.subcategory);
-    const category = getText(p.category);
-    const rawCategory = [subcategory, category].filter(Boolean).join(" > ");
-    
-    const stock = Number(p.availability) === 1 ? 1 : 0;
-    
-    const retailPrice = parseFloat(String(getText(p.retail_price) || '0').replace(',', '.'));
-    const wholesalePrice = parseFloat(String(getText(p.price) || '0').replace(',', '.'));
-    const finalPrice = retailPrice > 0 ? retailPrice : wholesalePrice;
 
-    const allImages = [getText(p.image), ...(Array.isArray(p.gallery?.image) ? p.gallery.image : p.gallery?.image ? [p.gallery.image] : [])].map(getText).filter(Boolean);
+  const products: XmlProduct[] = productArray.map((p: any) => {
+    // Images: main + gallery
+    let allImages: string[] = [];
+    if (p.image) allImages.push(getText(p.image));
+    if (p.gallery?.image) {
+      const galleryImages = (Array.isArray(p.gallery.image) ? p.gallery.image : [p.gallery.image])
+        .map((img: any) => getText(img))
+        .filter(Boolean);
+      allImages.push(...galleryImages);
+    }
+    allImages = Array.from(new Set(allImages));
     const mainImage = allImages[0] || null;
+
+    // Category path (dynamic)
+    const rawCategory = extractCategoryPath(p);
+
+    // Availability (keep as a boolean; don't fake stock)
+    const availabilityText = getText(p.availability).toLowerCase();
+    const isAvailable = availabilityText === 'ναι' || availabilityText === '1';
+
+    // Stock: use numeric fields only if present
+    let stock = 0;
+    if (p.stock) stock = Number(getText(p.stock)) || 0;
+    else if (p.qty) stock = Number(getText(p.qty)) || 0;
+    else if (p.availability_qty) stock = Number(getText(p.availability_qty)) || 0;
+    // If only availability exists, leave stock as 0 and rely on isAvailable
+
+    // Prices
+    const retailPriceNum = parseFloat((getText(p.retail_price) || '0').replace(',', '.'));
+    const wholesalePriceNum = parseFloat((getText(p.price) || '0').replace(',', '.'));
+    const finalPriceNum = retailPriceNum > 0 ? retailPriceNum : wholesalePriceNum;
 
     return {
       id: getText(p.code) || `b2b-${Math.random()}`,
-      name: getText(p.name) || "Unnamed Product",
-      retailPrice: retailPrice.toString(),
-      webOfferPrice: finalPrice.toString(),
-      description: getText(p.descr) || "",
+      name: getText(p.name) || 'No Name',
+      retailPrice: retailPriceNum.toString(),
+      webOfferPrice: finalPriceNum.toString(),
+      description: getText(p.descr) || '',
       category: mapCategory(rawCategory),
-      mainImage: mainImage,
-      images: Array.from(new Set(allImages)),
-      stock: stock,
+      mainImage,
+      images: allImages,
+      stock,
+      isAvailable,
     };
   });
 
