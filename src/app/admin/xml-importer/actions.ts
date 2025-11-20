@@ -5,45 +5,39 @@ import { megapapParser, type XmlProduct } from '@/lib/xml-parsers/megapap-parser
 import { b2bportalParser } from '@/lib/xml-parsers/b2bportal-parser';
 import { zougrisParser } from '@/lib/xml-parsers/zougris-parser';
 
+// A map to associate supplier names (lowercase) with their specific parser functions.
 const parserMap: Record<string, (url: string) => Promise<XmlProduct[]>> = {
-  "zougris": zougrisParser,
-  "b2bportal": b2bportalParser,
-  "megapap": megapapParser,
+  'zougris': zougrisParser,
+  'b2b portal': b2bportalParser, // Matching the name from suppliers context
+  'megapap': megapapParser,
+  // Add other specific supplier names here as needed
 };
 
-function normalize(str: string): string {
-  if (!str) return "";
-  return str.toLowerCase().replace(/[^a-z0-9]/g, "");
-}
+// A fallback parser for any supplier not in the specific map.
+const fallbackParser = b2bportalParser;
 
 export async function syncProductsFromXml(
   url: string,
   supplierName: string
 ): Promise<XmlProduct[]> {
+  const normalizedSupplierName = supplierName.toLowerCase().trim();
 
-  const key = normalize(supplierName);
-  const parserFn = parserMap[key];
+  // Find the correct parser from the map.
+  let parserFn = parserMap[normalizedSupplierName];
   
-  // Defensive logging as requested
-  console.log("RAW SUPPLIER NAME RECEIVED:", supplierName);
-  console.log("NORMALIZED KEY:", key);
-  console.log("AVAILABLE PARSER KEYS:", Object.keys(parserMap));
-
-
+  // If no specific parser is found, use the fallback.
   if (!parserFn) {
-    throw new Error(
-      `No parser found for supplier "${supplierName}" (normalized to "${key}"). Please ensure the supplier name in Firestore matches one of the following keys: ${Object.keys(parserMap).join(', ')}`
-    );
+      console.warn(`No specific parser found for "${supplierName}". Using fallback parser.`);
+      parserFn = fallbackParser;
   }
-  
-  console.log("MATCHED PARSER:", parserFn.name);
 
   try {
+    console.log(`Using parser: ${parserFn.name} for supplier: "${supplierName}"`);
     return await parserFn(url);
   } catch (error: any) {
     console.error(`❌ XML sync failed for "${supplierName}" with parser ${parserFn.name}:`, error);
     throw new Error(
-      `Could not parse XML for supplier "${supplierName}". Details: ${error?.message || 'Unknown error.'}`
+      `Could not parse XML for supplier "${supplierName}". Please check the URL and XML format. Details: ${error?.message || 'Unknown error.'}`
     );
   }
 }
