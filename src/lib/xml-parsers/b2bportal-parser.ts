@@ -1,8 +1,9 @@
+
 'use server';
 
 import { XMLParser } from 'fast-xml-parser';
 import type { XmlProduct } from '../types/product';
-import { mapCategory } from '../utils/category-mapper';
+import { mapCategory } from '../category-mapper';
 
 const getText = (node: any): string => {
   if (node == null) return '';
@@ -132,7 +133,8 @@ export async function b2bportalParser(url: string): Promise<XmlProduct[]> {
     if (p.stock) stock = Number(getText(p.stock)) || 0;
     else if (p.qty) stock = Number(getText(p.qty)) || 0;
     else if (p.availability_qty) stock = Number(getText(p.availability_qty)) || 0;
-    // If only availability exists, leave stock as 0 and rely on isAvailable
+    else if(isAvailable) stock = 1;
+
 
     // Prices
     const retailPriceNum = parseFloat((getText(p.retail_price) || '0').replace(',', '.'));
