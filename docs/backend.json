@@ -94,6 +94,20 @@
          "rawCategory": {
           "type": "string",
           "description": "The original, unprocessed category string from the supplier's XML feed."
+        },
+        "variantGroupKey": {
+            "type": "string",
+            "description": "A key to group product variants (e.g., by color)."
+        },
+        "color": {
+            "type": "string",
+            "description": "The color of the product variant."
+        },
+        "sku": {
+            "type": "string"
+        },
+        "model": {
+            "type": "string"
         }
       },
       "required": [

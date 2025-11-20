@@ -51,11 +51,20 @@ export default function XmlImporterPage() {
   const categoryMap = useMemo(() => {
     if (!storeCategories) return new Map();
     const map = new Map<string, string>(); // rawCategory -> storeCategoryId
-    storeCategories.forEach(cat => {
+    
+    const traverse = (categories: StoreCategory[]) => {
+      for (const cat of categories) {
         cat.rawCategories?.forEach(rawCat => {
-            map.set(rawCat, cat.id);
+            if(!map.has(rawCat)){ // Prioritize parent categories in case of duplicates
+               map.set(rawCat, cat.id);
+            }
         });
-    });
+        if (cat.children?.length) {
+            traverse(cat.children);
+        }
+      }
+    }
+    traverse(storeCategories);
     return map;
   }, [storeCategories]);
 
@@ -124,6 +133,10 @@ export default function XmlImporterPage() {
 
         return {
             id: p.id,
+            sku: p.sku,
+            model: p.model,
+            variantGroupKey: p.variantGroupKey,
+            color: p.color,
             supplierId: supplier.id,
             name: p.name,
             price: finalPrice,

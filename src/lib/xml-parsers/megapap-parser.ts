@@ -1,9 +1,22 @@
-
 'use server';
 
 import { XMLParser } from 'fast-xml-parser';
 import { mapCategory } from '../category-mapper';
 import type { XmlProduct } from '../types/product';
+
+// Gets the variant group key from SKU (e.g., GP037-0029,1 -> GP037-0029)
+function getVariantGroupKey(sku: string): string {
+  if (!sku) return '';
+  return sku.includes(',') ? sku.split(',')[0] : sku;
+}
+
+// Extracts the color from the filters string
+function getColorFromFilters(filters: string): string | undefined {
+    if (!filters) return undefined;
+    const colorFilter = filters.split(';').find(f => f.startsWith('ΧΡΩΜΑ:'));
+    if (!colorFilter) return undefined;
+    return colorFilter.split(':')[1]?.trim();
+}
 
 export async function megapapParser(url: string): Promise<XmlProduct[]> {
     console.log("▶ Running Megapap parser");
@@ -87,8 +100,14 @@ export async function megapapParser(url: string): Promise<XmlProduct[]> {
         finalWebOfferPrice += 75;
       }
 
+      const sku = p.id?.toString() || `temp-id-${Math.random()}`;
+
       return {
-        id: p.id?.toString() || `temp-id-${Math.random()}`,
+        id: sku,
+        sku: sku,
+        model: p.model,
+        variantGroupKey: getVariantGroupKey(sku),
+        color: getColorFromFilters(p.filters),
         name: p.name || 'No Name',
         retailPrice: p.retail_price_with_vat || '0',
         webOfferPrice: finalWebOfferPrice.toString(),

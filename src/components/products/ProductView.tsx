@@ -7,6 +7,7 @@ import { Separator } from '@/components/ui/separator';
 import { Product } from '@/lib/products-context';
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import {
   Carousel,
   CarouselContent,
@@ -19,16 +20,19 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Truck, Award, Star, ShieldCheck } from 'lucide-react';
 import { PaymentIcons } from '@/components/icons/PaymentIcons';
 import type { StoreCategory } from '@/components/admin/CategoryManager';
+import { Button } from '../ui/button';
 
 interface ProductViewProps {
     product: Product;
     allProducts: Product[];
     categoryPath: StoreCategory[];
+    variants: Product[];
 }
 
-export function ProductView({ product, allProducts, categoryPath }: ProductViewProps) {
+export function ProductView({ product, allProducts, categoryPath, variants }: ProductViewProps) {
   const [api, setApi] = useState<CarouselApi>()
   const [current, setCurrent] = useState(0)
+  const router = useRouter();
  
   const allImages = useMemo(() => {
     if (!product || !product.images) return [];
@@ -50,6 +54,10 @@ export function ProductView({ product, allProducts, categoryPath }: ProductViewP
   const onThumbClick = useCallback((index: number) => {
     api?.scrollTo(index)
   }, [api])
+
+  const handleVariantSelect = (slug: string) => {
+    router.push(`/products/${slug}`);
+  }
 
   const breadcrumbs = useMemo(() => {
       let path = '/category';
@@ -250,6 +258,29 @@ export function ProductView({ product, allProducts, categoryPath }: ProductViewP
               <Award className="h-4 w-4" />
               Κερδίζεις {pointsEarned} πόντους με αυτή την αγορά!
           </div>
+
+          {variants && variants.length > 1 && (
+            <div className="mt-6">
+                <h3 className="text-sm font-medium text-gray-900">Χρώμα: {product.color || 'N/A'}</h3>
+                <div className="flex items-center gap-2 mt-2">
+                    {variants.map(variant => (
+                        <Button 
+                            key={variant.id}
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => handleVariantSelect(variant.slug)}
+                            className={cn(
+                                "h-9 w-auto px-4",
+                                variant.id === product.id ? 'border-primary ring-2 ring-primary ring-offset-2' : ''
+                            )}
+                        >
+                            {variant.color}
+                        </Button>
+                    ))}
+                </div>
+            </div>
+          )}
+
           <Separator className="my-6" />
           <div
             className="prose prose-sm max-w-none text-muted-foreground"

@@ -23,6 +23,10 @@ export interface Product {
   stock?: number;
   supplierId: string;
   category?: string; // This is now a display-only field, not for logic
+  variantGroupKey?: string;
+  color?: string;
+  sku?: string;
+  model?: string;
 }
 
 interface ProductsContextType {
@@ -98,6 +102,7 @@ export const ProductsProvider = ({ children }: { children: React.ReactNode }) =>
         };
         
         delete (productData as any).mainImage;
+        delete (productData as any).category; // Remove the old simple category field
 
         productBatchData.push({ path: productRef.path, data: productData });
         batch.set(productRef, productData, { merge: true });

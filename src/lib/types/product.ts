@@ -10,4 +10,8 @@ export interface XmlProduct {
   images: string[];
   stock: number;
   isAvailable?: boolean; // Optional, for feeds that provide it
+  sku?: string;
+  model?: string;
+  variantGroupKey?: string;
+  color?: string;
 }
