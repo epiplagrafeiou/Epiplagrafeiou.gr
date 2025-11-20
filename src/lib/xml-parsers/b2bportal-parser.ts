@@ -15,18 +15,18 @@ export async function b2bportalParser(url: string): Promise<XmlProduct[]> {
   const xmlText = await response.text();
 
   const parser = new XMLParser({
-    ignoreAttributes: true, // Switched to true as attributes are not needed
+    ignoreAttributes: true,
     isArray: (name, jpath, isLeafNode, isAttribute) => {
-      return jpath === 'b2bportal.products.product';
+      return jpath === 'b2bportal.products.product' || jpath.endsWith('.image');
     },
     cdataPropName: '__cdata',
     trimValues: true,
     parseNodeValue: true,
-     tagValueProcessor: (tagName, tagValue, jPath, isLeafNode, isAttribute) => {
-        if (typeof tagValue === 'string' && tagValue.startsWith('<![CDATA[')) {
-            return tagValue.substring(9, tagValue.length - 3);
-        }
-        return tagValue;
+    tagValueProcessor: (tagName, tagValue, jPath, isLeafNode, isAttribute) => {
+      if (typeof tagValue === 'string' && tagValue.startsWith('<![CDATA[')) {
+        return tagValue.substring(9, tagValue.length - 3);
+      }
+      return tagValue;
     }
   });
 
