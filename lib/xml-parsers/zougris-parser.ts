@@ -1,17 +1,16 @@
-
 'use server';
 
 import { XMLParser } from 'fast-xml-parser';
 import type { XmlProduct } from '../types/product';
-import { mapCategory } from '../category-mapper';
+import { mapCategory } from '../utils/category-mapper';
 
 // Safe text extractor
 const getText = (node: any): string => {
   if (node == null) return '';
   if (typeof node === 'string' || typeof node === 'number') return String(node).trim();
   if (typeof node === 'object') {
-    if ('__cdata' in node) return String((node as any).__cdata).trim();
-    if ('_text' in node) return String((node as any)._text).trim();
+    if ('__cdata' in node) return String(node.__cdata).trim();
+    if ('_text' in node) return String(node._text).trim();
   }
   return '';
 };
@@ -73,6 +72,7 @@ export async function zougrisParser(url: string): Promise<XmlProduct[]> {
       retailPrice: retailPriceNum.toString(),
       webOfferPrice: finalPriceNum.toString(),
       description: getText(p.Description) || '',
+      // 👉 If you want raw categories only, replace mapCategory(rawCategory) with rawCategory
       category: mapCategory(rawCategory),
       mainImage,
       images: allImages,
