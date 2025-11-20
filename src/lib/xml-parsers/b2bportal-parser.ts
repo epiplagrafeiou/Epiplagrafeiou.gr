@@ -48,10 +48,12 @@ export async function b2bportalParser(url: string): Promise<XmlProduct[]> {
     textNodeName: "_text",
     trimValues: true,
     isArray: (name, jpath) => {
+      // Treat all potential category tags as arrays to handle multiple occurrences
+      const categoryTags = ['category', 'category1', 'category2', 'subcategory', 'category_name', 'cat', 'type', 'group', 'family', 'product_category', 'product_subcategory'];
+      if (categoryTags.includes(name)) return true;
+
       if (jpath === "b2bportal.products.product") return true;
       if (jpath.endsWith(".gallery.image")) return true;
-      if (name === "category") return true;
-      if (name === "subcategory") return true;
       return false;
     },
   });
@@ -89,13 +91,21 @@ export async function b2bportalParser(url: string): Promise<XmlProduct[]> {
     const allImages = Array.from(new Set([mainImg, ...gallery].filter(Boolean)));
     const mainImage = allImages[0] || null;
 
-    // CATEGORY FIX: join ALL supplier categories
-    const supplierCategories = [
-      ...(p.subcategory || []),
-      ...(p.category || []),
-    ].map((c: any) => getText(c));
+    // ROBUST CATEGORY EXTRACTION
+    const potentialCategoryFields = ['subcategory', 'category', 'category1', 'category2', 'category_name', 'cat', 'type', 'group', 'family', 'product_category', 'product_subcategory'];
+    const supplierCategories: string[] = [];
+    potentialCategoryFields.forEach(field => {
+        if (p[field]) {
+            // Since we force array parsing, we can always treat it as an array
+            (p[field] as any[]).forEach(catNode => {
+                const text = getText(catNode);
+                if (text) supplierCategories.push(text);
+            });
+        }
+    });
 
-    const rawCategory = supplierCategories.filter(Boolean).join(" > ");
+    const rawCategory = Array.from(new Set(supplierCategories)).filter(Boolean).join(" > ");
+
 
     // STOCK FIX
     const availability = getText(p.availability).replace(/\D/g, "");
