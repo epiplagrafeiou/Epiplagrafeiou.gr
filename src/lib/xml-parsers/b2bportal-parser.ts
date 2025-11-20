@@ -10,18 +10,24 @@ function cleanXml(xml: string): string {
   return xml.replace(/<script[\s\S]*?<\/script>/gi, "");
 }
 
-// Helper function to safely extract text from a node that might be a string or a CDATA object
+// Helper function to safely extract text from a node that might be a string, a CDATA object, or an array.
+// This makes the parser resilient to variations in the XML structure.
 function getText(node: any): string {
-    if (typeof node === 'string' || typeof node === 'number') {
-        return String(node);
+    if (!node) {
+        return "";
     }
-    if (node && typeof node === 'object') {
-        // fast-xml-parser can produce __cdata or _text depending on configuration and input
+    if (Array.isArray(node)) {
+        // If it's an array, recursively call getText on the first element.
+        return getText(node[0]);
+    }
+    if (typeof node === 'object') {
+        // fast-xml-parser uses '__cdata' or '_text' for text content within tags.
+        // We check for both to be safe.
         return node.__cdata || node._text || '';
     }
-    return '';
+    // If it's already a string or number, convert it to a string.
+    return String(node);
 }
-
 
 export async function b2bportalParser(url: string): Promise<XmlProduct[]> {
   console.log("▶ Running B2B Portal parser");
@@ -34,12 +40,13 @@ export async function b2bportalParser(url: string): Promise<XmlProduct[]> {
   const cleanXmlText = cleanXml(xmlText);
 
   const parser = new XMLParser({
-    ignoreAttributes: true,
+    ignoreAttributes: true, // Switched to true as we are not using attributes like `id` from the product tag.
     isArray: (name, jpath, isLeafNode, isAttribute) => {
+      // Ensure products and gallery images are always arrays.
       return jpath === 'b2bportal.products.product' || jpath.endsWith('.gallery.image');
     },
-    cdataPropName: '__cdata',
-    textNodeName: '_text',
+    cdataPropName: '__cdata', // The property name for CDATA content.
+    textNodeName: '_text', // The property name for regular text content.
     trimValues: true,
     parseNodeValue: true,
     parseAttributeValue: true,
@@ -57,27 +64,25 @@ export async function b2bportalParser(url: string): Promise<XmlProduct[]> {
   }
 
   const products: XmlProduct[] = productArray.map((p: any) => {
-    let allImages: string[] = [];
-    
+    // Use the robust `getText` helper for all fields
     const mainImg = getText(p.image);
+    let allImages: string[] = [];
     if (mainImg) {
         allImages.push(mainImg);
     }
     
     if (p.gallery && p.gallery.image) {
       const galleryImages = (Array.isArray(p.gallery.image) ? p.gallery.image : [p.gallery.image])
-        .map(getText) // Use helper to safely extract text
+        .map(getText) // Use helper for gallery images as well
         .filter(Boolean);
       allImages.push(...galleryImages);
     }
     
     allImages = Array.from(new Set(allImages)); 
-
     const mainImage = allImages[0] || null;
 
     const subcategory = getText(p.subcategory);
     const category = getText(p.category);
-    
     const rawCategory = [subcategory, category].filter(Boolean).join(' > ');
     
     const availabilityText = getText(p.availability);
@@ -89,6 +94,7 @@ export async function b2bportalParser(url: string): Promise<XmlProduct[]> {
     const retailPrice = parseFloat(retailPriceText.replace(',', '.') || '0');
     const wholesalePrice = parseFloat(wholesalePriceText.replace(',', '.') || '0');
     
+    // Use retail price if available, otherwise fall back to wholesale.
     const webOfferPrice = retailPrice > 0 ? retailPrice : wholesalePrice;
 
     return {
@@ -97,7 +103,7 @@ export async function b2bportalParser(url: string): Promise<XmlProduct[]> {
       retailPrice: retailPrice.toString(),
       webOfferPrice: webOfferPrice.toString(),
       description: getText(p.descr) || '',
-      category: mapCategory(rawCategory),
+      category: mapCategory(rawCategory), // mapCategory returns a unified string
       mainImage: mainImage,
       images: allImages,
       stock: stock,
