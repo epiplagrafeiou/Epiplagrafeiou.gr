@@ -11,21 +11,21 @@ function cleanXml(xml: string): string {
 }
 
 // UNIVERSAL XML TEXT EXTRACTOR
-function getText(node: any): string {
-  if (!node) return "";
+const getText = (node: any): string => {
+  if (node == null) return "";
   if (typeof node === "string" || typeof node === "number") {
     return String(node).trim();
   }
-  if (Array.isArray(node)) {
-    return getText(node[0]);
+  if (typeof node === "object") {
+    if ("__cdata" in node) return String(node.__cdata).trim();
+    if ("_text" in node) return String(node._text).trim();
   }
-  // fast-xml-parser can nest text in these properties
-  return (node.__cdata || node._text || node || "").trim();
-}
+  return "";
+};
 
 
 export async function b2bportalParser(url: string): Promise<XmlProduct[]> {
-  console.log("▶ Running B2B Portal parser (v7 - Final Corrected Version)");
+  console.log("▶ Running B2B Portal parser (v8 - Safe Text Extraction)");
 
   const response = await fetch(url, { cache: 'no-store' });
   if (!response.ok) {
@@ -60,21 +60,17 @@ export async function b2bportalParser(url: string): Promise<XmlProduct[]> {
   
   const products: XmlProduct[] = productArray.map((p: any) => {
     
-    // Correctly combine subcategory and category
     const subcategory = getText(p.subcategory);
     const category = getText(p.category);
     const rawCategory = [subcategory, category].filter(Boolean).join(" > ");
     
-    // Correct stock logic: '1' means in stock, otherwise out of stock.
     const stock = Number(p.availability) === 1 ? 1 : 0;
     
-    // Correct price logic with fallback
     const retailPrice = parseFloat(String(getText(p.retail_price) || '0').replace(',', '.'));
     const wholesalePrice = parseFloat(String(getText(p.price) || '0').replace(',', '.'));
     const finalPrice = retailPrice > 0 ? retailPrice : wholesalePrice;
 
-    // Image handling
-    const allImages = [p.image, ...(Array.isArray(p.gallery?.image) ? p.gallery.image : p.gallery?.image ? [p.gallery.image] : [])].filter(Boolean).map(getText);
+    const allImages = [getText(p.image), ...(Array.isArray(p.gallery?.image) ? p.gallery.image : p.gallery?.image ? [p.gallery.image] : [])].map(getText).filter(Boolean);
     const mainImage = allImages[0] || null;
 
     return {
@@ -83,7 +79,7 @@ export async function b2bportalParser(url: string): Promise<XmlProduct[]> {
       retailPrice: retailPrice.toString(),
       webOfferPrice: finalPrice.toString(),
       description: getText(p.descr) || "",
-      category: mapCategory(rawCategory), // Use the external mapper
+      category: mapCategory(rawCategory),
       mainImage: mainImage,
       images: Array.from(new Set(allImages)),
       stock: stock,
