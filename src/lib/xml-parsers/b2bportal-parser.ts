@@ -15,18 +15,19 @@ export async function b2bportalParser(url: string): Promise<XmlProduct[]> {
   const xmlText = await response.text();
 
   const parser = new XMLParser({
-    ignoreAttributes: true,
+    ignoreAttributes: false, // Keep attributes to get product ID
+    attributeNamePrefix: '',
     isArray: (name, jpath, isLeafNode, isAttribute) => {
-      return jpath === 'b2bportal.products.product' || jpath.endsWith('.image');
+      return jpath === 'b2bportal.products.product' || jpath.endsWith('.gallery.image');
     },
-    cdataPropName: '__cdata',
+    cdataPropName: '__cdata', // Handle CDATA sections
     trimValues: true,
     parseNodeValue: true,
     tagValueProcessor: (tagName, tagValue, jPath, isLeafNode, isAttribute) => {
-      if (typeof tagValue === 'string' && tagValue.startsWith('<![CDATA[')) {
-        return tagValue.substring(9, tagValue.length - 3);
-      }
-      return tagValue;
+        if (typeof tagValue === 'string' && tagValue.startsWith('<![CDATA[')) {
+            return tagValue.substring(9, tagValue.length - 3).trim();
+        }
+        return tagValue;
     }
   });
 
@@ -43,14 +44,12 @@ export async function b2bportalParser(url: string): Promise<XmlProduct[]> {
   const products: XmlProduct[] = productArray.map((p: any) => {
     let allImages: string[] = [];
     
-    // Correctly map the image fields
-    if (p.image_url && typeof p.image_url === 'string') {
-        allImages.push(p.image_url);
+    if (p.image) {
+        allImages.push(p.image);
     }
     
-    if (p.extra_images && p.extra_images.image) {
-      const galleryImages = (Array.isArray(p.extra_images.image) ? p.extra_images.image : [p.extra_images.image])
-        .map((img: any) => (typeof img === 'object' && img['#text'] ? img['#text'] : img))
+    if (p.gallery && p.gallery.image) {
+      const galleryImages = (Array.isArray(p.gallery.image) ? p.gallery.image : [p.gallery.image])
         .filter(Boolean);
       allImages.push(...galleryImages);
     }
@@ -59,21 +58,23 @@ export async function b2bportalParser(url: string): Promise<XmlProduct[]> {
 
     const mainImage = allImages[0] || null;
 
-    const rawCategory = [p.category_name, p.subcategory_name].filter(Boolean).join(' > ');
+    // Combine category and subcategory from the correct fields
+    const rawCategory = [p.subcategory, p.category].filter(Boolean).join(' > ');
     
-    // Correctly handle numeric availability
-    const stock = Number(p.availability) > 0 ? 10 : 0;
+    const stock = Number(p.availability) > 0 ? Number(p.availability) : 0;
     
-    // Correctly map the price field
-    const finalWebOfferPrice = parseFloat(p.price_vat?.toString().replace(',', '.') || '0');
+    const retailPrice = parseFloat(p.retail_price?.toString().replace(',', '.') || '0');
+    const wholesalePrice = parseFloat(p.price?.toString().replace(',', '.') || '0');
+    
+    // Use retail_price as the primary price, fallback to wholesale price if needed
+    const finalWebOfferPrice = retailPrice > 0 ? retailPrice : wholesalePrice;
 
     return {
-      // Correctly map the ID and name fields
-      id: p.product_code?.toString() || `temp-id-${Math.random()}`,
-      name: p.product_name || 'No Name',
-      retailPrice: p.price_vat?.toString().replace(',', '.') || '0',
+      id: p.code?.toString() || p.id?.toString() || `b2b-id-${Math.random()}`,
+      name: p.name || 'No Name',
+      retailPrice: retailPrice.toString(),
       webOfferPrice: finalWebOfferPrice.toString(),
-      description: p.product_description || '',
+      description: p.descr || '',
       category: mapCategory(rawCategory),
       mainImage: mainImage,
       images: allImages,
