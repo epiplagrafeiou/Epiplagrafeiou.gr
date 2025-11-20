@@ -17,7 +17,7 @@ export async function b2bportalParser(url: string): Promise<XmlProduct[]> {
   const parser = new XMLParser({
     ignoreAttributes: true, // Switched to true as attributes are not needed
     isArray: (name, jpath, isLeafNode, isAttribute) => {
-      return jpath === 'mywebstore.products.product';
+      return jpath === 'b2bportal.products.product';
     },
     cdataPropName: '__cdata',
     trimValues: true,
@@ -31,12 +31,12 @@ export async function b2bportalParser(url: string): Promise<XmlProduct[]> {
   });
 
   const parsed = parser.parse(xmlText);
-  const productArray = parsed.mywebstore?.products?.product;
+  const productArray = parsed.b2bportal?.products?.product;
 
   if (!productArray || !Array.isArray(productArray)) {
-    console.error('B2B Portal Parser: Parsed product data is not an array or is missing at mywebstore.products.product:', productArray);
+    console.error('B2B Portal Parser: Parsed product data is not an array or is missing at b2bportal.products.product:', productArray);
     throw new Error(
-      'The XML feed does not have the expected structure for b2bportal format. Could not find a product array at `mywebstore.products.product`.'
+      'The XML feed does not have the expected structure for b2bportal format. Could not find a product array at `b2bportal.products.product`.'
     );
   }
 
