@@ -2,7 +2,7 @@
 'use server';
 
 import { XMLParser } from 'fast-xml-parser';
-import type { XmlProduct } from './megapap-parser';
+import type { XmlProduct } from '../types/product';
 import { mapCategory } from '../category-mapper';
 
 // Utility: strip out unwanted <script> tags

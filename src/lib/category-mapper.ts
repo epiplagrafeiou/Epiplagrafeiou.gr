@@ -1,93 +1,98 @@
 
-export interface UnifiedCategory {
-  main: string;
-  sub: string;
-}
+const categoryMap: { [key: string]: string[] } = {
+    // Office
+    'καρεκλες γραφειου': ['ΓΡΑΦΕΙΟ', 'Καρέκλες Γραφείου'],
+    'gaming chairs': ['ΓΡΑΦΕΙΟ', 'Καρέκλες Γραφείου'],
+    'διευθυντικ': ['ΓΡΑΦΕΙΟ', 'Καρέκλες Γραφείου'],
+    'γραφεια': ['ΓΡΑΦΕΙΟ', 'Γραφεία'],
+    'βιβλιοθηκες': ['ΓΡΑΦΕΙΟ', 'Βιβλιοθήκες'],
+    'ραφιερα': ['ΓΡΑΦΕΙΟ', 'Ραφιέρες'],
+    'ραφια': ['ΓΡΑΦΕΙΟ', 'Ραφιέρες'],
+    'συρταριερα': ['ΓΡΑΦΕΙΟ', 'Συρταριέρες'],
+    'ντουλαπια αρχειοθετηση': ['ΓΡΑΦΕΙΟ', 'Ντουλάπια Αρχείων'],
+
+    // Living Room
+    'καναπ': ['ΣΑΛΟΝΙ', 'Καναπέδες'],
+    'πολυθρον': ['ΣΑΛΟΝΙ', 'Πολυθρόνες'],
+    'τραπεζακια σαλονιου': ['ΣΑΛΟΝΙ', 'Τραπεζάκια Σαλονιού'],
+    'επιπλα tv': ['ΣΑΛΟΝΙ', 'Έπιπλα Τηλεόρασης'],
+    'συνθεσ': ['ΣΑΛΟΝΙ', 'Συνθέσεις'],
+    'σκαμπο': ['ΣΑΛΟΝΙ', 'Σκαμπό & Πουφ'],
+    'πουφ': ['ΣΑΛΟΝΙ', 'Σκαμπό & Πουφ'],
+
+    // Bedroom
+    'κρεβατ': ['ΚΡΕΒΑΤΟΚΑΜΑΡΑ', 'Κρεβάτια'],
+    'στρωμα': ['ΚΡΕΒΑΤΟΚΑΜΑΡΑ', 'Στρώματα'],
+    'κομοδιν': ['ΚΡΕΒΑΤΟΚΑΜΑΡΑ', 'Κομοδίνα'],
+    'ντουλαπ': ['ΚΡΕΒΑΤΟΚΑΜΑΡΑ', 'Ντουλάπες'],
+    'τουαλετες επιπλα': ['ΚΡΕΒΑΤΟΚΑΜΑΡΑ', 'Τουαλέτες'],
+
+    // Dining
+    'τραπεζαρια': ['ΤΡΑΠΕΖΑΡΙΑ', 'Τραπέζια'],
+    'τραπεζι': ['ΤΡΑΠΕΖΑΡΙΑ', 'Τραπέζια'],
+    'καρεκλες κουζινας': ['ΤΡΑΠΕΖΑΡΙΑ', 'Καρέκλες'],
+    'καρεκλα τραπεζαριας': ['ΤΡΑΠΕΖΑΡΙΑ', 'Καρέκλες'],
+    'μπουφε': ['ΤΡΑΠΕΖΑΡΙΑ', 'Μπουφέδες'],
+    'βιτριν': ['ΤΡΑΠΕΖΑΡΙΑ', 'Βιτρίνες'],
+    'stool': ['ΤΡΑΠΕΖΑΡΙΑ', 'Stools'],
+
+    // Outdoor
+    'επιπλα κηπου': ['ΕΞΩΤΕΡΙΚΟΣ ΧΩΡΟΣ', 'Σετ Σαλονιού Κήπου'],
+    'επιπλα βεραντας': ['ΕΞΩΤΕΡΙΚΟΣ ΧΩΡΟΣ', 'Σετ Σαλονιού Κήπου'],
+    'καρεκλες κηπου': ['ΕΞΩΤΕΡΙΚΟΣ ΧΩΡΟΣ', 'Καρέκλες Κήπου'],
+    'ξαπλωστρ': ['ΕΞΩΤΕΡΙΚΟΣ ΧΩΡΟΣ', 'Ξαπλώστρες'],
+    'αιωρ': ['ΕΞΩΤΕΡΙΚΟΣ ΧΩΡΟΣ', 'Αιώρες'],
+    'πανι σκιαση': ['ΕΞΩΤΕΡΙΚΟΣ ΧΩΡΟΣ', 'Λύσεις Σκίασης'],
+    'τζακι εξωτερικου χωρου': ['ΕΞΩΤΕΡΙΚΟΣ ΧΩΡΟΣ', 'Τζάκια & Εστίες Φωτιάς'],
+    'ψησταρι': ['ΕΞΩΤΕΡΙΚΟΣ ΧΩΡΟΣ', 'Ψησταριές'],
+
+    // Lighting
+    'φωτιστικ': ['ΦΩΤΙΣΜΟΣ', 'Γενικά'],
+    'led': ['ΦΩΤΙΣΜΟΣ', 'LED'],
+    'λαμπτήρ': ['ΦΩΤΙΣΜΟΣ', 'Λάμπες'],
+
+    // Decoration
+    'διακοσμητικ': ['ΔΙΑΚΟΣΜΗΣΗ', 'Γενικά'],
+    'πινακ': ['ΔΙΑΚΟΣΜΗΣΗ', 'Πίνακες'],
+    'φυτα': ['ΔΙΑΚΟΣΜΗΣΗ', 'Φυτά'],
+    'κερι': ['ΔΙΑΚΟΣΜΗΣΗ', 'Κεριά'],
+    'ρολογ': ['ΔΙΑΚΟΣΜΗΣΗ', 'Ρολόγια'],
+    'χαλι': ['ΔΙΑΚΟΣΜΗΣΗ', 'Χαλιά'],
+    'καθρεπτ': ['ΔΙΑΚΟΣΜΗΣΗ', 'Καθρέπτες'],
+
+    // Kitchen
+    'οργανωση κουζινας': ['ΚΟΥΖΙΝΑ', 'Οργάνωση'],
+    'μαχαιροπιρουνα': ['ΚΟΥΖΙΝΑ', 'Μαχαιροπίρουνα'],
+    'εργαλεια κουζινας': ['ΚΟΥΖΙΝΑ', 'Εργαλεία Μαγειρικής'],
+    'κατσαρολ': ['ΚΟΥΖΙΝΑ', 'Μαγειρικά Σκεύη'],
+    'τηγανι': ['ΚΟΥΖΙΝΑ', 'Μαγειρικά Σκεύη'],
+    'πιατα': ['ΚΟΥΖΙΝΑ', 'Σερβίτσια'],
+    'ποτηρια': ['ΚΟΥΖΙΝΑ', 'Ποτήρια & Κούπες'],
+    'κουπες': ['ΚΟΥΖΙΝΑ', 'Ποτήρια & Κούπες'],
+    'καφετιερ': ['ΚΟΥΖΙΝΑ', 'Μηχανές Καφέ'],
+
+    // Kids
+    'παιδικο δωματιο': ['ΠΑΙΔΙΚΟ ΔΩΜΑΤΙΟ', 'Παιδικό Έπιπλο'],
+    'παιχνιδ': ['ΠΑΙΔΙΚΟ ΔΩΜΑΤΙΟ', 'Παιχνίδια'],
+    
+    // Uncategorized patterns
+    'οικιακες συσκευες': ['ΑΛΛΑ', 'Οικιακές Συσκευές'],
+    'μικροσυσκευες': ['ΑΛΛΑ', 'Οικιακές Συσκευές'],
+    'αξεσουαρ μπανιου': ['ΑΛΛΑ', 'Αξεσουάρ Μπάνιου'],
+};
 
 // Normalizes the raw category string for easier matching
 function normalize(str: string): string {
   if (!str) return "";
   return str.trim().toLowerCase()
-    .replace(/[ά]/g, 'a')
-    .replace(/[έ]/g, 'ε')
-    .replace(/[ή]/g, 'η')
-    .replace(/[ίϊΐ]/g, 'ι')
-    .replace(/[ό]/g, 'ο')
-    .replace(/[ύϋΰ]/g, 'υ')
-    .replace(/[ώ]/g, 'ω')
-    .replace(/[^a-zα-ω0-9 >]/gi, '');
-}
-
-/**
- * Maps a raw category string to a structured, unified category object.
- * @param raw The raw category string from the supplier feed.
- * @returns A UnifiedCategory object with main and sub categories.
- */
-export function mapCategoryToObject(raw: string): UnifiedCategory {
-  const key = normalize(raw);
-
-  // ΓΡΑΦΕΙΟ
-  if (key.includes("γραφει")) return { main: "ΓΡΑΦΕΙΟ", sub: "Γραφεία" };
-  if (key.includes("καρεκλες γραφειου")) return { main: "ΓΡΑΦΕΙΟ", sub: "Καρέκλες γραφείου" };
-  if (key.includes("βιβλιοθηκ")) return { main: "ΓΡΑΦΕΙΟ", sub: "Βιβλιοθήκες" };
-  if (key.includes("συρταριερ")) return { main: "ΓΡΑΦΕΙΟ", sub: "Συρταριέρες" };
-  if (key.includes("ντουλαπες") || key.includes("αρχει")) return { main: "ΓΡΑΦΕΙΟ", sub: "Ντουλάπες Αρχείων" };
-  if (key.includes("ραφιερ")) return { main: "ΓΡΑΦΕΙΟ", sub: "Ραφιέρες" };
-  if (key.includes("reception")) return { main: "ΓΡΑΦΕΙΟ", sub: "Reception Desks" };
-
-  // ΣΑΛΟΝΙ
-  if (key.includes("καναπε")) return { main: "ΣΑΛΟΝΙ", sub: "Καναπέδες" };
-  if (key.includes("πολυθρον")) return { main: "ΣΑΛΟΝΙ", sub: "Πολυθρόνες" };
-  if (key.includes("τραπεζακια")) return { main: "ΣΑΛΟΝΙ", sub: "Τραπεζάκια σαλονιού" };
-  if (key.includes("τηλεοραση")) return { main: "ΣΑΛΟΝΙ", sub: "Έπιπλα τηλεόρασης" };
-  if (key.includes("συνθεσ")) return { main: "ΣΑΛΟΝΙ", sub: "Συνθέσεις" };
-  if (key.includes("σκαμπ")) return { main: "ΣΑΛΟΝΙ", sub: "Σκαμπό & Πουφ" };
-
-  // ΚΡΕΒΑΤΟΚΑΜΑΡΑ
-  if (key.includes("κρεβατ")) return { main: "ΚΡΕΒΑΤΟΚΑΜΑΡΑ", sub: "Κρεβάτια" };
-  if (key.includes("στρωμα")) return { main: "ΚΡΕΒΑΤΟΚΑΜΑΡΑ", sub: "Στρώματα" };
-  if (key.includes("κομοδιν")) return { main: "ΚΡΕΒΑΤΟΚΑΜΑΡΑ", sub: "Κομοδίνα" };
-  if (key.includes("συρταριερ")) return { main: "ΚΡΕΒΑΤΟΚΑΜΑΡΑ", sub: "Συρταριέρες" };
-  if (key.includes("ντουλαπ")) return { main: "ΚΡΕΒΑΤΟΚΑΜΑΡΑ", sub: "Ντουλάπες" };
-  if (key.includes("τουαλετ")) return { main: "ΚΡΕΒΑΤΟΚΑΜΑΡΑ", sub: "Τουαλέτες" };
-
-  // ΤΡΑΠΕΖΑΡΙΑ
-  if (key.includes("τραπεζαρια") || key.includes("τραπεζι")) return { main: "ΤΡΑΠΕΖΑΡΙΑ", sub: "Τραπέζια" };
-  if (key.includes("καρεκλ") && !key.includes("γραφειου")) return { main: "ΤΡΑΠΕΖΑΡΙΑ", sub: "Καρέκλες" };
-  if (key.includes("μπουφε")) return { main: "ΤΡΑΠΕΖΑΡΙΑ", sub: "Μπουφέδες" };
-  if (key.includes("βιτριν")) return { main: "ΤΡΑΠΕΖΑΡΙΑ", sub: "Βιτρίνες" };
-  if (key.includes("stool") || key.includes("παγκο")) return { main: "ΤΡΑΠΕΖΑΡΙΑ", sub: "Stools" };
-
-  // ΕΞΩΤΕΡΙΚΟΣ ΧΩΡΟΣ
-  if (key.includes("κηπου") || key.includes("βεραντ")) return { main: "ΕΞΩΤΕΡΙΚΟΣ ΧΩΡΟΣ", sub: "Καρέκλες κήπου" };
-  if (key.includes("ξαπλωστ")) return { main: "ΕΞΩΤΕΡΙΚΟΣ ΧΩΡΟΣ", sub: "Ξαπλώστρες" };
-  if (key.includes("σαλονι κηπου")) return { main: "ΕΞΩΤΕΡΙΚΟΣ ΧΩΡΟΣ", sub: "Σετ σαλονιού κήπου" };
-
-  // ΦΩΤΙΣΜΟΣ
-  if (key.includes("φωτιστικ")) return { main: "ΦΩΤΙΣΜΟΣ", sub: "Γενικά" };
-  if (key.includes("led")) return { main: "ΦΩΤΙΣΜΟΣ", sub: "LED" };
-
-  // ΔΙΑΚΟΣΜΗΣΗ
-  if (key.includes("διακοσμητικ")) return { main: "ΔΙΑΚΟΣΜΗΣΗ", sub: "Γενικά" };
-  if (key.includes("πινακ")) return { main: "ΔΙΑΚΟΣΜΗΣΗ", sub: "Πίνακες" };
-  if (key.includes("φυτα")) return { main: "ΔΙΑΚΟΣΜΗΣΗ", sub: "Φυτά" };
-  if (key.includes("κερια")) return { main: "ΔΙΑΚΟΣΜΗΣΗ", sub: "Κεριά" };
-  if (key.includes("ρολογ")) return { main: "ΔΙΑΚΟΣΜΗΣΗ", sub: "Ρολόγια" };
-  if (key.includes("χαλι")) return { main: "ΔΙΑΚΟΣΜΗΣΗ", sub: "Χαλιά" };
-
-  // ΑΞΕΣΟΥΑΡ – ΜΙΚΡΟΕΠΙΠΛΑ
-  if (key.includes("ραφιερ")) return { main: "ΑΞΕΣΟΥΑΡ – ΜΙΚΡΟΕΠΙΠΛΑ", sub: "Ραφιέρες" };
-  if (key.includes("βοηθητικα τραπεζ")) return { main: "ΑΞΕΣΟΥΑΡ – ΜΙΚΡΟΕΠΙΠΛΑ", sub: "Βοηθητικά τραπέζια" };
-  if (key.includes("καλογερ") || key.includes("κρεμαστρ")) return { main: "ΑΞΕΣΟΥΑΡ – ΜΙΚΡΟΕΠΙΠΛΑ", sub: "Καλόγεροι" };
-  
-  // ΠΡΟΣΦΟΡΕΣ
-  if (key.includes("black friday") || key.includes("προσφορες")) return { main: "ΠΡΟΣΦΟΡΕΣ", sub: "Μειωμένη Τιμή" };
-
-  // ΧΡΙΣΤΟΥΓΕΝΝΙΑΤΙΚΑ
-  if (key.includes("χριστουγενν")) return { main: "ΧΡΙΣΤΟΥΓΕΝΝΙΑΤΙΚΑ", sub: "Εποχιακά" };
-
-  // Fallback
-  return { main: "ΑΛΛΑ", sub: "Uncategorized" };
+    .replace(/[άάὰ]/g, 'α')
+    .replace(/[έὲ]/g, 'ε')
+    .replace(/[ήὴ]/g, 'η')
+    .replace(/[ίϊΐὶ]/g, 'ι')
+    .replace(/[όὸ]/g, 'ο')
+    .replace(/[ύϋΰὺ]/g, 'υ')
+    .replace(/[ώὼ]/g, 'ω')
+    .replace(/[^a-zα-ω0-9 >]/gi, ''); // allow > for path separation
 }
 
 /**
@@ -96,6 +101,23 @@ export function mapCategoryToObject(raw: string): UnifiedCategory {
  * @returns A formatted category string.
  */
 export function mapCategory(raw: string): string {
-    const { main, sub } = mapCategoryToObject(raw);
-    return `${main} > ${sub}`;
+    const normalizedRaw = normalize(raw);
+    
+    for (const key in categoryMap) {
+        if (normalizedRaw.includes(key)) {
+            const [main, sub] = categoryMap[key];
+            return `${main} > ${sub}`;
+        }
+    }
+    
+    // Fallback if no specific keyword matches
+    const parts = raw.split('>').map(p => p.trim()).filter(Boolean);
+    if (parts.length > 1) {
+        return parts.slice(0, 2).join(' > ');
+    }
+    if (parts.length === 1) {
+        return `ΑΛΛΑ > ${parts[0]}`;
+    }
+
+    return "ΑΛΛΑ > Uncategorized";
 }

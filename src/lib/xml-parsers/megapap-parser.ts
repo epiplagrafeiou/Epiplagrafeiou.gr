@@ -3,18 +3,7 @@
 
 import { XMLParser } from 'fast-xml-parser';
 import { mapCategory } from '../category-mapper';
-
-export interface XmlProduct {
-  id: string;
-  name: string;
-  retailPrice: string;
-  webOfferPrice: string;
-  description: string;
-  category: string;
-  mainImage: string | null;
-  images: string[];
-  stock: number;
-}
+import type { XmlProduct } from '../types/product';
 
 export async function megapapParser(url: string): Promise<XmlProduct[]> {
     console.log("▶ Running Megapap parser");
