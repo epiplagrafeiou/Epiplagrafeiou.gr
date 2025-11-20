@@ -43,6 +43,7 @@ export async function b2bportalParser(url: string): Promise<XmlProduct[]> {
   const products: XmlProduct[] = productArray.map((p: any) => {
     let allImages: string[] = [];
     
+    // Correctly map the image fields
     if (p.image_url && typeof p.image_url === 'string') {
         allImages.push(p.image_url);
     }
@@ -63,9 +64,11 @@ export async function b2bportalParser(url: string): Promise<XmlProduct[]> {
     // Correctly handle numeric availability
     const stock = Number(p.availability) > 0 ? 10 : 0;
     
+    // Correctly map the price field
     const finalWebOfferPrice = parseFloat(p.price_vat?.toString().replace(',', '.') || '0');
 
     return {
+      // Correctly map the ID and name fields
       id: p.product_code?.toString() || `temp-id-${Math.random()}`,
       name: p.product_name || 'No Name',
       retailPrice: p.price_vat?.toString().replace(',', '.') || '0',
