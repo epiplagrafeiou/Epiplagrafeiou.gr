@@ -52,10 +52,12 @@ export default function Header() {
     const categoriesById: Record<string, StoreCategory> = {};
     const rootCategories: StoreCategory[] = [];
 
+    // Initialize all categories with a children array
     fetchedCategories.forEach(cat => {
         categoriesById[cat.id] = { ...cat, children: [] };
     });
 
+    // Populate the children arrays
     fetchedCategories.forEach(cat => {
         if (cat.parentId && categoriesById[cat.parentId]) {
             categoriesById[cat.parentId].children.push(categoriesById[cat.id]);
@@ -64,6 +66,7 @@ export default function Header() {
         }
     });
     
+    // Sort categories at each level by the 'order' property
     const sortRecursive = (categories: StoreCategory[]) => {
         categories.sort((a,b) => a.order - b.order);
         categories.forEach(c => sortRecursive(c.children));
@@ -71,6 +74,7 @@ export default function Header() {
     
     sortRecursive(rootCategories);
     
+    // Create links for the main navigation bar from top-level categories
     const navLinks = rootCategories.map(cat => ({
         name: cat.name,
         slug: `/category/${createSlug(cat.name)}`
