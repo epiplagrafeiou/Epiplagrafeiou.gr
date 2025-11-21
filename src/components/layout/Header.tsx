@@ -87,17 +87,21 @@ export default function Header() {
   const categoryTree = useMemo(() => {
     if (!fetchedCategories) return [];
   
-    const categoriesById: Record<string, StoreCategory> = fetchedCategories.reduce((acc, cat) => {
-        acc[cat.id] = { ...cat, children: [] };
-        return acc;
-    }, {} as Record<string, StoreCategory>);
-
+    const categoriesById: Record<string, StoreCategory> = {};
     const rootCategories: StoreCategory[] = [];
-    
+  
+    // First, populate the map with all categories, initializing children arrays.
+    fetchedCategories.forEach(cat => {
+        categoriesById[cat.id] = { ...cat, children: [] };
+    });
+  
+    // Second, build the tree structure.
     fetchedCategories.forEach(cat => {
         if (cat.parentId && categoriesById[cat.parentId]) {
+            // This is a child category, push it to its parent's children array.
             categoriesById[cat.parentId].children.push(categoriesById[cat.id]);
         } else {
+            // This is a root category.
             rootCategories.push(categoriesById[cat.id]);
         }
     });
@@ -195,11 +199,11 @@ export default function Header() {
            </NavigationMenuItem>
         ))}
          <NavigationMenuItem>
-             <NavigationMenuLink asChild className={navigationMenuTriggerStyle()}>
-                <Link href="/blog">
-                    Blog
-                </Link>
-            </NavigationMenuLink>
+            <Link href="/blog" legacyBehavior passHref>
+                <NavigationMenuLink className={navigationMenuTriggerStyle()}>
+                Blog
+                </NavigationMenuLink>
+            </Link>
         </NavigationMenuItem>
       </NavigationMenuList>
     </NavigationMenu>
