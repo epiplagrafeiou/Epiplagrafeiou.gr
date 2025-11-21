@@ -1,3 +1,4 @@
+
 'use client';
 import { useState, useMemo, useCallback, useEffect } from 'react';
 import {
@@ -23,7 +24,7 @@ import { useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, doc, writeBatch } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { cn, createSlug } from '@/lib/utils';
-import { categoryMapping } from '@/lib/category-mapper';
+import { getCategoryMapping } from '@/lib/category-mapper';
 
 const RawCategoryItem = ({ category }: { category: string }) => {
     const { attributes, listeners, setNodeRef } = useDraggable({
@@ -218,6 +219,8 @@ export default function CategoryManager() {
             toast({ variant: 'destructive', title: 'Database error', description: 'Firestore is not available.' });
             return;
         }
+
+        const categoryMapping = await getCategoryMapping();
     
         const batch = writeBatch(firestore);
         const existingCategories = new Map(fetchedCategories?.map(c => [c.id, c]));

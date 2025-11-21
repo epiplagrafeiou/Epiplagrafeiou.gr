@@ -13,7 +13,7 @@ function normalize(s: string): string {
 // This structure defines the desired final state.
 // The 'raw' is the original string from the supplier.
 // The 'mapped' is the clean, hierarchical path we want.
-export const categoryMapping = [
+const categoryMapping = [
     { raw: 'έπιπλα γραφείου > γραφεία', mapped: 'ΓΡΑΦΕΙΟ > Γραφεία' },
     { raw: 'έπιπλα γραφείου > καρέκλες γραφείου', mapped: 'ΓΡΑΦΕΙΟ > Καρέκλες γραφείου' },
     { raw: 'έπιπλα γραφείου > συρταριέρες γραφείου', mapped: 'ΓΡΑΦΕΙΟ > Συρταριέρες Γραφείου' },
@@ -117,6 +117,10 @@ export const categoryMapping = [
     { raw: 'κηροπήγια & κηροσβέστες > διακόσμηση & ατμόσφαιρα', mapped: 'Χριστουγεννιάτικα > Κηροπήγια & Κηροσβέστες' },
     { raw: 'χριστουγεννιάτικες φιγούρες > και αν δεν έχουμε ταξιδέψει κοιτάζοντας την !', mapped: 'Χριστουγεννιάτικα > Χριστουγεννιάτικες Φιγούρες' },
 ];
+
+export async function getCategoryMapping() {
+  return categoryMapping;
+}
 
 // Fallback function that uses the mapping.
 export async function mapCategory(rawCategory: string, productName: string): Promise<string> {
