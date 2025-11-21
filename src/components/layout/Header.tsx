@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
@@ -15,7 +14,8 @@ import {
   X,
   Heart,
   Truck,
-  ChevronRight
+  ChevronRight,
+  ChevronDown
 } from 'lucide-react';
 import { useCart } from '@/lib/cart-context';
 import { useUser, useFirestore, useMemoFirebase } from '@/firebase';
@@ -27,9 +27,47 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
+import {
+    NavigationMenu,
+    NavigationMenuContent,
+    NavigationMenuItem,
+    NavigationMenuLink,
+    NavigationMenuList,
+    NavigationMenuTrigger,
+    navigationMenuTriggerStyle,
+} from "@/components/ui/navigation-menu"
 import { createSlug } from '@/lib/utils';
 import { useWishlist } from '@/lib/wishlist-context';
 import type { StoreCategory } from '@/components/admin/CategoryManager';
+import { cn } from '@/lib/utils';
+import React from 'react';
+
+const ListItem = React.forwardRef<
+  React.ElementRef<"a">,
+  React.ComponentPropsWithoutRef<"a">
+>(({ className, title, children, ...props }, ref) => {
+  return (
+    <li>
+      <NavigationMenuLink asChild>
+        <a
+          ref={ref}
+          className={cn(
+            "block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground",
+            className
+          )}
+          {...props}
+        >
+          <div className="text-sm font-medium leading-none">{title}</div>
+          <p className="line-clamp-2 text-sm leading-snug text-muted-foreground">
+            {children}
+          </p>
+        </a>
+      </NavigationMenuLink>
+    </li>
+  )
+})
+ListItem.displayName = "ListItem"
+
 
 export default function Header() {
   const { itemCount } = useCart();
@@ -46,18 +84,17 @@ export default function Header() {
   }, [firestore]);
   const { data: fetchedCategories } = useCollection<Omit<StoreCategory, 'children'>>(categoriesQuery);
 
-  const { categoryTree, mainNavLinks } = useMemo(() => {
-    if (!fetchedCategories) return { categoryTree: [], mainNavLinks: [] };
-
+  const categoryTree = useMemo(() => {
+    if (!fetchedCategories) return [];
+  
     const categoriesById: Record<string, StoreCategory> = {};
     const rootCategories: StoreCategory[] = [];
-
-    // Initialize all categories with a children array
+    const desiredOrder = ['ΓΡΑΦΕΙΟ', 'ΣΑΛΟΝΙ', 'ΚΡΕΒΑΤΟΚΑΜΑΡΑ', 'ΕΞΩΤΕΡΙΚΟΣ ΧΩΡΟΣ', 'Αξεσουάρ', 'ΦΩΤΙΣΜΟΣ', 'ΔΙΑΚΟΣΜΗΣΗ', 'Χριστουγεννιάτικα'];
+  
     fetchedCategories.forEach(cat => {
         categoriesById[cat.id] = { ...cat, children: [] };
     });
-
-    // Populate the children arrays
+  
     fetchedCategories.forEach(cat => {
         if (cat.parentId && categoriesById[cat.parentId]) {
             categoriesById[cat.parentId].children.push(categoriesById[cat.id]);
@@ -65,22 +102,29 @@ export default function Header() {
             rootCategories.push(categoriesById[cat.id]);
         }
     });
-
-    // Sort categories at each level by the 'order' property
+    
     const sortRecursive = (categories: StoreCategory[]) => {
+        categories.forEach(c => {
+            if (c.children.length > 0) {
+                sortRecursive(c.children);
+            }
+        });
         categories.sort((a,b) => a.order - b.order);
-        categories.forEach(c => sortRecursive(c.children));
     }
-
+    
     sortRecursive(rootCategories);
 
-    // Create links for the main navigation bar from top-level categories
-    const navLinks = rootCategories.map(cat => ({
-        name: cat.name,
-        slug: `/category/${createSlug(cat.name)}`
-    }));
+    // Sort root categories based on the desired order
+    rootCategories.sort((a, b) => {
+        const indexA = desiredOrder.indexOf(a.name.toUpperCase());
+        const indexB = desiredOrder.indexOf(b.name.toUpperCase());
+        // If a category is not in the desired order list, it goes to the end
+        if (indexA === -1) return 1;
+        if (indexB === -1) return -1;
+        return indexA - indexB;
+    });
 
-    return { categoryTree: rootCategories, mainNavLinks: navLinks };
+    return rootCategories;
   }, [fetchedCategories]);
 
 
@@ -124,19 +168,29 @@ export default function Header() {
   };
 
   const desktopNav = (
-      <nav className="flex items-center gap-6">
-        {mainNavLinks.map((link) => (
-          <Link
-            key={link.slug}
-            href={link.slug}
-            className="group relative text-sm font-semibold text-foreground"
-          >
-            {link.name}
-            <span className="absolute bottom-[-2px] left-0 h-0.5 w-full scale-x-0 bg-primary transition-transform duration-300 group-hover:scale-x-100"></span>
-          </Link>
+    <NavigationMenu>
+      <NavigationMenuList>
+        {categoryTree.map(category => (
+           <NavigationMenuItem key={category.id}>
+             <NavigationMenuTrigger>{category.name}</NavigationMenuTrigger>
+             <NavigationMenuContent>
+                <ul className="grid w-[400px] gap-3 p-4 md:w-[500px] md:grid-cols-2 lg:w-[600px] ">
+                  {category.children.map((component) => (
+                    <ListItem
+                      key={component.id}
+                      title={component.name}
+                      href={`/category/${createSlug(category.name)}/${createSlug(component.name)}`}
+                    >
+                      {/* Placeholder for subcategory description */}
+                    </ListItem>
+                  ))}
+                </ul>
+             </NavigationMenuContent>
+           </NavigationMenuItem>
         ))}
-      </nav>
-  )
+      </NavigationMenuList>
+    </NavigationMenu>
+  );
 
   const mobileNav = (
     <div className={`fixed inset-0 z-50 bg-background transition-transform duration-300 md:hidden ${isMobileMenuOpen ? 'translate-x-0' : 'translate-x-full'}`}>
@@ -159,26 +213,17 @@ export default function Header() {
   return (
     <header className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur-sm">
       <div className="container mx-auto px-4">
-        {/* Top bar of the header */}
         <div className="flex h-20 items-center justify-between gap-4">
-          {/* Left side: Menu and Logo */}
           <div className="flex items-center gap-4">
             <Button variant="ghost" size="icon" className="md:hidden" onClick={() => setIsMobileMenuOpen(true)}>
               <Menu className="h-6 w-6 text-foreground" />
               <span className="sr-only">Μενού</span>
             </Button>
-             <div className="hidden md:flex flex-col items-center">
-                <Button variant="ghost" size="icon" onClick={() => setIsMobileMenuOpen(true)}>
-                    <Menu className="h-6 w-6 text-foreground" />
-                </Button>
-                <span className="text-xs font-medium text-foreground">Μενού</span>
-            </div>
             <Link href="/" className="shrink-0">
               <Logo />
             </Link>
           </div>
 
-          {/* Center: Search Bar */}
           <div className="hidden flex-1 px-4 lg:px-12 md:block">
             <form onSubmit={handleSearch} className="relative">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-foreground" />
@@ -191,7 +236,6 @@ export default function Header() {
             </form>
           </div>
 
-          {/* Right side: Icons */}
           <div className="flex items-center gap-2">
             <LoginDialog>
                 <Button variant="ghost" className="hidden md:flex items-center gap-2">
@@ -234,8 +278,7 @@ export default function Header() {
           </div>
         </div>
 
-        {/* Bottom bar of the header (navigation) */}
-        <div className="hidden h-12 items-center md:flex">
+        <div className="hidden h-12 items-center justify-center md:flex">
              {desktopNav}
         </div>
       </div>

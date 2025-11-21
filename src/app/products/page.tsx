@@ -18,9 +18,14 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Slider } from "@/components/ui/slider"
 import { formatCurrency } from '@/lib/utils';
-import { PackageSearch } from 'lucide-react';
+import { PackageSearch, ChevronDown, ChevronRight } from 'lucide-react';
 import { Card } from '@/components/ui/card';
-import { normalizeCategory } from '@/lib/utils';
+import { useCollection } from '@/firebase/firestore/use-collection';
+import { collection } from 'firebase/firestore';
+import { useFirestore, useMemoFirebase } from '@/firebase';
+import type { StoreCategory } from '@/components/admin/CategoryManager';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { createSlug } from '@/lib/utils';
 
 
 function ProductsPageContent() {
@@ -29,19 +34,63 @@ function ProductsPageContent() {
   const querySearchTerm = searchParams.get('q') || '';
   
   const [searchTerm, setSearchTerm] = useState(querySearchTerm);
-  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const [selectedCategories, setSelectedCategories] = useState<Set<string>>(new Set());
   const [priceRange, setPriceRange] = useState<[number, number]>([0, 1000]);
   const [sortBy, setSortBy] = useState('price-asc');
   const [inStockOnly, setInStockOnly] = useState(false);
+
+  const firestore = useFirestore();
+  const categoriesQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return collection(firestore, 'categories');
+  }, [firestore]);
+  const { data: fetchedCategories, isLoading: areCategoriesLoading } = useCollection<Omit<StoreCategory, 'children'>>(categoriesQuery);
+
+  const categoryTree = useMemo(() => {
+    if (!fetchedCategories) return [];
+  
+    const categoriesById: Record<string, StoreCategory> = {};
+    const rootCategories: StoreCategory[] = [];
+    const desiredOrder = ['ΓΡΑΦΕΙΟ', 'ΣΑΛΟΝΙ', 'ΚΡΕΒΑΤΟΚΑΜΑΡΑ', 'ΕΞΩΤΕΡΙΚΟΣ ΧΩΡΟΣ', 'Αξεσουάρ', 'ΦΩΤΙΣΜΟΣ', 'ΔΙΑΚΟΣΜΗΣΗ', 'Χριστουγεννιάτικα'];
+  
+    fetchedCategories.forEach(cat => {
+        categoriesById[cat.id] = { ...cat, children: [] };
+    });
+  
+    fetchedCategories.forEach(cat => {
+        if (cat.parentId && categoriesById[cat.parentId]) {
+            categoriesById[cat.parentId].children.push(categoriesById[cat.id]);
+        } else {
+            rootCategories.push(categoriesById[cat.id]);
+        }
+    });
+    
+    const sortRecursive = (categories: StoreCategory[]) => {
+        categories.forEach(c => {
+            if (c.children.length > 0) {
+                sortRecursive(c.children);
+            }
+        });
+        categories.sort((a,b) => a.order - b.order);
+    }
+    
+    sortRecursive(rootCategories);
+    
+    rootCategories.sort((a, b) => {
+        const indexA = desiredOrder.indexOf(a.name.toUpperCase());
+        const indexB = desiredOrder.indexOf(b.name.toUpperCase());
+        if (indexA === -1) return 1;
+        if (indexB === -1) return -1;
+        return indexA - indexB;
+    });
+
+    return rootCategories;
+  }, [fetchedCategories]);
 
   useEffect(() => {
     setSearchTerm(querySearchTerm);
   }, [querySearchTerm]);
 
-  const safePrices = useMemo(() => {
-    if (!isLoaded) return [0];
-    return products.map(p => Number(p.price) || 0);
-  }, [products, isLoaded]);
 
   const maxPrice = useMemo(() => {
     if (!isLoaded) return 1000;
@@ -56,6 +105,32 @@ function ProductsPageContent() {
       setPriceRange([0, maxProductPrice]);
     }
   }, [isLoaded, products]);
+  
+  const getSubCategoryIds = (categoryId: string): string[] => {
+    const ids: string[] = [categoryId];
+    const findChildren = (catId: string) => {
+        const category = findCategoryById(catId, categoryTree);
+        if (category && category.children) {
+            for (const child of category.children) {
+                ids.push(child.id);
+                findChildren(child.id);
+            }
+        }
+    };
+    findChildren(categoryId);
+    return ids;
+  };
+  
+  const findCategoryById = (id: string, categories: StoreCategory[]): StoreCategory | null => {
+      for (const cat of categories) {
+          if (cat.id === id) return cat;
+          if (cat.children) {
+              const found = findCategoryById(id, cat.children);
+              if (found) return found;
+          }
+      }
+      return null;
+  };
 
   const filteredAndSortedProducts = useMemo(() => {
     if (!isLoaded) return [];
@@ -69,13 +144,13 @@ function ProductsPageContent() {
     if (searchTerm) {
       filtered = filtered.filter(p => p.name.toLowerCase().includes(searchTerm.toLowerCase()));
     }
-
-    if (selectedCategories.length > 0) {
-      filtered = filtered.filter(p => {
-        const productTopCategory = normalizeCategory(p.category).split(' > ')[0];
-        return selectedCategories.includes(productTopCategory);
-      });
+    
+    if (selectedCategories.size > 0) {
+      const allSelectedIds = Array.from(selectedCategories).flatMap(getSubCategoryIds);
+      const selectedIdSet = new Set(allSelectedIds);
+      filtered = filtered.filter(p => p.categoryId && selectedIdSet.has(p.categoryId));
     }
+
 
     filtered = filtered.filter(p => p.price >= priceRange[0] && p.price <= priceRange[1]);
 
@@ -94,16 +169,44 @@ function ProductsPageContent() {
     return filtered;
   }, [products, isLoaded, searchTerm, selectedCategories, priceRange, sortBy, inStockOnly]);
   
-  const topLevelCategories = useMemo(() => {
-    if (!isLoaded) return [];
-    const cats = new Set(products.map(p => normalizeCategory(p.category).split(' > ')[0]));
-    return Array.from(cats);
-  }, [products, isLoaded]);
 
-  const handleCategoryChange = (category: string, checked: boolean) => {
-    setSelectedCategories(prev => 
-      checked ? [...prev, category] : prev.filter(c => c !== category)
-    );
+  const handleCategoryChange = (categoryId: string, checked: boolean) => {
+    setSelectedCategories(prev => {
+        const newSet = new Set(prev);
+        if (checked) {
+            newSet.add(categoryId);
+        } else {
+            newSet.delete(categoryId);
+        }
+        return newSet;
+    });
+  };
+
+  const renderCategoryFilters = (categories: StoreCategory[]) => {
+    return categories.map(cat => (
+      <Collapsible key={cat.id} className="space-y-2">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-2">
+            <Checkbox 
+              id={`cat-${cat.id}`} 
+              onCheckedChange={(checked) => handleCategoryChange(cat.id, !!checked)}
+              checked={selectedCategories.has(cat.id)}
+            />
+            <Label htmlFor={`cat-${cat.id}`} className="font-semibold">{cat.name}</Label>
+          </div>
+          {cat.children && cat.children.length > 0 && (
+            <CollapsibleTrigger>
+              <ChevronDown className="h-4 w-4" />
+            </CollapsibleTrigger>
+          )}
+        </div>
+        {cat.children && cat.children.length > 0 && (
+          <CollapsibleContent className="pl-6 space-y-2">
+            {renderCategoryFilters(cat.children)}
+          </CollapsibleContent>
+        )}
+      </Collapsible>
+    ));
   };
   
 
@@ -135,24 +238,15 @@ function ProductsPageContent() {
             <div>
               <h3 className="font-semibold mb-2">Κατηγορίες</h3>
 
-              {!isLoaded ? (
+              {areCategoriesLoading ? (
                 <div className="space-y-2">
-                  {Array.from({ length: 6 }).map((_, i) => (
+                  {Array.from({ length: 8 }).map((_, i) => (
                     <Skeleton key={i} className="h-6 w-32" />
                   ))}
                 </div>
               ) : (
                 <div className="space-y-2">
-                  {topLevelCategories.map(cat => (
-                    <div key={cat} className="flex items-center space-x-2">
-                      <Checkbox 
-                        id={`cat-${cat}`} 
-                        onCheckedChange={(checked) => handleCategoryChange(cat, !!checked)}
-                        checked={selectedCategories.includes(cat)}
-                      />
-                      <Label htmlFor={`cat-${cat}`}>{cat}</Label>
-                    </div>
-                  ))}
+                  {renderCategoryFilters(categoryTree)}
                 </div>
               )}
             </div>
