@@ -14,8 +14,7 @@ import {
   X,
   Heart,
   Truck,
-  ChevronRight,
-  ChevronDown
+  ChevronRight
 } from 'lucide-react';
 import { useCart } from '@/lib/cart-context';
 import { useUser, useFirestore, useMemoFirebase } from '@/firebase';
@@ -34,7 +33,6 @@ import {
     NavigationMenuLink,
     NavigationMenuList,
     NavigationMenuTrigger,
-    navigationMenuTriggerStyle,
 } from "@/components/ui/navigation-menu"
 import { createSlug } from '@/lib/utils';
 import { useWishlist } from '@/lib/wishlist-context';
@@ -114,11 +112,9 @@ export default function Header() {
     
     sortRecursive(rootCategories);
 
-    // Sort root categories based on the desired order
     rootCategories.sort((a, b) => {
         const indexA = desiredOrder.indexOf(a.name.toUpperCase());
         const indexB = desiredOrder.indexOf(b.name.toUpperCase());
-        // If a category is not in the desired order list, it goes to the end
         if (indexA === -1) return 1;
         if (indexB === -1) return -1;
         return indexA - indexB;
@@ -133,6 +129,7 @@ export default function Header() {
     if (!searchQuery.trim()) return;
     router.push(`/products?q=${encodeURIComponent(searchQuery)}`);
     setSearchQuery('');
+    if (isMobileMenuOpen) handleLinkClick();
   };
 
   const handleLinkClick = () => {
@@ -146,7 +143,7 @@ export default function Header() {
         return (
           <Collapsible key={node.id} className="group">
             <CollapsibleTrigger className="flex w-full items-center justify-between py-2 text-left text-sm font-medium">
-              <span>{node.name}</span>
+              <Link href={`/category${currentSlug}`} onClick={handleLinkClick} className="flex-grow">{node.name}</Link>
               <ChevronRight className="h-4 w-4 transition-transform duration-200 group-data-[state=open]:rotate-90" />
             </CollapsibleTrigger>
             <CollapsibleContent className="pl-4">
@@ -188,6 +185,13 @@ export default function Header() {
              </NavigationMenuContent>
            </NavigationMenuItem>
         ))}
+         <NavigationMenuItem>
+            <Link href="/blog" legacyBehavior passHref>
+                <NavigationMenuLink className={navigationMenuTriggerStyle()}>
+                Blog
+                </NavigationMenuLink>
+            </Link>
+        </NavigationMenuItem>
       </NavigationMenuList>
     </NavigationMenu>
   );
@@ -203,6 +207,15 @@ export default function Header() {
             </Button>
         </div>
         <div className="p-4 overflow-y-auto h-[calc(100vh-4rem)]">
+             <form onSubmit={handleSearch} className="relative mb-4">
+                <Input 
+                    placeholder="Αναζήτηση..." 
+                    className="pr-10" 
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                />
+                <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+            </form>
             <nav className="flex flex-col divide-y">
                 {renderCategoryTree(categoryTree)}
             </nav>
@@ -243,10 +256,6 @@ export default function Header() {
                     <span className="text-sm font-medium text-foreground">Σύνδεση/Εγγραφή</span>
                 </Button>
             </LoginDialog>
-            <Button variant="ghost" size="icon" className="hidden md:inline-flex">
-              <Truck className="text-foreground" />
-              <span className="sr-only">Delivery</span>
-            </Button>
             <Button variant="ghost" size="icon" asChild className="hidden md:inline-flex relative">
               <Link href="/wishlist">
                 <Heart className="text-foreground" />
@@ -270,11 +279,6 @@ export default function Header() {
                 </div>
               </Link>
             </Button>
-             <form onSubmit={handleSearch} className="relative md:hidden">
-              <Button variant="ghost" size="icon" type="submit">
-                <Search className="text-foreground" />
-              </Button>
-            </form>
           </div>
         </div>
 
