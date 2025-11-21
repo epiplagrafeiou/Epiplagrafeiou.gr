@@ -7,12 +7,12 @@ import { useRouter } from 'next/navigation';
 import { Logo } from '@/components/icons/Logo';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { 
-  ShoppingCart, 
-  User, 
-  Search, 
-  Menu, 
-  X, 
+import {
+  ShoppingCart,
+  User,
+  Search,
+  Menu,
+  X,
   Heart,
   Truck,
   ChevronRight
@@ -38,7 +38,7 @@ export default function Header() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
-  
+
   const firestore = useFirestore();
   const categoriesQuery = useMemoFirebase(() => {
     if (!firestore) return null;
@@ -65,15 +65,15 @@ export default function Header() {
             rootCategories.push(categoriesById[cat.id]);
         }
     });
-    
+
     // Sort categories at each level by the 'order' property
     const sortRecursive = (categories: StoreCategory[]) => {
         categories.sort((a,b) => a.order - b.order);
         categories.forEach(c => sortRecursive(c.children));
     }
-    
+
     sortRecursive(rootCategories);
-    
+
     // Create links for the main navigation bar from top-level categories
     const navLinks = rootCategories.map(cat => ({
         name: cat.name,
@@ -94,7 +94,7 @@ export default function Header() {
   const handleLinkClick = () => {
     setIsMobileMenuOpen(false);
   }
-  
+
   const renderCategoryTree = (nodes: StoreCategory[], parentSlug = '') => {
     return nodes.map(node => {
       const currentSlug = `${parentSlug}/${createSlug(node.name)}`;
@@ -122,6 +122,21 @@ export default function Header() {
       );
     });
   };
+
+  const desktopNav = (
+      <nav className="flex items-center gap-6">
+        {mainNavLinks.map((link) => (
+          <Link
+            key={link.slug}
+            href={link.slug}
+            className="group relative text-sm font-semibold text-foreground"
+          >
+            {link.name}
+            <span className="absolute bottom-[-2px] left-0 h-0.5 w-full scale-x-0 bg-primary transition-transform duration-300 group-hover:scale-x-100"></span>
+          </Link>
+        ))}
+      </nav>
+  )
 
   const mobileNav = (
     <div className={`fixed inset-0 z-50 bg-background transition-transform duration-300 md:hidden ${isMobileMenuOpen ? 'translate-x-0' : 'translate-x-full'}`}>
@@ -167,9 +182,9 @@ export default function Header() {
           <div className="hidden flex-1 px-4 lg:px-12 md:block">
             <form onSubmit={handleSearch} className="relative">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-foreground" />
-              <Input 
-                placeholder="Αναζητήστε προϊόντα, δωμάτια, ιδέες..." 
-                className="h-12 w-full rounded-full bg-secondary pl-12" 
+              <Input
+                placeholder="Αναζητήστε προϊόντα, δωμάτια, ιδέες..."
+                className="h-12 w-full rounded-full bg-secondary pl-12"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
@@ -221,18 +236,7 @@ export default function Header() {
 
         {/* Bottom bar of the header (navigation) */}
         <div className="hidden h-12 items-center md:flex">
-             <nav className="flex items-center gap-6">
-                {mainNavLinks.map((link) => (
-                <Link
-                    key={link.name}
-                    href={link.slug}
-                    className="group relative text-sm font-semibold text-foreground"
-                >
-                    {link.name}
-                    <span className="absolute bottom-[-2px] left-0 h-0.5 w-full scale-x-0 bg-primary transition-transform duration-300 group-hover:scale-x-100"></span>
-                </Link>
-                ))}
-            </nav>
+             {desktopNav}
         </div>
       </div>
       {mobileNav}
