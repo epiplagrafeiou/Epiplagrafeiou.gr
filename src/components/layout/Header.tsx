@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
@@ -88,18 +87,21 @@ export default function Header() {
     if (!fetchedCategories) return [];
 
     const categoriesById: Record<string, StoreCategory> = {};
-    const rootCategories: StoreCategory[] = [];
-
+    
+    // First pass: create a map of all categories by ID, initializing children arrays.
     fetchedCategories.forEach(cat => {
-      categoriesById[cat.id] = { ...cat, children: [] };
+        categoriesById[cat.id] = { ...cat, children: [] };
     });
 
-    fetchedCategories.forEach(cat => {
-      if (cat.parentId && categoriesById[cat.parentId]) {
-        categoriesById[cat.parentId].children.push(categoriesById[cat.id]);
-      } else {
-        rootCategories.push(categoriesById[cat.id]);
-      }
+    const rootCategories: StoreCategory[] = [];
+
+    // Second pass: build the tree by assigning children to their parents.
+    Object.values(categoriesById).forEach(cat => {
+        if (cat.parentId && categoriesById[cat.parentId]) {
+            categoriesById[cat.parentId].children.push(cat);
+        } else {
+            rootCategories.push(cat);
+        }
     });
 
     const desiredOrder = ['ΓΡΑΦΕΙΟ', 'ΣΑΛΟΝΙ', 'ΚΡΕΒΑΤΟΚΑΜΑΡΑ', 'ΕΞΩΤΕΡΙΚΟΣ ΧΩΡΟΣ', 'Αξεσουάρ', 'ΦΩΤΙΣΜΟΣ', 'ΔΙΑΚΟΣΜΗΣΗ', 'Χριστουγεννιάτικα'];
