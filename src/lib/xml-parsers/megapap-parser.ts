@@ -1,3 +1,4 @@
+
 'use server';
 
 import { XMLParser } from 'fast-xml-parser';
@@ -10,9 +11,12 @@ function getVariantGroupKey(sku: string): string {
   return sku.includes(',') ? sku.split(',')[0] : sku;
 }
 
-// Extracts the color from the filters string
-function getColorFromFilters(filters: string): string | undefined {
-    if (!filters) return undefined;
+// Extracts the color from the filters string, now safely handling non-string inputs.
+function getColorFromFilters(filters: any): string | undefined {
+    // Ensure the input is a string before trying to split it.
+    if (typeof filters !== 'string' || !filters) {
+        return undefined;
+    }
     const colorFilter = filters.split(';').find(f => f.startsWith('ΧΡΩΜΑ:'));
     if (!colorFilter) return undefined;
     return colorFilter.split(':')[1]?.trim();
