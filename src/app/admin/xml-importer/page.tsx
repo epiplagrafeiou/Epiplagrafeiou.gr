@@ -101,6 +101,7 @@ export default function XmlImporterPage() {
     let markedUpPrice = price;
     let ruleApplied = false;
 
+    // 1. Apply Percentage-based Markup
     for (const rule of sortedRules) {
         if (price >= rule.from && price <= rule.to) {
             markedUpPrice = price * (1 + rule.markup / 100);
@@ -108,17 +109,19 @@ export default function XmlImporterPage() {
             break;
         }
     }
-
+    // Apply default rule if no specific range matched
     if (!ruleApplied) {
         const defaultRule = sortedRules.find(r => r.from === 0) || { markup: 0 };
         markedUpPrice = price * (1 + defaultRule.markup / 100);
     }
     
+    // 2. Apply Fixed Additions for Low-Cost Items (based on original price)
+    // This happens AFTER the percentage markup is calculated.
     if (price >= 0 && price <= 2) {
       markedUpPrice += 0.65;
-    } else if (price >= 2.01 && price <= 5) {
+    } else if (price > 2 && price <= 5) {
       markedUpPrice += 1.30;
-    } else if (price >= 5.01 && price <= 14) {
+    } else if (price > 5 && price <= 14) {
       markedUpPrice += 1.70;
     }
 
