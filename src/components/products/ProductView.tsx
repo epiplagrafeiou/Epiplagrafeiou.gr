@@ -60,18 +60,17 @@ export function ProductView({ product, allProducts, categoryPath, variants }: Pr
   }
 
   const breadcrumbs = useMemo(() => {
-      let path = '/category';
-      // FIX: Add a defensive check to ensure categoryPath is an array before mapping.
-      if (!Array.isArray(categoryPath)) {
-          return [];
-      }
-      return categoryPath.map(cat => {
-          path += `/${createSlug(cat.name)}`;
-          return {
-              name: cat.name,
-              href: path
-          };
-      });
+    // Ensure categoryPath is always an array to prevent crashes.
+    const safePath = Array.isArray(categoryPath) ? categoryPath : [];
+    let path = '/category';
+    
+    return safePath.map(cat => {
+        path += `/${createSlug(cat.name || '')}`;
+        return {
+            name: cat.name || '',
+            href: path
+        };
+    });
   }, [categoryPath]);
 
 
