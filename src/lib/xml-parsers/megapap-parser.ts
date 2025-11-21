@@ -66,7 +66,7 @@ export async function megapapParser(url: string): Promise<XmlProduct[]> {
     
     const productsToParse = Array.isArray(productArray) ? productArray : [productArray];
 
-    const products: XmlProduct[] = productsToParse.map((p: any) => {
+    const products: XmlProduct[] = await Promise.all(productsToParse.map(async (p: any) => {
       let allImages: string[] = [];
       if (p.images && p.images.image) {
         if (Array.isArray(p.images.image)) {
@@ -103,7 +103,7 @@ export async function megapapParser(url: string): Promise<XmlProduct[]> {
       if (productName.includes('καναπ') || productName.includes('sofa')) {
         finalWebOfferPrice += 75;
       }
-
+      
       const sku = p.id?.toString() || `temp-id-${Math.random()}`;
 
       return {
@@ -116,12 +116,12 @@ export async function megapapParser(url: string): Promise<XmlProduct[]> {
         retailPrice: p.retail_price_with_vat || '0',
         webOfferPrice: finalWebOfferPrice.toString(),
         description: p.description || '',
-        category: mapCategory(rawCategory),
+        category: await mapCategory(rawCategory),
         mainImage,
         images: allImages,
         stock,
       };
-    });
+    }));
 
     return products;
 }
