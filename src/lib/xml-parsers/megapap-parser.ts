@@ -3,6 +3,7 @@
 
 import { XMLParser } from 'fast-xml-parser';
 import type { XmlProduct } from '../types/product';
+import { mapCategory } from '../category-mapper';
 
 // Gets the variant group key from SKU (e.g., GP037-0029,1 -> GP037-0029)
 function getVariantGroupKey(sku: string): string {
@@ -96,10 +97,11 @@ export async function megapapParser(url: string): Promise<XmlProduct[]> {
       const stock = Number(rawStock) || 0;
       
       const rawCategory = [p.category, p.subcategory].filter(Boolean).join(' > ');
+      const productName = p.name || 'No Name';
 
       let finalWebOfferPrice = parseFloat(p.weboffer_price_with_vat || p.retail_price_with_vat || '0');
-      const productName = p.name?.toLowerCase() || '';
-      if (productName.includes('καναπ') || productName.includes('sofa')) {
+      const productNameLower = productName.toLowerCase() || '';
+      if (productNameLower.includes('καναπ') || productNameLower.includes('sofa')) {
         finalWebOfferPrice += 75;
       }
       
@@ -111,11 +113,11 @@ export async function megapapParser(url: string): Promise<XmlProduct[]> {
         model: p.model,
         variantGroupKey: getVariantGroupKey(sku),
         color: getColorFromFilters(p.filters),
-        name: p.name || 'No Name',
+        name: productName,
         retailPrice: p.retail_price_with_vat || '0',
         webOfferPrice: finalWebOfferPrice.toString(),
         description: p.description || '',
-        category: rawCategory,
+        category: await mapCategory(rawCategory, productName),
         mainImage,
         images: allImages,
         stock,

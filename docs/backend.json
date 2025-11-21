@@ -67,9 +67,9 @@
         "originalPrice": {
           "type": "number"
         },
-        "categoryId": {
-          "type": ["string", "null"],
-          "description": "The ID of the curated category this product belongs to."
+        "category": {
+          "type": "string",
+          "description": "The final, mapped category path for display and filtering."
         },
         "imageId": {
             "type": "string",
@@ -115,6 +115,7 @@
         "slug",
         "description",
         "price",
+        "category",
         "imageId",
         "images",
         "stock",

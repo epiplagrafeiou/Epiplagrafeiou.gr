@@ -3,6 +3,7 @@
 
 import { XMLParser } from 'fast-xml-parser';
 import type { XmlProduct } from '../types/product';
+import { mapCategory } from '../category-mapper';
 
 // Utility: strip out unwanted <script> tags
 function cleanXml(xml: string): string {
@@ -65,6 +66,7 @@ export async function zougrisParser(url: string): Promise<XmlProduct[]> {
       getText(p.Epilogi),
     ].filter(Boolean);
     const rawCategory = categoryParts.join(' > ');
+    const productName = getText(p.Title) || 'No Name';
 
     // Stock: real quantity
     const stock = Number(getText(p.Quantity)) || 0;
@@ -76,11 +78,11 @@ export async function zougrisParser(url: string): Promise<XmlProduct[]> {
 
     return {
         id: getText(p.Code) || `zougris-${Math.random()}`,
-        name: getText(p.Title) || 'No Name',
+        name: productName,
         retailPrice: retailPriceNum.toString(),
         webOfferPrice: finalPriceNum.toString(),
         description: getText(p.Description) || '',
-        category: rawCategory,
+        category: await mapCategory(rawCategory, productName),
         mainImage,
         images: allImages,
         stock,

@@ -2,7 +2,7 @@
 'use client';
 
 import { createContext, useContext, useMemo } from 'react';
-import { createSlug } from './utils';
+import { createSlug, normalizeCategory } from './utils';
 import { useCollection } from '@/firebase/firestore/use-collection';
 import { collection, writeBatch, doc, updateDoc } from 'firebase/firestore';
 import { useFirestore, useMemoFirebase, FirestorePermissionError, errorEmitter } from '@/firebase';
@@ -22,7 +22,7 @@ export interface Product {
   images?: string[];
   stock?: number;
   supplierId: string;
-  category?: string; // This is now a display-only field, not for logic
+  category: string; // This is now the final, mapped category path
   variantGroupKey?: string;
   color?: string;
   sku?: string;
@@ -33,7 +33,7 @@ interface ProductsContextType {
   products: Product[];
   adminProducts: Product[];
   addProducts: (
-    newProducts: (Partial<Omit<Product, 'slug' | 'imageId'>> & { id: string; supplierId: string; images: string[]; mainImage?: string | null; name: string; price: number; categoryId: string | null; rawCategory: string; description: string; stock: number })[]
+    newProducts: (Partial<Omit<Product, 'slug' | 'imageId'>> & { id: string; supplierId: string; images: string[]; mainImage?: string | null; name: string; price: number; category: string; description: string; stock: number })[]
   ) => void;
   updateProduct: (product: Product) => void;
   deleteProducts: (productIds: string[]) => void;
@@ -66,7 +66,7 @@ export const ProductsProvider = ({ children }: { children: React.ReactNode }) =>
   };
 
   const addProducts = async (
-    newProducts: (Omit<Product, 'slug' | 'imageId'> & { mainImage?: string | null, images: string[] })[],
+    newProducts: (Omit<Product, 'slug' | 'imageId'> & { mainImage?: string | null, images: string[], category: string })[],
   ) => {
     if (!firestore) return;
 
@@ -97,12 +97,12 @@ export const ProductsProvider = ({ children }: { children: React.ReactNode }) =>
           imageId: imageId,
           images: sortedImages,
           price: p.price,
+          category: p.category, // Use the new mapped category
           description: p.description,
           stock: Number(p.stock) || 0,
         };
         
         delete (productData as any).mainImage;
-        delete (productData as any).category; // Remove the old simple category field
 
         productBatchData.push({ path: productRef.path, data: productData });
         batch.set(productRef, productData, { merge: true });
@@ -125,7 +125,7 @@ export const ProductsProvider = ({ children }: { children: React.ReactNode }) =>
     const productRef = doc(firestore, 'products', product.id);
     const { id, ...productData } = product;
 
-    updateDoc(productRef, {...productData }).catch(error => {
+    updateDoc(productRef, {...productData, category: productData.category }).catch(error => {
         const permissionError = new FirestorePermissionError({
             path: productRef.path,
             operation: 'update',

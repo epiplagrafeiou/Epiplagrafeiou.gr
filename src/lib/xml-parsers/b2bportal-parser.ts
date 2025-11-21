@@ -3,6 +3,7 @@
 
 import { XMLParser } from 'fast-xml-parser';
 import type { XmlProduct } from '../types/product';
+import { mapCategory } from '../category-mapper';
 
 // Safe text extractor
 const getText = (node: any): string => {
@@ -108,7 +109,7 @@ export async function b2bportalParser(url: string): Promise<XmlProduct[]> {
     );
   }
 
-  const products: XmlProduct[] = productArray.map((p: any) => {
+  const products: XmlProduct[] = await Promise.all(productArray.map(async (p: any) => {
     // Images: main + gallery
     let allImages: string[] = [];
     if (p.image) allImages.push(getText(p.image));
@@ -123,6 +124,7 @@ export async function b2bportalParser(url: string): Promise<XmlProduct[]> {
 
     // Category path (dynamic)
     const rawCategory = extractCategoryPath(p);
+    const productName = getText(p.name) || 'No Name';
 
     // Availability (keep as a boolean; don't fake stock)
     const availabilityText = getText(p.availability).toLowerCase();
@@ -142,17 +144,17 @@ export async function b2bportalParser(url: string): Promise<XmlProduct[]> {
 
     return {
       id: getText(p.code) || `b2b-${Math.random()}`,
-      name: getText(p.name) || 'No Name',
+      name: productName,
       retailPrice: retailPriceNum.toString(),
       webOfferPrice: finalPriceNum.toString(),
       description: getText(p.descr) || '',
-      category: rawCategory,
+      category: await mapCategory(rawCategory, productName),
       mainImage,
       images: allImages,
       stock,
       isAvailable,
     };
-  });
+  }));
 
   return products;
 }

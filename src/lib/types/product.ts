@@ -5,7 +5,7 @@ export interface XmlProduct {
   retailPrice: string;
   webOfferPrice: string;
   description: string;
-  category: string;
+  category: string; // This will now hold the MAPPED category
   mainImage: string | null;
   images: string[];
   stock: number;
