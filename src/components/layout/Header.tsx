@@ -87,14 +87,13 @@ export default function Header() {
   const categoryTree = useMemo(() => {
     if (!fetchedCategories) return [];
   
-    const categoriesById: Record<string, StoreCategory> = {};
+    const categoriesById: Record<string, StoreCategory> = fetchedCategories.reduce((acc, cat) => {
+        acc[cat.id] = { ...cat, children: [] };
+        return acc;
+    }, {} as Record<string, StoreCategory>);
+
     const rootCategories: StoreCategory[] = [];
-    const desiredOrder = ['ΓΡΑΦΕΙΟ', 'ΣΑΛΟΝΙ', 'ΚΡΕΒΑΤΟΚΑΜΑΡΑ', 'ΕΞΩΤΕΡΙΚΟΣ ΧΩΡΟΣ', 'Αξεσουάρ', 'ΦΩΤΙΣΜΟΣ', 'ΔΙΑΚΟΣΜΗΣΗ', 'Χριστουγεννιάτικα'];
-  
-    fetchedCategories.forEach(cat => {
-        categoriesById[cat.id] = { ...cat, children: [] };
-    });
-  
+    
     fetchedCategories.forEach(cat => {
         if (cat.parentId && categoriesById[cat.parentId]) {
             categoriesById[cat.parentId].children.push(categoriesById[cat.id]);
@@ -102,6 +101,8 @@ export default function Header() {
             rootCategories.push(categoriesById[cat.id]);
         }
     });
+    
+    const desiredOrder = ['ΓΡΑΦΕΙΟ', 'ΣΑΛΟΝΙ', 'ΚΡΕΒΑΤΟΚΑΜΑΡΑ', 'ΕΞΩΤΕΡΙΚΟΣ ΧΩΡΟΣ', 'Αξεσουάρ', 'ΦΩΤΙΣΜΟΣ', 'ΔΙΑΚΟΣΜΗΣΗ', 'Χριστουγεννιάτικα'];
     
     const sortRecursive = (categories: StoreCategory[]) => {
         categories.forEach(c => {
@@ -194,11 +195,11 @@ export default function Header() {
            </NavigationMenuItem>
         ))}
          <NavigationMenuItem>
-            <Link href="/blog" passHref>
-                <NavigationMenuLink className={navigationMenuTriggerStyle()}>
-                Blog
-                </NavigationMenuLink>
-            </Link>
+             <NavigationMenuLink asChild className={navigationMenuTriggerStyle()}>
+                <Link href="/blog">
+                    Blog
+                </Link>
+            </NavigationMenuLink>
         </NavigationMenuItem>
       </NavigationMenuList>
     </NavigationMenu>
@@ -298,5 +299,4 @@ export default function Header() {
     </header>
   );
 }
-
     
