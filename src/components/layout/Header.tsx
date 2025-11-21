@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
@@ -88,14 +89,12 @@ export default function Header() {
 
     const categoriesById: Record<string, StoreCategory> = {};
     
-    // First pass: create a map of all categories by ID, initializing children arrays.
     fetchedCategories.forEach(cat => {
         categoriesById[cat.id] = { ...cat, children: [] };
     });
 
     const rootCategories: StoreCategory[] = [];
-
-    // Second pass: build the tree by assigning children to their parents.
+    
     Object.values(categoriesById).forEach(cat => {
         if (cat.parentId && categoriesById[cat.parentId]) {
             categoriesById[cat.parentId].children.push(cat);
