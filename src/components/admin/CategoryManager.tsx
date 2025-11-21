@@ -1,3 +1,4 @@
+
 'use client';
 import { useState, useMemo, useCallback, useEffect } from 'react';
 import {
@@ -9,7 +10,7 @@ import {
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useProducts } from '@/lib/products-context';
-import { DndContext, useDraggable, useDroppable, closestCenter, DragEndEvent, DragStartEvent, UniqueIdentifier } from '@dnd-kit/core';
+import { DndContext, useDraggable, useDroppable, closestCenter, DragEndEvent, DragStartEvent, UniqueIdentifier, DragOverlay } from '@dnd-kit/core';
 import {
   SortableContext,
   verticalListSortingStrategy,
@@ -696,3 +697,5 @@ export default function CategoryManager() {
         </DndContext>
     );
 }
+
+    
