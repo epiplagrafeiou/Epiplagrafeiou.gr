@@ -3,12 +3,22 @@
 
 import { XMLParser } from 'fast-xml-parser';
 import type { XmlProduct } from '../types/product';
-import { mapCategory } from '../category-mapper';
 
 // Utility: strip out unwanted <script> tags
 function cleanXml(xml: string): string {
   return xml.replace(/<script[\s\S]*?<\/script>/gi, "");
 }
+
+// Safe text extractor
+const getText = (node: any): string => {
+  if (node == null) return '';
+  if (typeof node === 'string' || typeof node === 'number') return String(node).trim();
+  if (typeof node === 'object') {
+    if ('__cdata' in node) return String(node.__cdata).trim();
+    if ('_text' in node) return String(node._text).trim();
+  }
+  return '';
+};
 
 export async function zougrisParser(url: string): Promise<XmlProduct[]> {
   console.log("▶ Running Zougris parser");
@@ -22,49 +32,61 @@ export async function zougrisParser(url: string): Promise<XmlProduct[]> {
   const cleanXmlText = cleanXml(xmlText);
 
   const parser = new XMLParser({
-    ignoreAttributes: true,
-    isArray: (name, jpath, isLeafNode, isAttribute) => {
-      return jpath === 'Products.Product';
-    },
-    cdataPropName: '__cdata',
+    ignoreAttributes: false,
+    attributeNamePrefix: '',
+    isArray: (name, jpath) => jpath === 'Products.Product',
+    textNodeName: '_text',
     trimValues: true,
+    cdataPropName: '__cdata',
     parseNodeValue: true,
-    tagValueProcessor: (tagName, tagValue, jPath, isLeafNode, isAttribute) => {
-        if (typeof tagValue === 'string' && tagValue.startsWith('<![CDATA[')) {
-            return tagValue.substring(9, tagValue.length - 3);
-        }
-        return tagValue;
-    }
+    parseAttributeValue: true,
+    parseTrueNumberOnly: true,
   });
 
   const parsed = parser.parse(cleanXmlText);
-  const productsNode = parsed?.Products?.Product;
+  const productArray = parsed?.Products?.Product;
 
-  if (!productsNode) {
-    throw new Error("❌ Zougris XML does not contain <Products><Product> nodes.");
+  if (!productArray || !Array.isArray(productArray)) {
+    console.error('Parsed product data is not an array or is missing:', productArray);
+    throw new Error('The XML feed does not have the expected structure at `Products.Product`.');
   }
 
-  const productArray = Array.isArray(productsNode) ? productsNode : [productsNode];
+  const products: XmlProduct[] = await Promise.all(productArray.map(async (p: any) => {
+    // Collect images: B2BImage, B2BImage2, B2BImage3...
+    const imageKeys = Object.keys(p).filter(k => k.toLowerCase().startsWith('b2bimage'));
+    const allImages = imageKeys.map(k => getText(p[k])).filter(Boolean);
+    const mainImage = allImages[0] || null;
 
-  return await Promise.all(productArray.map(async (p: any) => {
-    const images = [p.B2BImage, p.B2BImage2, p.B2BImage3, p.B2BImage4, p.B2BImage5].filter(Boolean);
-    const rawCategory = [p.Category1, p.Category2, p.Category3].filter(Boolean).join(' > ');
-    
-    // Determine the most appropriate price, falling back if retail is zero
-    const retailPrice = parseFloat(p.RetailPrice?.toString().replace(',', '.') || '0');
-    const wholesalePrice = parseFloat(p.WholesalePrice?.toString().replace(',', '.') || '0');
-    const webOfferPrice = retailPrice > 0 ? retailPrice : wholesalePrice;
+    // Category path: Category1 > Category2 > Category3 > Epilogi
+    const categoryParts = [
+      getText(p.Category1),
+      getText(p.Category2),
+      getText(p.Category3),
+      getText(p.Epilogi),
+    ].filter(Boolean);
+    const rawCategory = categoryParts.join(' > ');
+
+    // Stock: real quantity
+    const stock = Number(getText(p.Quantity)) || 0;
+
+    // Prices
+    const retailPriceNum = parseFloat((getText(p.RetailPrice) || '0').replace(',', '.'));
+    const wholesalePriceNum = parseFloat((getText(p.WholesalePrice) || '0').replace(',', '.'));
+    const finalPriceNum = retailPriceNum > 0 ? retailPriceNum : wholesalePriceNum;
 
     return {
-        id: p.Code?.toString() || `zougris-${Math.random()}`,
-        name: p.Title || 'No Name',
-        retailPrice: retailPrice.toString(),
-        webOfferPrice: webOfferPrice.toString(),
-        description: p.Description || '',
-        category: await mapCategory(rawCategory),
-        mainImage: images[0] || null,
-        images: images,
-        stock: parseInt(p.Quantity, 10) || 0,
+        id: getText(p.Code) || `zougris-${Math.random()}`,
+        name: getText(p.Title) || 'No Name',
+        retailPrice: retailPriceNum.toString(),
+        webOfferPrice: finalPriceNum.toString(),
+        description: getText(p.Description) || '',
+        category: rawCategory,
+        mainImage,
+        images: allImages,
+        stock,
+        isAvailable: stock > 0,
     };
   }));
+
+  return products;
 }

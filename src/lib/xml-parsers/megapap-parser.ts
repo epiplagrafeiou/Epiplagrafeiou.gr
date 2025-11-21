@@ -2,7 +2,6 @@
 'use server';
 
 import { XMLParser } from 'fast-xml-parser';
-import { mapCategory } from '../category-mapper';
 import type { XmlProduct } from '../types/product';
 
 // Gets the variant group key from SKU (e.g., GP037-0029,1 -> GP037-0029)
@@ -116,7 +115,7 @@ export async function megapapParser(url: string): Promise<XmlProduct[]> {
         retailPrice: p.retail_price_with_vat || '0',
         webOfferPrice: finalWebOfferPrice.toString(),
         description: p.description || '',
-        category: await mapCategory(rawCategory),
+        category: rawCategory,
         mainImage,
         images: allImages,
         stock,
