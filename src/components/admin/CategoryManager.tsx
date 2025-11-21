@@ -21,7 +21,7 @@ import { GripVertical, PlusCircle, Trash2, GitMerge, Pencil, Save, RefreshCw } f
 import { Input } from '@/components/ui/input';
 import { useCollection } from '@/firebase/firestore/use-collection';
 import { useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, doc, writeBatch } from 'firebase/firestore';
+import { collection, doc, writeBatch, getDocs, deleteDoc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { cn, createSlug } from '@/lib/utils';
 import { getCategoryMapping } from '@/lib/category-mapper';
@@ -219,56 +219,64 @@ export default function CategoryManager() {
             toast({ variant: 'destructive', title: 'Database error', description: 'Firestore is not available.' });
             return;
         }
-
-        const categoryMapping = await getCategoryMapping();
     
-        const batch = writeBatch(firestore);
-        const existingCategories = new Map(fetchedCategories?.map(c => [c.id, c]));
-        const createdCategoryIds = new Set<string>();
-    
-        for (const mapping of categoryMapping) {
-            const { raw, mapped } = mapping;
-            const pathParts = mapped.split(' > ');
-            let parentId: string | null = null;
-    
-            for (let i = 0; i < pathParts.length; i++) {
-                const partName = pathParts[i];
-                const currentPath = pathParts.slice(0, i + 1).join(' > ');
-                const categoryId = `cat-${createSlug(currentPath)}`;
-    
-                if (!createdCategoryIds.has(categoryId) && !existingCategories.has(categoryId)) {
-                    const newCat = {
-                        id: categoryId,
-                        name: partName,
-                        rawCategories: [],
-                        parentId: parentId,
-                        order: i, 
-                    };
-                    const docRef = doc(firestore, "categories", categoryId);
-                    batch.set(docRef, newCat);
-                    createdCategoryIds.add(categoryId);
-                    existingCategories.set(categoryId, newCat); // Add to map to avoid re-creation
-                }
-    
-                if (i === pathParts.length - 1) { // It's the final subcategory
-                    const finalCat = existingCategories.get(categoryId);
-                    if (finalCat && !finalCat.rawCategories.includes(raw)) {
-                        const updatedRawCategories = Array.from(new Set([...finalCat.rawCategories, raw]));
-                        const docRef = doc(firestore, "categories", categoryId);
-                        batch.set(docRef, { rawCategories: updatedRawCategories }, { merge: true });
-                        existingCategories.set(categoryId, {...finalCat, rawCategories: updatedRawCategories});
-                    }
-                }
-                parentId = categoryId;
-            }
-        }
+        const confirmation = confirm("Are you sure you want to clear all existing categories and seed the new structure? This action cannot be undone.");
+        if (!confirmation) return;
     
         try {
-            await batch.commit();
-            toast({ title: 'Success!', description: `Category structure has been seeded/updated.` });
+            // 1. Clear all existing categories
+            toast({ title: 'Clearing old categories...', description: 'Please wait.' });
+            const existingDocs = await getDocs(categoriesQuery!);
+            const deleteBatch = writeBatch(firestore);
+            existingDocs.forEach(doc => deleteBatch.delete(doc.ref));
+            await deleteBatch.commit();
+    
+            // 2. Seed the new structure
+            toast({ title: 'Seeding new category structure...', description: 'This may take a moment.' });
+            const categoryMapping = await getCategoryMapping();
+            const seedBatch = writeBatch(firestore);
+            const categoriesToCreate = new Map<string, Partial<StoreCategory>>();
+    
+            for (const mapping of categoryMapping) {
+                const { raw, mapped } = mapping;
+                const pathParts = mapped.split(' > ');
+                let parentId: string | null = null;
+    
+                for (let i = 0; i < pathParts.length; i++) {
+                    const partName = pathParts[i];
+                    const currentPath = pathParts.slice(0, i + 1).join(' > ');
+                    const categoryId = `cat-${createSlug(currentPath)}`;
+    
+                    if (!categoriesToCreate.has(categoryId)) {
+                        categoriesToCreate.set(categoryId, {
+                            id: categoryId,
+                            name: partName,
+                            rawCategories: [],
+                            parentId: parentId,
+                            order: i,
+                        });
+                    }
+    
+                    if (i === pathParts.length - 1) {
+                        const cat = categoriesToCreate.get(categoryId);
+                        if (cat && cat.rawCategories) {
+                            cat.rawCategories.push(raw);
+                        }
+                    }
+                    parentId = categoryId;
+                }
+            }
+    
+            categoriesToCreate.forEach((categoryData, categoryId) => {
+                const docRef = doc(firestore, "categories", categoryId);
+                seedBatch.set(docRef, categoryData);
+            });
+    
+            await seedBatch.commit();
+            toast({ title: 'Success!', description: `Category structure has been seeded successfully.` });
         } catch (error) {
             console.error("Error seeding categories:", error);
-            toast({ variant: 'destructive', title: 'Seed Failed', description: 'Could not write categories to the database.' });
+            toast({ variant: 'destructive', title: 'Seed Failed', description: 'An unexpected error occurred.' });
         }
     };
 
@@ -642,7 +650,7 @@ export default function CategoryManager() {
                                 </div>
                                 <Button onClick={handleSeedCategories} variant="outline">
                                     <RefreshCw className="mr-2 h-4 w-4" />
-                                    Seed Category Structure
+                                    Clear & Seed Categories
                                 </Button>
                             </div>
                         </CardHeader>
