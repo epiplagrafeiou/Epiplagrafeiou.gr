@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
@@ -85,27 +86,33 @@ export default function Header() {
 
   const categoryTree = useMemo(() => {
     if (!fetchedCategories) return [];
-
+  
     const categoriesById: Record<string, StoreCategory> = {};
-    const rootCategories: StoreCategory[] = [];
-
-    // First pass: Create a map of all categories by their ID.
+    
+    // First pass: create a map of all categories and initialize children array.
     fetchedCategories.forEach(cat => {
       categoriesById[cat.id] = { ...cat, children: [] };
     });
+  
+    const rootCategories: StoreCategory[] = [];
+    const childIds = new Set<string>();
 
-    // Second pass: Link children to their parents.
+    // Second pass: link children to parents.
     for (const catId in categoriesById) {
-        const category = categoriesById[catId];
-        if (category.parentId && categoriesById[category.parentId]) {
-            // This is a child category, push it to its parent's children array.
-            categoriesById[category.parentId].children.push(category);
-        } else {
-            // This is a root category.
-            rootCategories.push(category);
-        }
+      const category = categoriesById[catId];
+      if (category.parentId && categoriesById[category.parentId]) {
+        categoriesById[category.parentId].children.push(category);
+        childIds.add(category.id);
+      }
     }
 
+    // Final pass: determine true root categories.
+    for (const catId in categoriesById) {
+        if(!childIds.has(catId)) {
+            rootCategories.push(categoriesById[catId]);
+        }
+    }
+  
     const desiredOrder = ['ΓΡΑΦΕΙΟ', 'ΣΑΛΟΝΙ', 'ΚΡΕΒΑΤΟΚΑΜΑΡΑ', 'ΕΞΩΤΕΡΙΚΟΣ ΧΩΡΟΣ', 'Αξεσουάρ', 'ΦΩΤΙΣΜΟΣ', 'ΔΙΑΚΟΣΜΗΣΗ', 'Χριστουγεννιάτικα'];
     
     const sortRecursive = (categories: StoreCategory[]) => {
@@ -115,13 +122,13 @@ export default function Header() {
     }
     
     sortRecursive(rootCategories);
-
+  
     rootCategories.sort((a, b) => {
         const nameA = a.name.toUpperCase().trim();
         const nameB = b.name.toUpperCase().trim();
         const indexA = desiredOrder.indexOf(nameA);
         const indexB = desiredOrder.indexOf(nameB);
-
+  
         if (indexA !== -1 && indexB !== -1) {
             return indexA - indexB;
         }
@@ -129,7 +136,7 @@ export default function Header() {
         if (indexB !== -1) return 1;
         return nameA.localeCompare(nameB);
     });
-
+  
     return rootCategories;
   }, [fetchedCategories]);
 
@@ -196,9 +203,11 @@ export default function Header() {
            </NavigationMenuItem>
         ))}
          <NavigationMenuItem>
-            <NavigationMenuLink asChild className={navigationMenuTriggerStyle()}>
-                <Link href="/blog">Blog</Link>
-            </NavigationMenuLink>
+            <Link href="/blog" legacyBehavior passHref>
+                <NavigationMenuLink className={navigationMenuTriggerStyle()}>
+                Blog
+                </NavigationMenuLink>
+            </Link>
         </NavigationMenuItem>
       </NavigationMenuList>
     </NavigationMenu>
@@ -298,4 +307,6 @@ export default function Header() {
     </header>
   );
 }
+    
+
     
