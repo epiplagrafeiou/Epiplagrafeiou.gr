@@ -85,6 +85,10 @@ export default function Header() {
   const { data: fetchedCategories } = useCollection<Omit<StoreCategory, 'children'>>(categoriesQuery);
 
   const categoryTree = useMemo(() => {
+    // START DEBUG LOG
+    console.log("Fetched categories:", JSON.stringify(fetchedCategories, null, 2));
+    // END DEBUG LOG
+
     if (!fetchedCategories) return [];
   
     const categoriesById: Record<string, StoreCategory> = {};
@@ -115,12 +119,22 @@ export default function Header() {
     sortRecursive(rootCategories);
 
     rootCategories.sort((a, b) => {
-        const indexA = desiredOrder.indexOf(a.name.toUpperCase());
-        const indexB = desiredOrder.indexOf(b.name.toUpperCase());
-        if (indexA === -1) return 1;
-        if (indexB === -1) return -1;
-        return indexA - indexB;
+        const nameA = a.name.toUpperCase().trim();
+        const nameB = b.name.toUpperCase().trim();
+        const indexA = desiredOrder.indexOf(nameA);
+        const indexB = desiredOrder.indexOf(nameB);
+
+        if (indexA !== -1 && indexB !== -1) {
+            return indexA - indexB;
+        }
+        if (indexA !== -1) return -1;
+        if (indexB !== -1) return 1;
+        return nameA.localeCompare(nameB);
     });
+
+    // START DEBUG LOG
+    console.log("Constructed Root Categories:", rootCategories.map(c => c.name));
+    // END DEBUG LOG
 
     return rootCategories;
   }, [fetchedCategories]);
