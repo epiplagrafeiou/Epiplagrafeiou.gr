@@ -9,16 +9,6 @@ const nextConfig: NextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
-  devIndicators: {
-    buildActivity: true,
-    buildActivityPosition: "bottom-right",
-  },
-  experimental: {
-    // This is the correct way to configure allowed origins for development.
-    allowedDevOrigins: [
-        "https://*.cloudworkstations.dev",
-    ],
-  },
   images: {
     remotePatterns: [
       {

@@ -86,35 +86,28 @@ export default function Header() {
 
   const categoryTree = useMemo(() => {
     if (!fetchedCategories) return [];
-  
+
     const categoriesById: Record<string, StoreCategory> = {};
     const rootCategories: StoreCategory[] = [];
-  
-    // First, populate the map with all categories, initializing children arrays.
+
     fetchedCategories.forEach(cat => {
-        categoriesById[cat.id] = { ...cat, children: [] };
+      categoriesById[cat.id] = { ...cat, children: [] };
     });
-  
-    // Second, build the tree structure.
+
     fetchedCategories.forEach(cat => {
-        if (cat.parentId && categoriesById[cat.parentId]) {
-            // This is a child category, push it to its parent's children array.
-            categoriesById[cat.parentId].children.push(categoriesById[cat.id]);
-        } else {
-            // This is a root category.
-            rootCategories.push(categoriesById[cat.id]);
-        }
+      if (cat.parentId && categoriesById[cat.parentId]) {
+        categoriesById[cat.parentId].children.push(categoriesById[cat.id]);
+      } else {
+        rootCategories.push(categoriesById[cat.id]);
+      }
     });
-    
+
     const desiredOrder = ['ΓΡΑΦΕΙΟ', 'ΣΑΛΟΝΙ', 'ΚΡΕΒΑΤΟΚΑΜΑΡΑ', 'ΕΞΩΤΕΡΙΚΟΣ ΧΩΡΟΣ', 'Αξεσουάρ', 'ΦΩΤΙΣΜΟΣ', 'ΔΙΑΚΟΣΜΗΣΗ', 'Χριστουγεννιάτικα'];
     
     const sortRecursive = (categories: StoreCategory[]) => {
-        categories.forEach(c => {
-            if (c.children.length > 0) {
-                sortRecursive(c.children);
-            }
-        });
-        categories.sort((a,b) => a.order - b.order);
+      if (!categories) return;
+      categories.sort((a,b) => a.order - b.order);
+      categories.forEach(c => sortRecursive(c.children));
     }
     
     sortRecursive(rootCategories);
@@ -199,11 +192,9 @@ export default function Header() {
            </NavigationMenuItem>
         ))}
          <NavigationMenuItem>
-            <Link href="/blog" legacyBehavior passHref>
-                <NavigationMenuLink className={navigationMenuTriggerStyle()}>
-                Blog
-                </NavigationMenuLink>
-            </Link>
+            <NavigationMenuLink asChild className={navigationMenuTriggerStyle()}>
+                <Link href="/blog">Blog</Link>
+            </NavigationMenuLink>
         </NavigationMenuItem>
       </NavigationMenuList>
     </NavigationMenu>
