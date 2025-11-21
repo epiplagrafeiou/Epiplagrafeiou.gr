@@ -98,16 +98,20 @@ export async function b2bportalParser(url: string): Promise<XmlProduct[]> {
 
   const parsed = parser.parse(xmlText);
 
-  const productArray =
+  let productArray =
     parsed?.b2bportal?.products?.product ||
     parsed?.mywebstore?.products?.product;
 
-  if (!productArray || !Array.isArray(productArray)) {
-    console.error('Parsed product data is not an array or is missing:', productArray);
-    throw new Error(
-      'The XML feed does not have the expected structure. Could not find a product array at `b2bportal.products.product` or `mywebstore.products.product`.'
-    );
+  if (!productArray) {
+    console.warn('B2B Parser: No products found in the XML feed.');
+    return [];
   }
+  
+  // DEFENSIVE FIX: Ensure productArray is always an array
+  if (!Array.isArray(productArray)) {
+    productArray = [productArray];
+  }
+
 
   const products: XmlProduct[] = await Promise.all(productArray.map(async (p: any) => {
     // Images: main + gallery
@@ -135,8 +139,7 @@ export async function b2bportalParser(url: string): Promise<XmlProduct[]> {
     if (p.stock) stock = Number(getText(p.stock)) || 0;
     else if (p.qty) stock = Number(getText(p.qty)) || 0;
     else if (p.availability_qty) stock = Number(getText(p.availability_qty)) || 0;
-    // If only availability exists, leave stock as 0 and rely on isAvailable
-
+    
     // Prices
     const retailPriceNum = parseFloat((getText(p.retail_price) || '0').replace(',', '.'));
     const wholesalePriceNum = parseFloat((getText(p.price) || '0').replace(',', '.'));
@@ -148,7 +151,7 @@ export async function b2bportalParser(url: string): Promise<XmlProduct[]> {
       retailPrice: retailPriceNum.toString(),
       webOfferPrice: finalPriceNum.toString(),
       description: getText(p.descr) || '',
-      category: await mapCategory(rawCategory, productName),
+      category: await mapCategory(rawCategory, productName), // Use the mapper
       mainImage,
       images: allImages,
       stock,

@@ -45,11 +45,16 @@ export async function zougrisParser(url: string): Promise<XmlProduct[]> {
   });
 
   const parsed = parser.parse(cleanXmlText);
-  const productArray = parsed?.Products?.Product;
+  let productArray = parsed?.Products?.Product;
 
-  if (!productArray || !Array.isArray(productArray)) {
-    console.error('Parsed product data is not an array or is missing:', productArray);
-    throw new Error('The XML feed does not have the expected structure at `Products.Product`.');
+  if (!productArray) {
+    console.warn('Zougris Parser: No products found in the XML feed.');
+    return [];
+  }
+
+  // DEFENSIVE FIX: Ensure productArray is always an array
+  if (!Array.isArray(productArray)) {
+    productArray = [productArray];
   }
 
   const products: XmlProduct[] = await Promise.all(productArray.map(async (p: any) => {
@@ -82,7 +87,7 @@ export async function zougrisParser(url: string): Promise<XmlProduct[]> {
         retailPrice: retailPriceNum.toString(),
         webOfferPrice: finalPriceNum.toString(),
         description: getText(p.Description) || '',
-        category: await mapCategory(rawCategory, productName),
+        category: await mapCategory(rawCategory, productName), // Use the mapper
         mainImage,
         images: allImages,
         stock,

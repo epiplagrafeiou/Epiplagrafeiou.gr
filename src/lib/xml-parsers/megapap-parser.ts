@@ -13,7 +13,6 @@ function getVariantGroupKey(sku: string): string {
 
 // Extracts the color from the filters string, now safely handling non-string inputs.
 function getColorFromFilters(filters: any): string | undefined {
-    // Ensure the input is a string before trying to split it.
     if (typeof filters !== 'string' || !filters) {
         return undefined;
     }
@@ -55,18 +54,19 @@ export async function megapapParser(url: string): Promise<XmlProduct[]> {
     };
 
     const parsed = simplifiedParser.parse(xmlText);
-    const productArray = deCdata(parsed).megapap?.products?.product;
+    let productArray = deCdata(parsed).megapap?.products?.product;
 
-    if (!productArray || !Array.isArray(productArray)) {
-      console.error('Megapap Parser: Parsed product data is not an array or is missing at megapap.products.product:', productArray);
-      throw new Error(
-        'The XML feed does not have the expected structure for Megapap format. Could not find a product array at `megapap.products.product`.'
-      );
+    if (!productArray) {
+        console.warn('Megapap Parser: No products found in the XML feed.');
+        return [];
     }
     
-    const productsToParse = Array.isArray(productArray) ? productArray : [productArray];
-
-    const products: XmlProduct[] = await Promise.all(productsToParse.map(async (p: any) => {
+    // DEFENSIVE FIX: Ensure productArray is always an array
+    if (!Array.isArray(productArray)) {
+        productArray = [productArray];
+    }
+    
+    const products: XmlProduct[] = await Promise.all(productArray.map(async (p: any) => {
       let allImages: string[] = [];
       if (p.images && p.images.image) {
         if (Array.isArray(p.images.image)) {
@@ -98,12 +98,6 @@ export async function megapapParser(url: string): Promise<XmlProduct[]> {
       
       const rawCategory = [p.category, p.subcategory].filter(Boolean).join(' > ');
       const productName = p.name || 'No Name';
-
-      let finalWebOfferPrice = parseFloat(p.weboffer_price_with_vat || p.retail_price_with_vat || '0');
-      const productNameLower = productName.toLowerCase() || '';
-      if (productNameLower.includes('καναπ') || productNameLower.includes('sofa')) {
-        finalWebOfferPrice += 75;
-      }
       
       const sku = p.id?.toString() || `temp-id-${Math.random()}`;
 
@@ -115,9 +109,9 @@ export async function megapapParser(url: string): Promise<XmlProduct[]> {
         color: getColorFromFilters(p.filters),
         name: productName,
         retailPrice: p.retail_price_with_vat || '0',
-        webOfferPrice: finalWebOfferPrice.toString(),
+        webOfferPrice: p.weboffer_price_with_vat || p.retail_price_with_vat || '0',
         description: p.description || '',
-        category: await mapCategory(rawCategory, productName),
+        category: await mapCategory(rawCategory, productName), // Use the mapper
         mainImage,
         images: allImages,
         stock,
