@@ -133,9 +133,7 @@ export async function b2bportalParser(url: string): Promise<XmlProduct[]> {
     if (p.stock) stock = Number(getText(p.stock)) || 0;
     else if (p.qty) stock = Number(getText(p.qty)) || 0;
     else if (p.availability_qty) stock = Number(getText(p.availability_qty)) || 0;
-    else if (isAvailable) {
-        stock = 1; // Default to 1 if availability is 'yes' but no quantity is specified
-    }
+    // If only availability exists, leave stock as 0 and rely on isAvailable
 
     // Prices
     const retailPriceNum = parseFloat((getText(p.retail_price) || '0').replace(',', '.'));
