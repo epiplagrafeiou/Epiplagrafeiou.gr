@@ -4,10 +4,14 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
-import { Armchair, Briefcase, Files, Library, Monitor, Wrench } from 'lucide-react';
+import { Armchair, Briefcase, Sofa, Bed, Umbrella, Wrench, Lightbulb, Palmtree, Sparkles, Gift } from 'lucide-react';
 import { ProductCard } from '@/components/products/ProductCard';
 import { useProducts } from '@/lib/products-context';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useCollection } from '@/firebase/firestore/use-collection';
+import { collection } from 'firebase/firestore';
+import { useFirestore, useMemoFirebase } from '@/firebase';
+import { useMemo } from 'react';
 import {
   Carousel,
   CarouselContent,
@@ -15,20 +19,46 @@ import {
   CarouselNext,
   CarouselPrevious,
 } from "@/components/ui/carousel";
+import { type StoreCategory } from '@/components/admin/CategoryManager';
+import { createSlug } from '@/lib/utils';
 
-const mainCategories = [
-    { name: 'Καρέκλες', slug: 'karekles-grafeiou', Icon: Armchair },
-    { name: 'Γραφεία', slug: 'grafeia', Icon: Briefcase },
-    { name: 'Συρταριέρες', slug: 'syrtarieres-kai-ntoulapia', Icon: Files },
-    { name: 'Ραφιέρες', slug: 'bibliothikes-kai-rafieres', Icon: Library },
-    { name: 'Αξεσουάρ', slug: 'aksesouar-grafeiou', Icon: Monitor },
-    { name: 'Ανταλλακτικά', slug: 'antallaktika-gia-karekles-grafeiou', Icon: Wrench },
-]
+
+const iconMap: { [key: string]: React.ElementType } = {
+  'ΓΡΑΦΕΙΟ': Briefcase,
+  'ΣΑΛΟΝΙ': Sofa,
+  'ΚΡΕΒΑΤΟΚΑΜΑΡΑ': Bed,
+  'ΕΞΩΤΕΡΙΚΟΣ ΧΩΡΟΣ': Palmtree,
+  'Αξεσουάρ': Wrench,
+  'ΦΩΤΙΣΜΟΣ': Lightbulb,
+  'ΔΙΑΚΟΣΜΗΣΗ': Sparkles,
+  'Χριστουγεννιάτικα': Gift,
+  'default': Armchair,
+};
+
 
 export default function HomePageClient() {
   const { products, isLoaded } = useProducts();
-  const featuredProducts = products.slice(0, 4);
+  const firestore = useFirestore();
+  const featuredProducts = products.slice(0, 8);
   const heroSlides = PlaceHolderImages.filter(img => img.id.startsWith('hero-slide-'));
+
+  const categoriesQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return collection(firestore, 'categories');
+  }, [firestore]);
+  const { data: fetchedCategories } = useCollection<StoreCategory>(categoriesQuery);
+
+  const mainCategories = useMemo(() => {
+    if (!fetchedCategories) return [];
+    return fetchedCategories
+      .filter(cat => !cat.parentId)
+       .sort((a, b) => a.order - b.order)
+      .map(cat => ({
+        ...cat,
+        Icon: iconMap[cat.name.toUpperCase()] || iconMap.default,
+        slug: createSlug(cat.name),
+      }));
+  }, [fetchedCategories]);
 
   return (
     <div className="flex flex-col">
@@ -78,7 +108,7 @@ export default function HomePageClient() {
           </h2>
           <div className="flex flex-wrap items-center justify-center gap-8 md:gap-12">
             {mainCategories.map(({ name, slug, Icon }) => (
-              <Link href={`/category/${slug}`} key={name} className="group flex flex-col items-center gap-3 transition-transform duration-200 hover:-translate-y-2">
+              <Link href={`/category/${slug}`} key={slug} className="group flex flex-col items-center gap-3 transition-transform duration-200 hover:-translate-y-2">
                 <div className="flex h-28 w-28 items-center justify-center rounded-full bg-secondary transition-colors group-hover:bg-primary/10">
                   <Icon className="h-12 w-12 text-muted-foreground transition-colors group-hover:text-primary" />
                 </div>
@@ -96,7 +126,7 @@ export default function HomePageClient() {
           </h2>
           <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-4">
             {!isLoaded ? (
-              Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-[400px] w-full" />)
+              Array.from({ length: 8 }).map((_, i) => <Skeleton key={i} className="h-[400px] w-full" />)
             ) : (
               featuredProducts.map((product) => (
                 <ProductCard key={product.id} product={product} />
