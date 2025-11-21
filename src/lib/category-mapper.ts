@@ -134,3 +134,5 @@ export async function mapCategory(rawCategory: string, productName: string): Pro
 
     return rawCategory; // Return the raw category if no match is found
 }
+
+    

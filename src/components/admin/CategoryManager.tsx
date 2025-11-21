@@ -10,7 +10,7 @@ import {
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useProducts } from '@/lib/products-context';
-import { DndContext, useDraggable, useDroppable, closestCenter, DragEndEvent, DragOverlay, DragStartEvent, UniqueIdentifier } from '@dnd-kit/core';
+import { DndContext, useDraggable, useDroppable, closestCenter, DragEndEvent, DragStartEvent, UniqueIdentifier } from '@dnd-kit/core';
 import {
   SortableContext,
   verticalListSortingStrategy,
@@ -21,7 +21,7 @@ import { GripVertical, PlusCircle, Trash2, GitMerge, Pencil, Save, RefreshCw } f
 import { Input } from '@/components/ui/input';
 import { useCollection } from '@/firebase/firestore/use-collection';
 import { useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, doc, writeBatch, getDocs, deleteDoc } from 'firebase/firestore';
+import { collection, doc, writeBatch, getDocs } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { cn, createSlug } from '@/lib/utils';
 import { getCategoryMapping } from '@/lib/category-mapper';
@@ -692,3 +692,5 @@ export default function CategoryManager() {
         </DndContext>
     );
 }
+
+    
