@@ -17,7 +17,7 @@ import {
   useSortable,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { GripVertical, PlusCircle, Trash2, GitMerge, Pencil, Save } from 'lucide-react';
+import { GripVertical, PlusCircle, Trash2, GitMerge, Pencil, Save, RefreshCw } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { useCollection } from '@/firebase/firestore/use-collection';
 import { useFirestore, useMemoFirebase } from '@/firebase';
@@ -212,6 +212,47 @@ export default function CategoryManager() {
             setStoreCategories(rootCategories);
         }
     }, [fetchedCategories]);
+
+    const handleSeedCategories = async () => {
+        if (!firestore) {
+            toast({ variant: "destructive", title: "Database error", description: "Firestore is not available."});
+            return;
+        }
+
+        const mainCategories = ['ΓΡΑΦΕΙΟ', 'ΣΑΛΟΝΙ', 'ΚΡΕΒΑΤΟΚΑΜΑΡΑ', 'ΕΞΩΤΕΡΙΚΟΣ ΧΩΡΟΣ', 'Αξεσουάρ', 'ΦΩΤΙΣΜΟΣ', 'ΔΙΑΚΟΣΜΗΣΗ', 'Χριστουγεννιάτικα'];
+        const existingRootCategories = fetchedCategories?.filter(c => !c.parentId).map(c => c.name.toUpperCase()) || [];
+        
+        const categoriesToAdd = mainCategories.filter(mc => !existingRootCategories.includes(mc));
+
+        if (categoriesToAdd.length === 0) {
+            toast({ title: "All Set!", description: "All main categories already exist in the database."});
+            return;
+        }
+
+        const batch = writeBatch(firestore);
+        
+        categoriesToAdd.forEach((name, index) => {
+            const id = `cat-main-${name.toLowerCase().replace(/ /g, '-')}`;
+            const order = mainCategories.indexOf(name);
+            const newCat: Omit<StoreCategory, 'children'> = {
+                id,
+                name,
+                rawCategories: [],
+                parentId: null,
+                order
+            };
+            const docRef = doc(firestore, "categories", id);
+            batch.set(docRef, newCat);
+        });
+
+        try {
+            await batch.commit();
+            toast({ title: "Success!", description: `${categoriesToAdd.length} main categories were added to Firestore.`});
+        } catch (error) {
+            console.error("Error seeding categories:", error);
+            toast({ variant: "destructive", title: "Seed Failed", description: "Could not add main categories to the database." });
+        }
+    };
 
     const saveCategories = useCallback(async (categoriesToSave: StoreCategory[]) => {
         if (!firestore) {
@@ -576,8 +617,16 @@ export default function CategoryManager() {
 
                     <Card className="lg:col-span-2">
                         <CardHeader>
-                            <CardTitle>My Store Categories</CardTitle>
-                             <CardDescription>Organize your store's navigation structure here.</CardDescription>
+                            <div className="flex justify-between items-center">
+                                <div>
+                                    <CardTitle>My Store Categories</CardTitle>
+                                    <CardDescription>Organize your store's navigation structure here.</CardDescription>
+                                </div>
+                                <Button onClick={handleSeedCategories} variant="outline">
+                                    <RefreshCw className="mr-2 h-4 w-4" />
+                                    Seed Main Categories
+                                </Button>
+                            </div>
                         </CardHeader>
                         <CardContent>
                              <div className="flex gap-2 mb-4">
@@ -605,7 +654,7 @@ export default function CategoryManager() {
                                   ))}
                                 </div>
                             </SortableContext>
-                             {storeCategories.length === 0 && <p className="text-sm text-muted-foreground text-center py-8">Add a category to get started.</p>}
+                             {storeCategories.length === 0 && <p className="text-sm text-muted-foreground text-center py-8">Add a category or seed the main ones to get started.</p>}
                         </CardContent>
                     </Card>
                 </div>
