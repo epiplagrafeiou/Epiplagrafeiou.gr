@@ -22,7 +22,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import type { XmlProduct } from '@/lib/xml-parsers/megapap-parser';
+import type { XmlProduct } from '@/lib/types/product';
 import { useCollection } from '@/firebase/firestore/use-collection';
 import { collection } from 'firebase/firestore';
 import { useFirestore, useMemoFirebase } from '@/firebase';
@@ -96,7 +96,8 @@ export default function XmlImporterPage() {
     }
   };
   
-  const applyMarkup = (price: number, rules: MarkupRule[] = []): number => {
+  const applyMarkup = (product: XmlProduct, rules: MarkupRule[] = []): number => {
+    const price = parseFloat(product.webOfferPrice) || 0;
     const sortedRules = [...rules].sort((a, b) => a.from - b.from);
     let markedUpPrice = price;
     let ruleApplied = false;
@@ -116,22 +117,31 @@ export default function XmlImporterPage() {
     }
     
     // 2. Apply Fixed Additions for Low-Cost Items (based on original price)
-    // This happens AFTER the percentage markup is calculated.
-    if (price >= 0 && price <= 2) {
+    if (price > 0 && price <= 2) {
       markedUpPrice += 0.65;
     } else if (price > 2 && price <= 5) {
       markedUpPrice += 1.30;
     } else if (price > 5 && price <= 14) {
       markedUpPrice += 1.70;
     }
+    
+    // 3. Apply category-specific surcharges
+    const productNameLower = product.name.toLowerCase();
+    if (productNameLower.includes('μπουφέδες')) {
+      markedUpPrice += 6;
+    } else if (productNameLower.includes('ντουλάπες')) {
+      markedUpPrice += 14;
+    } else if (productNameLower.includes('σετ τραπεζαρίες κήπου')) {
+      markedUpPrice += 16;
+    }
+
 
     return markedUpPrice;
   };
   
   const processAndAddProducts = (productsToProcess: XmlProduct[], supplier: (typeof suppliers)[0]) => {
      const productsToAdd = productsToProcess.map(p => {
-        const retailPrice = parseFloat(p.webOfferPrice) || 0;
-        const finalPrice = applyMarkup(retailPrice, supplier.markupRules);
+        const finalPrice = applyMarkup(p, supplier.markupRules);
         const categoryId = categoryMap.get(p.category) || null;
 
         return {
@@ -370,7 +380,7 @@ export default function XmlImporterPage() {
                     <TableBody>
                         {filteredProducts.map((product) => {
                           const supplierPrice = parseFloat(product.webOfferPrice) || 0;
-                          const finalPrice = activeSupplier ? applyMarkup(supplierPrice, activeSupplier.markupRules) : supplierPrice;
+                          const finalPrice = activeSupplier ? applyMarkup(product, activeSupplier.markupRules) : supplierPrice;
 
                           return (
                             <TableRow key={product.id}>
