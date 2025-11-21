@@ -95,21 +95,15 @@ export default function Header() {
     });
   
     const rootCategories: StoreCategory[] = [];
-    const childIds = new Set<string>();
-
-    // Second pass: link children to parents.
+    
+    // Second pass: link children to parents and identify root categories.
     for (const catId in categoriesById) {
-      const category = categoriesById[catId];
-      if (category.parentId && categoriesById[category.parentId]) {
-        categoriesById[category.parentId].children.push(category);
-        childIds.add(category.id);
-      }
-    }
-
-    // Final pass: determine true root categories.
-    for (const catId in categoriesById) {
-        if(!childIds.has(catId)) {
-            rootCategories.push(categoriesById[catId]);
+        const category = categoriesById[catId];
+        if (category.parentId && categoriesById[category.parentId]) {
+            categoriesById[category.parentId].children.push(category);
+        } else {
+            // This is the correct way to identify a root category.
+            rootCategories.push(category);
         }
     }
   
