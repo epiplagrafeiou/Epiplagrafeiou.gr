@@ -85,10 +85,6 @@ export default function Header() {
   const { data: fetchedCategories } = useCollection<Omit<StoreCategory, 'children'>>(categoriesQuery);
 
   const categoryTree = useMemo(() => {
-    // START DEBUG LOG
-    console.log("Fetched categories:", JSON.stringify(fetchedCategories, null, 2));
-    // END DEBUG LOG
-
     if (!fetchedCategories) return [];
   
     const categoriesById: Record<string, StoreCategory> = {};
@@ -131,10 +127,6 @@ export default function Header() {
         if (indexB !== -1) return 1;
         return nameA.localeCompare(nameB);
     });
-
-    // START DEBUG LOG
-    console.log("Constructed Root Categories:", rootCategories.map(c => c.name));
-    // END DEBUG LOG
 
     return rootCategories;
   }, [fetchedCategories]);
@@ -202,7 +194,7 @@ export default function Header() {
            </NavigationMenuItem>
         ))}
          <NavigationMenuItem>
-            <Link href="/blog" legacyBehavior passHref>
+            <Link href="/blog" passHref>
                 <NavigationMenuLink className={navigationMenuTriggerStyle()}>
                 Blog
                 </NavigationMenuLink>
@@ -306,3 +298,5 @@ export default function Header() {
     </header>
   );
 }
+
+    
