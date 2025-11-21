@@ -61,6 +61,10 @@ export function ProductView({ product, allProducts, categoryPath, variants }: Pr
 
   const breadcrumbs = useMemo(() => {
       let path = '/category';
+      // FIX: Add a defensive check to ensure categoryPath is an array before mapping.
+      if (!Array.isArray(categoryPath)) {
+          return [];
+      }
       return categoryPath.map(cat => {
           path += `/${createSlug(cat.name)}`;
           return {
