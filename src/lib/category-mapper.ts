@@ -2,6 +2,7 @@
 'use server';
 
 function normalize(s: string): string {
+  if (!s) return '';
   return s
     .toLowerCase()
     .replace(/\s+/g, ' ')
@@ -9,7 +10,6 @@ function normalize(s: string): string {
     .trim();
 }
 
-// The new home for your category mapping logic
 export async function mapCategory(rawCategory: string, productName: string): Promise<string> {
     const normalizedRaw = normalize(rawCategory);
     const normalizedProduct = normalize(productName);
@@ -65,7 +65,7 @@ export async function mapCategory(rawCategory: string, productName: string): Pro
     if (normalizedRaw.includes('φαναράκια > κήπος - βεράντα')) return 'ΕΞΩΤΕΡΙΚΟΣ ΧΩΡΟΣ > Φαναράκια';
 
     // Αξεσουάρ
-    if ((normalizedRaw.includes('κρεμάστρες & καλόγεροι > οργάνωση σπιτιού') && normalizedProduct.includes('καλ')) || normalizedRaw.includes('έπιπλα εσωτερικού χώρου > καλόγεροι - κρεμάστρες τοίχου')) return 'Αξεσουάρ > Καλόγεροι';
+    if (normalizedRaw.includes('κρεμάστρες & καλόγεροι > οργάνωση σπιτιού') && normalizedProduct.includes('καλ')) return 'Αξεσουάρ > Καλόγεροι';
     if ((normalizedRaw.includes('κρεμάστρες δαπέδου > οργάνωση σπιτιού')) || (normalizedRaw.includes('κρεμάστρες & καλόγεροι > οργάνωση σπιτιού') && normalizedProduct.includes('κρεμ'))) return 'Αξεσουάρ > Κρεμάστρες Δαπέδου';
     if (normalizedRaw.includes('πολύμπριζα > εικόνα - ήχος') || normalizedRaw.includes('προεκτάσεις ρεύματος & μπαλαντέζες > εικόνα - ήχος')) return 'Αξεσουάρ > Πολύπριζα';
     if (normalizedRaw.includes('βάσεις τηλεόρασης > εικόνα - ήχος')) return 'Αξεσουάρ > Βάσεις Τηλεόρασης';
@@ -111,6 +111,5 @@ export async function mapCategory(rawCategory: string, productName: string): Pro
     if (normalizedRaw.includes('κηροπήγια & κηροσβέστες > διακόσμηση & ατμόσφαιρα')) return 'Χριστουγεννιάτικα > Κηροπήγια & Κηροσβέστες';
     if (normalizedRaw.includes('χριστουγεννιάτικες φιγούρες > και αν δεν έχουμε ταξιδέψει κοιτάζοντας την !')) return 'Χριστουγεννιάτικα > Χριστουγεννιάτικες Φιγούρες';
 
-    // Fallback to the original if no rule matches
     return rawCategory;
 }
