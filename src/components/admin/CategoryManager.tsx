@@ -1,4 +1,3 @@
-
 'use client';
 import { useState, useMemo, useCallback, useEffect } from 'react';
 import {
@@ -23,7 +22,8 @@ import { useCollection } from '@/firebase/firestore/use-collection';
 import { useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, doc, writeBatch } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
-import { cn } from '@/lib/utils';
+import { cn, createSlug } from '@/lib/utils';
+import { categoryMapping } from '@/lib/category-mapper';
 
 const RawCategoryItem = ({ category }: { category: string }) => {
     const { attributes, listeners, setNodeRef } = useDraggable({
@@ -215,42 +215,57 @@ export default function CategoryManager() {
 
     const handleSeedCategories = async () => {
         if (!firestore) {
-            toast({ variant: "destructive", title: "Database error", description: "Firestore is not available."});
+            toast({ variant: 'destructive', title: 'Database error', description: 'Firestore is not available.' });
             return;
         }
-
-        const mainCategories = ['ΓΡΑΦΕΙΟ', 'ΣΑΛΟΝΙ', 'ΚΡΕΒΑΤΟΚΑΜΑΡΑ', 'ΕΞΩΤΕΡΙΚΟΣ ΧΩΡΟΣ', 'Αξεσουάρ', 'ΦΩΤΙΣΜΟΣ', 'ΔΙΑΚΟΣΜΗΣΗ', 'Χριστουγεννιάτικα'];
-        const existingRootCategories = fetchedCategories?.filter(c => !c.parentId).map(c => c.name.toUpperCase()) || [];
-        
-        const categoriesToAdd = mainCategories.filter(mc => !existingRootCategories.includes(mc));
-
-        if (categoriesToAdd.length === 0) {
-            toast({ title: "All Set!", description: "All main categories already exist in the database."});
-            return;
-        }
-
+    
         const batch = writeBatch(firestore);
-        
-        categoriesToAdd.forEach((name, index) => {
-            const id = `cat-main-${name.toLowerCase().replace(/ /g, '-')}`;
-            const order = mainCategories.indexOf(name);
-            const newCat: Omit<StoreCategory, 'children'> = {
-                id,
-                name,
-                rawCategories: [],
-                parentId: null,
-                order
-            };
-            const docRef = doc(firestore, "categories", id);
-            batch.set(docRef, newCat);
-        });
-
+        const existingCategories = new Map(fetchedCategories?.map(c => [c.id, c]));
+        const createdCategoryIds = new Set<string>();
+    
+        for (const mapping of categoryMapping) {
+            const { raw, mapped } = mapping;
+            const pathParts = mapped.split(' > ');
+            let parentId: string | null = null;
+    
+            for (let i = 0; i < pathParts.length; i++) {
+                const partName = pathParts[i];
+                const currentPath = pathParts.slice(0, i + 1).join(' > ');
+                const categoryId = `cat-${createSlug(currentPath)}`;
+    
+                if (!createdCategoryIds.has(categoryId) && !existingCategories.has(categoryId)) {
+                    const newCat = {
+                        id: categoryId,
+                        name: partName,
+                        rawCategories: [],
+                        parentId: parentId,
+                        order: i, 
+                    };
+                    const docRef = doc(firestore, "categories", categoryId);
+                    batch.set(docRef, newCat);
+                    createdCategoryIds.add(categoryId);
+                    existingCategories.set(categoryId, newCat); // Add to map to avoid re-creation
+                }
+    
+                if (i === pathParts.length - 1) { // It's the final subcategory
+                    const finalCat = existingCategories.get(categoryId);
+                    if (finalCat && !finalCat.rawCategories.includes(raw)) {
+                        const updatedRawCategories = Array.from(new Set([...finalCat.rawCategories, raw]));
+                        const docRef = doc(firestore, "categories", categoryId);
+                        batch.set(docRef, { rawCategories: updatedRawCategories }, { merge: true });
+                        existingCategories.set(categoryId, {...finalCat, rawCategories: updatedRawCategories});
+                    }
+                }
+                parentId = categoryId;
+            }
+        }
+    
         try {
             await batch.commit();
-            toast({ title: "Success!", description: `${categoriesToAdd.length} main categories were added to Firestore.`});
+            toast({ title: 'Success!', description: `Category structure has been seeded/updated.` });
         } catch (error) {
             console.error("Error seeding categories:", error);
-            toast({ variant: "destructive", title: "Seed Failed", description: "Could not add main categories to the database." });
+            toast({ variant: 'destructive', title: 'Seed Failed', description: 'Could not write categories to the database.' });
         }
     };
 
@@ -608,10 +623,10 @@ export default function CategoryManager() {
                             <CardDescription>Drag a category to map it to one of your store categories.</CardDescription>
                         </CardHeader>
                         <CardContent>
-                            {allRawCategories.map(cat => (
+                            {uncategorized.map(cat => (
                                 <RawCategoryItem key={cat} category={cat} />
                             ))}
-                             {allRawCategories.length === 0 && <p className="text-sm text-muted-foreground">No supplier categories found. Try syncing products first.</p>}
+                             {uncategorized.length === 0 && <p className="text-sm text-muted-foreground">All raw categories have been mapped!</p>}
                         </CardContent>
                     </Card>
 
@@ -624,7 +639,7 @@ export default function CategoryManager() {
                                 </div>
                                 <Button onClick={handleSeedCategories} variant="outline">
                                     <RefreshCw className="mr-2 h-4 w-4" />
-                                    Seed Main Categories
+                                    Seed Category Structure
                                 </Button>
                             </div>
                         </CardHeader>
