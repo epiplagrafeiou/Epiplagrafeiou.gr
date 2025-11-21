@@ -6,7 +6,7 @@ import Image from 'next/image';
 import { useParams, notFound } from 'next/navigation';
 import { useCollection } from '@/firebase/firestore/use-collection';
 import { useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, query, where, getDocs } from 'firebase/firestore';
+import { collection } from 'firebase/firestore';
 import { ProductCard } from '@/components/products/ProductCard';
 import { useProducts } from '@/lib/products-context';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -33,52 +33,43 @@ export default function CategoryPage() {
   }, [firestore]);
   const { data: fetchedCategories, isLoading: areCategoriesLoading } = useCollection<Omit<StoreCategory, 'children'>>(categoriesQuery);
 
-  const { categoryTree, categoryMap } = useMemo(() => {
-    if (!fetchedCategories) return { categoryTree: [], categoryMap: new Map() };
-
+  const categoryTree = useMemo(() => {
+    if (!fetchedCategories) return [];
     const categoriesById: Record<string, StoreCategory> = {};
     const rootCategories: StoreCategory[] = [];
-    const mapBySlug = new Map<string, StoreCategory>();
-
+  
     fetchedCategories.forEach(cat => {
-        categoriesById[cat.id] = { ...cat, children: [] };
+      categoriesById[cat.id] = { ...cat, children: [] };
     });
-
+  
     fetchedCategories.forEach(cat => {
-        let path = createSlug(cat.name);
         if (cat.parentId && categoriesById[cat.parentId]) {
             categoriesById[cat.parentId].children.push(categoriesById[cat.id]);
-            const parent = fetchedCategories.find(p => p.id === cat.parentId);
-             // This is a simplified path builder; a recursive one would be better
-            if (parent) {
-                path = `${createSlug(parent.name)}/${path}`;
-            }
         } else {
             rootCategories.push(categoriesById[cat.id]);
         }
-        mapBySlug.set(path, categoriesById[cat.id]);
     });
     
-    return { categoryTree: rootCategories, categoryMap };
+    return rootCategories;
   }, [fetchedCategories]);
   
-  const slugPath = useMemo(() => Array.isArray(params.slug) ? params.slug.join('/') : (params.slug || ''), [params.slug]);
+  const slugPath = useMemo(() => Array.isArray(params.slug) ? params.slug.map(s => decodeURIComponent(s)).join('/') : (params.slug ? decodeURIComponent(params.slug) : ''), [params.slug]);
 
   const { currentCategory, breadcrumbs } = useMemo(() => {
-    if (!fetchedCategories) return { currentCategory: null, breadcrumbs: [] };
+    if (categoryTree.length === 0) return { currentCategory: null, breadcrumbs: [] };
 
     let category: StoreCategory | null = null;
     let breadcrumbs: { name: string; href: string; isLast: boolean }[] = [];
     let currentHref = '/category';
     
-    let pathParts = slugPath.split('/');
+    const pathParts = slugPath.split('/');
     let currentChildren = categoryTree;
 
     for (const part of pathParts) {
         const found = currentChildren.find(c => createSlug(c.name) === part);
         if (found) {
             category = found;
-            currentHref += `/${part}`;
+            currentHref += `/${createSlug(found.name)}`;
             breadcrumbs.push({ name: found.name, href: currentHref, isLast: false });
             currentChildren = found.children;
         } else {
@@ -90,8 +81,7 @@ export default function CategoryPage() {
     if (breadcrumbs.length > 0) breadcrumbs[breadcrumbs.length - 1].isLast = true;
 
     return { currentCategory: category, breadcrumbs };
-
-  }, [slugPath, fetchedCategories, categoryTree]);
+  }, [slugPath, categoryTree]);
 
 
   const filteredProducts = useMemo(() => {
@@ -100,7 +90,9 @@ export default function CategoryPage() {
     const allChildCategoryIds = new Set<string>();
     const collectCategoryIds = (category: StoreCategory) => {
         allChildCategoryIds.add(category.id);
-        category.children.forEach(collectCategoryIds);
+        if (category.children) {
+            category.children.forEach(collectCategoryIds);
+        }
     };
     collectCategoryIds(currentCategory);
 

@@ -28,10 +28,10 @@ const iconMap: { [key: string]: React.ElementType } = {
   'ΣΑΛΟΝΙ': Sofa,
   'ΚΡΕΒΑΤΟΚΑΜΑΡΑ': Bed,
   'ΕΞΩΤΕΡΙΚΟΣ ΧΩΡΟΣ': Palmtree,
-  'Αξεσουάρ': Wrench,
+  'ΑΞΕΣΟΥΑΡ': Wrench,
   'ΦΩΤΙΣΜΟΣ': Lightbulb,
   'ΔΙΑΚΟΣΜΗΣΗ': Sparkles,
-  'Χριστουγεννιάτικα': Gift,
+  'ΧΡΙΣΤΟΥΓΕΝΝΙΑΤΙΚΑ': Gift,
   'default': Armchair,
 };
 
@@ -50,12 +50,25 @@ export default function HomePageClient() {
 
   const mainCategories = useMemo(() => {
     if (!fetchedCategories) return [];
+    
+    const desiredOrder = ['ΓΡΑΦΕΙΟ', 'ΣΑΛΟΝΙ', 'ΚΡΕΒΑΤΟΚΑΜΑΡΑ', 'ΕΞΩΤΕΡΙΚΟΣ ΧΩΡΟΣ', 'Αξεσουάρ', 'ΦΩΤΙΣΜΟΣ', 'ΔΙΑΚΟΣΜΗΣΗ', 'Χριστουγεννιάτικα'];
+
     return fetchedCategories
       .filter(cat => !cat.parentId)
-       .sort((a, b) => a.order - b.order)
+      .sort((a, b) => {
+        const nameA = a.name.toUpperCase().trim();
+        const nameB = b.name.toUpperCase().trim();
+        const indexA = desiredOrder.indexOf(nameA);
+        const indexB = desiredOrder.indexOf(nameB);
+  
+        if (indexA !== -1 && indexB !== -1) return indexA - indexB;
+        if (indexA !== -1) return -1;
+        if (indexB !== -1) return 1;
+        return nameA.localeCompare(nameB);
+      })
       .map(cat => ({
         ...cat,
-        Icon: iconMap[cat.name.toUpperCase()] || iconMap.default,
+        Icon: iconMap[cat.name.toUpperCase().trim()] || iconMap.default,
         slug: createSlug(cat.name),
       }));
   }, [fetchedCategories]);

@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Logo } from '@/components/icons/Logo';
@@ -14,7 +14,6 @@ import {
   Menu,
   X,
   Heart,
-  Truck,
   ChevronRight
 } from 'lucide-react';
 import { useCart } from '@/lib/cart-context';
@@ -86,34 +85,33 @@ export default function Header() {
 
   const categoryTree = useMemo(() => {
     if (!fetchedCategories) return [];
-  
+
     const categoriesById: Record<string, StoreCategory> = {};
     
     // First pass: create a map of all categories and initialize children array.
     fetchedCategories.forEach(cat => {
       categoriesById[cat.id] = { ...cat, children: [] };
     });
-  
+    
     const rootCategories: StoreCategory[] = [];
     
-    // Second pass: link children to parents and identify root categories.
+    // Second pass: link children to parents and identify true root categories.
     for (const catId in categoriesById) {
-        const category = categoriesById[catId];
-        if (category.parentId && categoriesById[category.parentId]) {
-            categoriesById[category.parentId].children.push(category);
-        } else {
-            // This is the correct way to identify a root category.
-            rootCategories.push(category);
-        }
+      const category = categoriesById[catId];
+      if (category.parentId && categoriesById[category.parentId]) {
+          categoriesById[category.parentId].children.push(category);
+      } else {
+          rootCategories.push(category);
+      }
     }
   
     const desiredOrder = ['ΓΡΑΦΕΙΟ', 'ΣΑΛΟΝΙ', 'ΚΡΕΒΑΤΟΚΑΜΑΡΑ', 'ΕΞΩΤΕΡΙΚΟΣ ΧΩΡΟΣ', 'Αξεσουάρ', 'ΦΩΤΙΣΜΟΣ', 'ΔΙΑΚΟΣΜΗΣΗ', 'Χριστουγεννιάτικα'];
     
     const sortRecursive = (categories: StoreCategory[]) => {
-      if (!categories) return;
-      categories.sort((a,b) => a.order - b.order);
+      if (!categories || categories.length === 0) return;
+      categories.sort((a, b) => (a.order || 0) - (b.order || 0));
       categories.forEach(c => sortRecursive(c.children));
-    }
+    };
     
     sortRecursive(rootCategories);
   
@@ -123,9 +121,7 @@ export default function Header() {
         const indexA = desiredOrder.indexOf(nameA);
         const indexB = desiredOrder.indexOf(nameB);
   
-        if (indexA !== -1 && indexB !== -1) {
-            return indexA - indexB;
-        }
+        if (indexA !== -1 && indexB !== -1) return indexA - indexB;
         if (indexA !== -1) return -1;
         if (indexB !== -1) return 1;
         return nameA.localeCompare(nameB);
@@ -301,6 +297,3 @@ export default function Header() {
     </header>
   );
 }
-    
-
-    
