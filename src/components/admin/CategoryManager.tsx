@@ -1,4 +1,3 @@
-
 'use client';
 import { useState, useMemo, useCallback, useEffect } from 'react';
 import {
@@ -226,13 +225,18 @@ export default function CategoryManager() {
         try {
             // 1. Clear all existing categories
             toast({ title: 'Clearing old categories...', description: 'Please wait.' });
-            const existingDocs = await getDocs(categoriesQuery!);
+            const categoriesCollectionRef = collection(firestore, 'categories');
+            const existingDocs = await getDocs(categoriesCollectionRef);
             const deleteBatch = writeBatch(firestore);
-            existingDocs.forEach(doc => deleteBatch.delete(doc.ref));
-            await deleteBatch.commit();
+            if(!existingDocs.empty) {
+                existingDocs.forEach(doc => deleteBatch.delete(doc.ref));
+                await deleteBatch.commit();
+                toast({ title: 'Old categories cleared!', description: 'Now seeding new structure.' });
+            } else {
+                 toast({ title: 'No old categories to clear.', description: 'Proceeding to seed.' });
+            }
     
             // 2. Seed the new structure
-            toast({ title: 'Seeding new category structure...', description: 'This may take a moment.' });
             const categoryMapping = await getCategoryMapping();
             const seedBatch = writeBatch(firestore);
             const categoriesToCreate = new Map<string, Partial<StoreCategory>>();
@@ -259,7 +263,7 @@ export default function CategoryManager() {
     
                     if (i === pathParts.length - 1) {
                         const cat = categoriesToCreate.get(categoryId);
-                        if (cat && cat.rawCategories) {
+                        if (cat && cat.rawCategories && !cat.rawCategories.includes(raw)) {
                             cat.rawCategories.push(raw);
                         }
                     }
@@ -274,9 +278,9 @@ export default function CategoryManager() {
     
             await seedBatch.commit();
             toast({ title: 'Success!', description: `Category structure has been seeded successfully.` });
-        } catch (error) {
+        } catch (error: any) {
             console.error("Error seeding categories:", error);
-            toast({ variant: 'destructive', title: 'Seed Failed', description: 'An unexpected error occurred.' });
+            toast({ variant: 'destructive', title: 'Seed Failed', description: error.message || 'An unexpected error occurred.' });
         }
     };
 
@@ -302,10 +306,11 @@ export default function CategoryManager() {
         const flatListToSave = flattenCategories(categoriesToSave);
         const idsToKeep = new Set(flatListToSave.map(c => c.id));
 
-        fetchedCategories?.forEach(oldCat => {
-            if (!idsToKeep.has(oldCat.id)) {
-                const docRef = doc(firestore, 'categories', oldCat.id);
-                batch.delete(docRef);
+        const categoriesCollectionRef = collection(firestore, 'categories');
+        const existingDocs = await getDocs(categoriesCollectionRef);
+        existingDocs.forEach(oldDoc => {
+            if (!idsToKeep.has(oldDoc.id)) {
+                batch.delete(oldDoc.ref);
             }
         });
 
@@ -322,12 +327,12 @@ export default function CategoryManager() {
             toast({ variant: 'destructive', title: 'Save Failed', description: 'Could not save categories to the database.' });
         }
 
-    }, [firestore, toast, fetchedCategories]);
+    }, [firestore, toast]);
 
 
     const allRawCategories = useMemo(() => {
         const set = new Set<string>();
-        adminProducts.forEach(p => p.category && set.add(p.category));
+        adminProducts.forEach(p => p.rawCategory && set.add(p.rawCategory));
         return Array.from(set).sort();
     }, [adminProducts]);
     
@@ -366,7 +371,6 @@ export default function CategoryManager() {
     const withUpdatedCategories = (updater: (cats: StoreCategory[]) => StoreCategory[]) => {
         const newCategories = updater(storeCategories);
         setStoreCategories(newCategories);
-        // We will now call saveCategories manually via a button
     }
 
     const handleAddCategory = () => {
@@ -692,5 +696,3 @@ export default function CategoryManager() {
         </DndContext>
     );
 }
-
-    
