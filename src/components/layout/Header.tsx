@@ -86,7 +86,7 @@ export default function Header() {
   const categoryTree = useMemo(() => {
     if (!fetchedCategories) return [];
 
-    const categoriesById: Record<string, StoreCategory> = {};
+    const categoriesById: { [id: string]: StoreCategory } = {};
     
     // First pass: create a map of all categories and initialize children array.
     fetchedCategories.forEach(cat => {
@@ -105,7 +105,7 @@ export default function Header() {
       }
     }
   
-    const desiredOrder = ['ΓΡΑΦΕΙΟ', 'ΣΑΛΟΝΙ', 'ΚΡΕΒΑΤΟΚΑΜΑΡΑ', 'ΕΞΩΤΕΡΙΚΟΣ ΧΩΡΟΣ', 'Αξεσουάρ', 'ΦΩΤΙΣΜΟΣ', 'ΔΙΑΚΟΣΜΗΣΗ', 'Χριστουγεννιάτικα'];
+    const desiredOrder = ['ΓΡΑΦΕΙΟ', 'ΣΑΛΟΝΙ', 'ΚΡΕΒΑΤΟΚΑΜΑΡΑ', 'ΕΞΩΤΕΡΙΚΟΣ ΧΩΡΟΣ', 'ΑΞΕΣΟΥΑΡ', 'ΦΩΤΙΣΜΟΣ', 'ΔΙΑΚΟΣΜΗΣΗ', 'ΧΡΙΣΤΟΥΓΕΝΝΙΑΤΙΚΑ'];
     
     const sortRecursive = (categories: StoreCategory[]) => {
       if (!categories || categories.length === 0) return;
@@ -193,11 +193,9 @@ export default function Header() {
            </NavigationMenuItem>
         ))}
          <NavigationMenuItem>
-            <Link href="/blog" legacyBehavior passHref>
-                <NavigationMenuLink className={navigationMenuTriggerStyle()}>
-                Blog
-                </NavigationMenuLink>
-            </Link>
+            <NavigationMenuLink href="/blog" className={navigationMenuTriggerStyle()}>
+              Blog
+            </NavigationMenuLink>
         </NavigationMenuItem>
       </NavigationMenuList>
     </NavigationMenu>

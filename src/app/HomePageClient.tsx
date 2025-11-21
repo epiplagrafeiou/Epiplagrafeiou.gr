@@ -120,14 +120,16 @@ export default function HomePageClient() {
             Διάλεξε Κατηγορία
           </h2>
           <div className="flex flex-wrap items-center justify-center gap-8 md:gap-12">
-            {mainCategories.map(({ name, slug, Icon }) => (
+            {mainCategories.map(({ name, slug }) => {
+              const Icon = iconMap[name.toUpperCase().trim()] || iconMap.default;
+              return (
               <Link href={`/category/${slug}`} key={slug} className="group flex flex-col items-center gap-3 transition-transform duration-200 hover:-translate-y-2">
                 <div className="flex h-28 w-28 items-center justify-center rounded-full bg-secondary transition-colors group-hover:bg-primary/10">
                   <Icon className="h-12 w-12 text-muted-foreground transition-colors group-hover:text-primary" />
                 </div>
                 <span className="font-medium text-foreground">{name}</span>
               </Link>
-            ))}
+            )})}
           </div>
         </div>
       </section>

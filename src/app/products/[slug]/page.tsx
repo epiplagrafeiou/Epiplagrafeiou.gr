@@ -50,7 +50,7 @@ export default function ProductDetailPage() {
   // Determine related products, excluding other variants of the same product
   const relatedProducts = products.filter(p => {
     // Exclude self and other variants
-    if (p.variantGroupKey && p.variantGroupKey === product.variantGroupKey) {
+    if (product.variantGroupKey && p.variantGroupKey === product.variantGroupKey) {
       return false;
     }
     // Simple relation: same final category, but not the same product
