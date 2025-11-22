@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
@@ -40,6 +39,7 @@ import { useWishlist } from '@/lib/wishlist-context';
 import type { StoreCategory } from '@/components/admin/CategoryManager';
 import React from 'react';
 
+/* ---------------- REUSABLE LIST ITEM ----------------- */
 const ListItem = React.forwardRef<
   React.ElementRef<"a">,
   React.ComponentPropsWithoutRef<"a">
@@ -67,6 +67,7 @@ const ListItem = React.forwardRef<
 ListItem.displayName = "ListItem";
 
 
+/* ------------------------ HEADER ------------------------ */
 export default function Header() {
   const { itemCount } = useCart();
   const { wishlistCount } = useWishlist();
@@ -76,7 +77,7 @@ export default function Header() {
   const router = useRouter();
 
   const staticCategories = [
-    { name: 'ΓΡΑΦΕΙΟ', children: [ { name: 'Καρέκλες γραφείου' }, { name: 'Γραφεία' }, { name: 'Συρταριέρες Γραφείου' }, { name: 'Βιβλιοθήκες' }, { name: 'Ραφιέρες / Αποθηκευτικά Κουτιά' }, { name: 'Ντουλάπες' }, { name: 'Ανταλλακτικά' }, { name: 'Γραφεία υποδοχής / Reception' } ] },
+    { name: 'ΓΡΑΦΕΙΟ', children: [ { name: 'Καρέκλες γραφείου' }, { name: 'Γραφεία' }, { name: 'Συρταριέρες Γραφείου' }, { name: 'Βιβλιοθήκες' }, { name: 'Ραφιέρες / Αποθηκευτικά Κουτιά' }, { name: 'Ντουλάπες' }, { name: 'Ανταλλακτικά', slug: 'antallaktika-gia-karekles-grafeiou' }, { name: 'Γραφεία υποδοχής / Reception' } ] },
     { name: 'ΣΑΛΟΝΙ', children: [ { name: 'Καναπέδες' }, { name: 'Πολυθρόνες' }, { name: 'Καρέκλες τραπεζαρίας' }, { name: 'Τραπέζια' }, { name: 'Τραπεζάκια σαλονιού' }, { name: 'Τραπεζάκια Βοηθητικά' }, { name: 'Έπιπλα τηλεόρασης' }, { name: 'Συνθέσεις Σαλονιού' }, { name: 'Έπιπλα Εισόδου' }, { name: 'Παπουτσοθήκες' }, { name: 'Μπουφέδες' }, { name: 'Κονσόλες' }, { name: 'Σκαμπώ μπαρ' }, { name: 'Πουφ & Σκαμπό' }, { name: 'Κουρτίνες & Κουρτινόξυλα' } ] },
     { name: 'ΚΡΕΒΑΤΟΚΑΜΑΡΑ', children: [ { name: 'Κρεβάτια' }, { name: 'Κομοδίνα' }, { name: 'Συρταριέρες' }, { name: 'Ντουλάπες' }, { name: 'Φουσκωτά στρώματα' }, { name: 'Λευκά Είδη' } ] },
     { name: 'ΕΞΩΤΕΡΙΚΟΣ ΧΩΡΟΣ', children: [ { name: 'Καρέκλες κήπου' }, { name: 'Τραπέζια εξωτερικού χώρου' }, { name: 'Σετ τραπεζαρίες κήπου' }, { name: 'Βάσεις ομπρελών' }, { name: 'Ομπρέλες κήπου / παραλίας' }, { name: 'Κουτιά Αποθήκευσης Κήπου' }, { name: 'Διακόσμηση & Οργάνωση Μπαλκονιού' }, { name: 'Αιώρες Κήπου & Βεράντας' }, { name: 'Λυσεις σκίασης για μπαλκόνι' }, { name: 'Φαναράκια' } ] },
@@ -87,6 +88,7 @@ export default function Header() {
   ];
 
 
+  /* ----------------------- SEARCH -------------------------- */
   const handleSearch = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!searchQuery.trim()) return;
@@ -94,10 +96,6 @@ export default function Header() {
     setSearchQuery('');
     if (isMobileMenuOpen) setIsMobileMenuOpen(false);
   };
-  
-  const handleMobileLinkClick = () => {
-    setIsMobileMenuOpen(false);
-  }
 
   const renderCategoryTree = (nodes: typeof staticCategories, parentSlug = '') => {
     return nodes.map(node => {
@@ -106,12 +104,12 @@ export default function Header() {
         return (
           <Collapsible key={node.name} className="group">
             <CollapsibleTrigger className="flex w-full items-center justify-between py-2 text-left text-sm font-medium">
-              <Link href={`/category${currentSlug}`} onClick={handleMobileLinkClick} className="flex-grow">{node.name}</Link>
+              <Link href={`/category${currentSlug}`} onClick={() => setIsMobileMenuOpen(false)} className="flex-grow">{node.name}</Link>
               <ChevronRight className="h-4 w-4 transition-transform duration-200 group-data-[state=open]:rotate-90" />
             </CollapsibleTrigger>
             <CollapsibleContent className="pl-4">
               <ul className="space-y-1">
-                {renderCategoryTree(node.children, currentSlug)}
+                {renderCategoryTree(node.children as typeof staticCategories, currentSlug)}
               </ul>
             </CollapsibleContent>
           </Collapsible>
@@ -119,7 +117,7 @@ export default function Header() {
       }
       return (
         <li key={node.name}>
-          <Link href={`/category${currentSlug}`} onClick={handleMobileLinkClick} className="block py-2 text-sm">
+          <Link href={`/category${currentSlug}`} onClick={() => setIsMobileMenuOpen(false)} className="block py-2 text-sm">
             {node.name}
           </Link>
         </li>
@@ -127,34 +125,36 @@ export default function Header() {
     });
   };
 
+  /* ---------------------- DESKTOP NAV ----------------------- */
   const desktopNav = (
-      <NavigationMenu>
-        <NavigationMenuList>
-          {staticCategories.map(category => (
-            <NavigationMenuItem key={category.name}>
-              <NavigationMenuTrigger>{category.name}</NavigationMenuTrigger>
-              <NavigationMenuContent>
-                <ul className="grid w-[400px] gap-3 p-4 md:w-[500px] md:grid-cols-2 lg:w-[600px]">
-                  {category.children.map((component) => (
-                    <ListItem
-                      key={component.name}
-                      title={component.name}
-                      href={`/category/${createSlug(category.name)}/${createSlug(component.name)}`}
-                    />
-                  ))}
-                </ul>
-              </NavigationMenuContent>
-            </NavigationMenuItem>
-          ))}
-        </NavigationMenuList>
-      </NavigationMenu>
+    <NavigationMenu>
+      <NavigationMenuList>
+        {staticCategories.map(category => (
+          <NavigationMenuItem key={category.name}>
+            <NavigationMenuTrigger>{category.name}</NavigationMenuTrigger>
+            <NavigationMenuContent>
+              <ul className="grid w-[400px] gap-3 p-4 md:w-[500px] md:grid-cols-2 lg:w-[600px]">
+                {category.children.map((component) => (
+                  <ListItem
+                    key={component.name}
+                    title={component.name}
+                    href={`/category/${createSlug(category.name)}/${component.slug || createSlug(component.name)}`}
+                  />
+                ))}
+              </ul>
+            </NavigationMenuContent>
+          </NavigationMenuItem>
+        ))}
+      </NavigationMenuList>
+    </NavigationMenu>
   );
 
+  /* ---------------------- MOBILE NAV ------------------------ */
   const mobileNav = (
     <div className={`fixed inset-0 z-50 bg-background transition-transform duration-300 md:hidden 
       ${isMobileMenuOpen ? 'translate-x-0' : 'translate-x-full'}`}>
       <div className="flex h-16 items-center justify-between border-b px-4">
-        <Link href="/" onClick={handleMobileLinkClick}>
+        <Link href="/" onClick={() => setIsMobileMenuOpen(false)}>
           <Logo />
         </Link>
         <Button variant="ghost" size="icon" onClick={() => setIsMobileMenuOpen(false)}>
@@ -180,11 +180,13 @@ export default function Header() {
     </div>
   );
 
+  /* ------------------- FINAL RENDER ---------------------- */
   return (
     <header className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur-sm">
       <div className="container mx-auto px-4">
         <div className="flex h-20 items-center justify-between gap-4">
 
+          {/* Left side (logo + mobile menu) */}
           <div className="flex items-center gap-4">
             <Button variant="ghost" size="icon" className="md:hidden"
               onClick={() => setIsMobileMenuOpen(true)}>
@@ -195,6 +197,7 @@ export default function Header() {
             </Link>
           </div>
 
+          {/* Desktop search */}
           <div className="hidden flex-1 px-4 lg:px-12 md:block">
             <form onSubmit={handleSearch} className="relative">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-foreground" />
@@ -207,6 +210,7 @@ export default function Header() {
             </form>
           </div>
 
+          {/* Right icons */}
           <div className="flex items-center gap-2">
             <LoginDialog>
               <Button variant="ghost" className="hidden md:flex items-center gap-2">
@@ -241,6 +245,7 @@ export default function Header() {
           </div>
         </div>
 
+        {/* Desktop nav */}
         <div className="hidden h-12 items-center justify-center md:flex">
           {desktopNav}
         </div>
@@ -250,3 +255,4 @@ export default function Header() {
     </header>
   );
 }
+    
