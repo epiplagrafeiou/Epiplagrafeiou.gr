@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'next';
+import React, { useState, useMemo } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
@@ -235,7 +235,7 @@ export default function Header() {
                 <NavigationMenuTrigger>{category.name}</NavigationMenuTrigger>
                 <NavigationMenuContent>
                   <div className="absolute left-0 top-0 w-full">
-                    <div className="container mx-auto">
+                    <div className="mx-auto max-w-4xl">
                         <div className="flex gap-6 p-6">
                             <ul className="grid grid-cols-3 gap-x-6 gap-y-4 w-2/3">
                                 {(category.children || []).map(child => (
