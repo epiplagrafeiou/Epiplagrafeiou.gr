@@ -100,6 +100,8 @@ export async function megapapParser(url: string): Promise<XmlProduct[]> {
       const productName = p.name || 'No Name';
       
       const sku = p.id?.toString() || `temp-id-${Math.random()}`;
+      
+      const finalWebOfferPrice = parseFloat(p.weboffer_price_with_vat || p.retail_price_with_vat || '0');
 
       return {
         id: sku,
@@ -109,7 +111,7 @@ export async function megapapParser(url: string): Promise<XmlProduct[]> {
         color: getColorFromFilters(p.filters),
         name: productName,
         retailPrice: p.retail_price_with_vat || '0',
-        webOfferPrice: p.weboffer_price_with_vat || p.retail_price_with_vat || '0',
+        webOfferPrice: finalWebOfferPrice.toString(),
         description: p.description || '',
         category: await mapCategory(rawCategory, productName), // Use the mapper
         mainImage,
