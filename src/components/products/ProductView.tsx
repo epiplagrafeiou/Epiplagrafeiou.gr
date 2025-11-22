@@ -60,7 +60,6 @@ export function ProductView({ product, allProducts, categoryPath, variants }: Pr
   }
 
   const breadcrumbs = useMemo(() => {
-    // Ensure categoryPath is always an array to prevent crashes.
     const safePath = Array.isArray(categoryPath) ? categoryPath : [];
     let path = '/category';
     
@@ -257,9 +256,29 @@ export function ProductView({ product, allProducts, categoryPath, variants }: Pr
                 />
             </div>
           )}
-          <div className="mt-2 text-sm font-medium text-green-600 flex items-center gap-1">
+          
+          <div className="mt-6 space-y-3 text-sm text-muted-foreground">
+            <div className="flex items-center gap-3">
+              <Truck className="h-5 w-5 flex-shrink-0 text-primary" />
+              <span>Δωρεάν μεταφορικά για παραγγελίες άνω των 150€</span>
+            </div>
+            <div className="flex items-center gap-3">
+              <Award className="h-5 w-5 flex-shrink-0 text-primary" />
+              <span>60 χρόνια εμπειρίας, η σφραγίδα της σιγουριάς μας</span>
+            </div>
+            <div className="flex items-center gap-3">
+              <Star className="h-5 w-5 flex-shrink-0 text-primary" />
+              <span>4.9/5 Αξιολόγηση από 86+ κριτικές</span>
+            </div>
+          </div>
+          
+          <div className="mt-4 text-sm font-medium text-green-600 flex items-center gap-1">
               <Award className="h-4 w-4" />
               Κερδίζεις {pointsEarned} πόντους με αυτή την αγορά!
+          </div>
+
+          <div className="mt-6">
+            <AddToCartButton product={product} size="lg" className="w-full" />
           </div>
 
           {variants && variants.length > 1 && (
@@ -289,24 +308,8 @@ export function ProductView({ product, allProducts, categoryPath, variants }: Pr
             className="prose prose-sm max-w-none text-muted-foreground"
             dangerouslySetInnerHTML={{ __html: product.description }}
           />
-          <div className="mt-8">
-            <AddToCartButton product={product} size="lg" />
-          </div>
-          <div className="mt-6 space-y-3 text-sm text-muted-foreground">
-            <div className="flex items-center gap-3">
-              <Truck className="h-5 w-5 flex-shrink-0 text-primary" />
-              <span>Δωρεάν μεταφορικά για παραγγελίες άνω των 150€</span>
-            </div>
-            <div className="flex items-center gap-3">
-              <Award className="h-5 w-5 flex-shrink-0 text-primary" />
-              <span>60 χρόνια εμπειρίας, η σφραγίδα της σιγουριάς μας</span>
-            </div>
-            <div className="flex items-center gap-3">
-              <Star className="h-5 w-5 flex-shrink-0 text-primary" />
-              <span>4.9/5 Αξιολόγηση από 86+ κριτικές</span>
-            </div>
-          </div>
-           <div className="mt-6 flex items-center gap-2 text-xs text-muted-foreground">
+
+           <div className="mt-8 flex items-center gap-2 text-xs text-muted-foreground">
               <ShieldCheck className="h-4 w-4 text-green-600" />
               <span>Ασφαλείς Πληρωμές SSL</span>
             </div>
