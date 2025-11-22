@@ -209,19 +209,32 @@ export default function Header() {
   const renderCategoryTree = (nodes: typeof staticCategories, parentSlug = '') => {
     return nodes.map((node) => {
       const currentSlug = `${parentSlug}/${createSlug(node.name)}`;
+  
       if (node.children && node.children.length > 0) {
         return (
           <Collapsible key={node.name} className="group">
-            <CollapsibleTrigger className="flex w-full items-center justify-between py-2 text-left text-sm font-medium">
+            <div className="flex items-center justify-between py-2">
+              {/* Category link */}
               <Link
                 href={`/category${currentSlug}`}
-                onClick={() => setIsMobileMenuOpen(false)}
-                className="flex-grow"
+                onClick={(e) => {
+                  e.stopPropagation(); // prevents opening the collapsible
+                  setIsMobileMenuOpen(false);
+                }}
+                className="text-sm font-medium flex-grow"
               >
                 {node.name}
               </Link>
-              <ChevronRight className="h-4 w-4 transition-transform duration-200 group-data-[state=open]:rotate-90" />
-            </CollapsibleTrigger>
+  
+              {/* Chevron that opens the collapse */}
+              <CollapsibleTrigger
+                className="p-2"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <ChevronRight className="h-4 w-4 transition-transform group-data-[state=open]:rotate-90" />
+              </CollapsibleTrigger>
+            </div>
+  
             <CollapsibleContent className="pl-4">
               <ul className="space-y-1">
                 {renderCategoryTree(
@@ -233,6 +246,8 @@ export default function Header() {
           </Collapsible>
         );
       }
+  
+      // Leaf category — simple link
       return (
         <li key={node.name}>
           <Link
@@ -304,7 +319,7 @@ export default function Header() {
           <Search className="absolute right-3 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
         </form>
 
-        <nav className="flex flex-col divide-y">
+        <nav className="flex flex-col divide-y bg-background">
           {renderCategoryTree(staticCategories)}
         </nav>
       </div>
