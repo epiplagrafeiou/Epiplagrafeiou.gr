@@ -28,6 +28,7 @@ export default function ProductDetailPage() {
   
   const categoryPath = useMemo(() => {
     if (!product || !storeCategories) return [];
+    // Correctly use categoryId for a stable lookup.
     return findCategoryPath(product.categoryId, storeCategories);
   }, [product, storeCategories]);
 
