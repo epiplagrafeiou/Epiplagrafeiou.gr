@@ -1,3 +1,4 @@
+
 'use client';
 
 import { ProductCard } from '@/components/products/ProductCard';
@@ -9,11 +10,12 @@ import { useParams, notFound } from 'next/navigation';
 import { createSlug } from '@/lib/utils';
 import Link from 'next/link';
 import { useMemo } from 'react';
+import React from 'react';
 
 const featuredCategories = [
-    { name: 'Γραφεία', href: '/category/grafeia' },
-    { name: 'Καρέκλες Γραφείου', href: '/category/karekles-grafeiou' },
-    { name: 'Βιβλιοθήκες', href: '/category/bibliothikes' },
+    { name: 'Γραφεία', href: '/category/grafeio' },
+    { name: 'Καρέκλες Γραφείου', href: '/category/grafeio/karekles-grafeiou' },
+    { name: 'Βιβλιοθήκες', href: '/category/grafeio/bibliothikes' },
 ]
 
 export default function CategoryPage() {
@@ -22,46 +24,52 @@ export default function CategoryPage() {
   
   const slugPath = useMemo(() => Array.isArray(params.slug) ? params.slug.join('/') : (params.slug || ''), [params.slug]);
 
-  // This will hold the correct Greek category path if found
-  const categoryPathString = useMemo(() => {
-    if (!isLoaded) return '';
-    // Find the category whose slug matches the URL
-    return products.map(p => p.category).find(catString => {
-        const catSlug = catString.split(' > ').map(createSlug).join('/');
+  const { categoryPath, pageTitle, breadcrumbs, filteredProducts } = useMemo(() => {
+    if (!isLoaded) return { categoryPath: '', pageTitle: '', breadcrumbs: [], filteredProducts: [] };
+
+    // Find the correct category string by matching its generated slug to the URL slug.
+    const pathString = products
+      .map(p => p.category)
+      .find(catString => {
+        const catSlug = (catString || '').split(' > ').map(createSlug).join('/');
         return catSlug === slugPath;
-    }) || '';
+      });
+
+    if (!pathString) {
+      // Return empty state to be handled by notFound()
+      return { categoryPath: null, pageTitle: '', breadcrumbs: [], filteredProducts: [] };
+    }
+
+    const productsForCategory = products.filter(product => {
+      return (product.category || '').startsWith(pathString);
+    });
+
+    const categoryParts = pathString.split(' > ');
+    const title = categoryParts[categoryParts.length - 1];
+
+    let currentHref = '';
+    const breadcrumbData = categoryParts.map(part => {
+      const partSlug = createSlug(part);
+      currentHref += `${currentHref ? '/' : ''}${partSlug}`;
+      return {
+        name: part, // Use the real Greek name for display
+        href: `/category/${currentHref}`, // Use the English slug for the link
+      };
+    });
+
+    return {
+      categoryPath: pathString,
+      pageTitle: title,
+      breadcrumbs: breadcrumbData,
+      filteredProducts: productsForCategory
+    };
   }, [isLoaded, products, slugPath]);
 
-
-  // If the page is loaded and we still couldn't find a matching category path, show a 404.
-  if (isLoaded && !categoryPathString) {
+  // Handle not found case after data is loaded
+  if (isLoaded && categoryPath === null) {
     notFound();
   }
 
-  const filteredProducts = useMemo(() => {
-    if (!isLoaded || !categoryPathString) return [];
-    // Filter products that start with the found category path
-    return products.filter(product => {
-      return product.category.startsWith(categoryPathString);
-    });
-  }, [isLoaded, products, categoryPathString]);
-  
-  // Use the Greek path for display, and slugs for links
-  const categoryParts = useMemo(() => categoryPathString ? categoryPathString.split(' > ') : [], [categoryPathString]);
-  
-  let currentHref = '';
-  const breadcrumbs = useMemo(() => categoryParts.map((part, index) => {
-    const partSlug = createSlug(part);
-    currentHref += `${currentHref ? '/' : ''}${partSlug}`;
-    return {
-      name: part, // Use the real Greek name for display
-      href: `/category/${currentHref}`, // Use the English slug for the link
-      isLast: index === categoryParts.length - 1
-    };
-  }), [categoryParts]);
-
-  const pageTitle = categoryParts.length > 0 ? categoryParts[categoryParts.length - 1] : "Προϊόντα";
-  
   const breadcrumbSchema = {
     '@context': 'https://schema.org',
     '@type': 'BreadcrumbList',
@@ -90,21 +98,26 @@ export default function CategoryPage() {
   return (
     <div className="container mx-auto px-4 py-8">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }} />
-      <div className="mb-6 flex items-center space-x-2 text-sm text-muted-foreground">
-        <Link href="/" className="hover:text-foreground">Home</Link>
-        <span>/</span>
-        <Link href="/products" className="hover:text-foreground">Products</Link>
-        {breadcrumbs.map((crumb, index) => (
-          <span key={index} className="flex items-center space-x-2">
-            <span>/</span>
-            {crumb.isLast ? (
-              <span className="text-foreground capitalize">{crumb.name}</span>
-            ) : (
-              <Link href={crumb.href} className="hover:text-foreground capitalize">{crumb.name}</Link>
-            )}
-          </span>
-        ))}
-      </div>
+      <nav>
+        <ol className="mb-6 flex items-center gap-2 text-sm text-muted-foreground">
+          <li><Link href="/" className="hover:text-foreground">Home</Link></li>
+          <li>/</li>
+          <li><Link href="/products" className="hover:text-foreground">Products</Link></li>
+          {breadcrumbs.map((crumb, index) => (
+            <React.Fragment key={crumb.href}>
+              <li>/</li>
+              <li>
+                <Link 
+                  href={crumb.href} 
+                  className={index === breadcrumbs.length - 1 ? "text-foreground capitalize" : "hover:text-foreground capitalize"}
+                >
+                  {crumb.name}
+                </Link>
+              </li>
+            </React.Fragment>
+          ))}
+        </ol>
+      </nav>
 
       <h1 className="mb-8 text-3xl font-bold capitalize">{pageTitle}</h1>
 
