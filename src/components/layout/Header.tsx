@@ -75,10 +75,9 @@ export default function Header() {
   const { user } = useUser();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [treeReady, setTreeReady] = useState(false); // 🚀 NO MORE FLICKER
+  const [treeReady, setTreeReady] = useState(false);
   const router = useRouter();
 
-  /* ------------ FETCH CATEGORIES FROM FIRESTORE ------------ */
   const firestore = useFirestore();
   const categoriesQuery = useMemoFirebase(() => {
     if (!firestore) return null;
@@ -87,75 +86,65 @@ export default function Header() {
 
   const { data: fetchedCategories } = useCollection<Omit<StoreCategory, 'children'>>(categoriesQuery);
 
-  /* ------------ BUILD CATEGORY TREE (DEDUPED) -------------- */
   const categoryTree = useMemo(() => {
     if (!fetchedCategories) return [];
 
     const categoriesById: Record<string, StoreCategory> = {};
-    let rootCategories: StoreCategory[] = [];
-
-    // Normalize & structure
+    const rootCategories: StoreCategory[] = [];
+  
+    // Normalize parentId and create structure
     fetchedCategories.forEach(cat => {
-      categoriesById[cat.id] = {
-        ...cat,
-        parentId: cat.parentId || null,
-        children: []
-      };
+        categoriesById[cat.id] = {
+            ...cat,
+            parentId: cat.parentId || null,  // Normalize: "" → null
+            children: []
+        };
     });
 
-    // Build tree structure
-    fetchedCategories.forEach(cat => {
-      const node = categoriesById[cat.id];
-
-      if (node.parentId && categoriesById[node.parentId]) {
-        categoriesById[node.parentId].children.push(node);
+    // Build tree
+    for (const catId in categoriesById) {
+      const category = categoriesById[catId];
+      if (category.parentId && categoriesById[category.parentId]) {
+        categoriesById[category.parentId].children.push(category);
       } else {
-        rootCategories.push(node);
+        rootCategories.push(category);
       }
-    });
+    }
 
-    // 🔥 Remove duplicates at root level
-    rootCategories = [...new Map(rootCategories.map(c => [c.id, c])).values()];
-
+    // Sort children and parent categories
     const sortRecursive = (categories: StoreCategory[]) => {
-      categories.forEach(c => {
-        c.children = [...new Map(c.children.map(x => [x.id, x])).values()];
-        sortRecursive(c.children);
-      });
-      categories.sort((a, b) => (a.order || 0) - (b.order || 0));
+        categories.forEach(c => sortRecursive(c.children));
+        categories.sort((a, b) => (a.order || 0) - (b.order || 0));
     };
-
     sortRecursive(rootCategories);
 
-    // Custom priority order
+    // Custom order
     const desiredOrder = [
-      'ΓΡΑΦΕΙΟ',
-      'ΣΑΛΟΝΙ',
-      'ΚΡΕΒΑΤΟΚΑΜΑΡΑ',
-      'ΕΞΩΤΕΡΙΚΟΣ ΧΩΡΟΣ',
-      'ΑΞΕΣΟΥΑΡ',
-      'ΦΩΤΙΣΜΟΣ',
-      'ΔΙΑΚΟΣΜΗΣΗ',
-      'ΧΡΙΣΤΟΥΓΕΝΝΙΑΤΙΚΑ'
+        'ΓΡΑΦΕΙΟ',
+        'ΣΑΛΟΝΙ',
+        'ΚΡΕΒΑΤΟΚΑΜΑΡΑ',
+        'ΕΞΩΤΕΡΙΚΟΣ ΧΩΡΟΣ',
+        'ΑΞΕΣΟΥΑΡ',
+        'ΦΩΤΙΣΜΟΣ',
+        'ΔΙΑΚΟΣΜΗΣΗ',
+        'ΧΡΙΣΤΟΥΓΕΝΝΙΑΤΙΚΑ'
     ];
 
     rootCategories.sort((a, b) => {
-      const indexA = desiredOrder.indexOf(a.name.toUpperCase());
-      const indexB = desiredOrder.indexOf(b.name.toUpperCase());
-      return (indexA === -1 ? 999 : indexA) - (indexB === -1 ? 999 : indexB);
+        const indexA = desiredOrder.indexOf(a.name.toUpperCase());
+        const indexB = desiredOrder.indexOf(b.name.toUpperCase());
+        return (indexA === -1 ? 999 : indexA) - (indexB === -1 ? 999 : indexB);
     });
 
-    return rootCategories;
+    return [...new Map(rootCategories.map(item => [item.id, item])).values()];
   }, [fetchedCategories]);
 
-  // 🚀 MAKE NAV ALWAYS READY ON FIRST PAINT
   useEffect(() => {
     if (categoryTree.length > 0) {
       setTreeReady(true);
     }
   }, [categoryTree]);
 
-  /* ----------------------- SEARCH -------------------------- */
   const handleSearch = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!searchQuery.trim()) return;
@@ -200,7 +189,6 @@ export default function Header() {
     );
   }
 
-  /* ---------------------- DESKTOP NAV ----------------------- */
   const desktopNav = (
     <NavigationMenu>
       <NavigationMenuList>
@@ -222,17 +210,16 @@ export default function Header() {
         ))}
 
         <NavigationMenuItem>
-          <Link href="/blog" legacyBehavior passHref>
-            <NavigationMenuLink className={navigationMenuTriggerStyle()}>
-              Blog
+            <NavigationMenuLink asChild className={navigationMenuTriggerStyle()}>
+              <Link href="/blog">
+                Blog
+              </Link>
             </NavigationMenuLink>
-          </Link>
         </NavigationMenuItem>
       </NavigationMenuList>
     </NavigationMenu>
   );
 
-  /* ---------------------- MOBILE NAV ------------------------ */
   const mobileNav = (
     <div className={`fixed inset-0 z-50 bg-background transition-transform duration-300 md:hidden 
       ${isMobileMenuOpen ? 'translate-x-0' : 'translate-x-full'}`}>
@@ -263,13 +250,11 @@ export default function Header() {
     </div>
   );
 
-  /* ------------------- FINAL RENDER ---------------------- */
   return (
     <header className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur-sm">
       <div className="container mx-auto px-4">
         <div className="flex h-20 items-center justify-between gap-4">
 
-          {/* Left side (logo + mobile menu) */}
           <div className="flex items-center gap-4">
             <Button variant="ghost" size="icon" className="md:hidden"
               onClick={() => setIsMobileMenuOpen(true)}>
@@ -280,7 +265,6 @@ export default function Header() {
             </Link>
           </div>
 
-          {/* Desktop search */}
           <div className="hidden flex-1 px-4 lg:px-12 md:block">
             <form onSubmit={handleSearch} className="relative">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-foreground" />
@@ -293,7 +277,6 @@ export default function Header() {
             </form>
           </div>
 
-          {/* Right icons */}
           <div className="flex items-center gap-2">
             <LoginDialog>
               <Button variant="ghost" className="hidden md:flex items-center gap-2">
@@ -328,7 +311,6 @@ export default function Header() {
           </div>
         </div>
 
-        {/* Desktop nav */}
         <div className="hidden h-12 items-center justify-center md:flex">
           {desktopNav}
         </div>
