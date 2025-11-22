@@ -42,14 +42,14 @@ import { collection } from 'firebase/firestore';
 
 
 const mainCategories = [
-    { name: 'ΓΡΑΦΕΙΟ', slug: 'grafeio', children: [] },
-    { name: 'ΣΑΛΟΝΙ', slug: 'saloni', children: [] },
-    { name: 'ΚΡΕΒΑΤΟΚΑΜΑΡΑ', slug: 'krevatokamara', children: [] },
-    { name: 'ΕΞΩΤΕΡΙΚΟΣ ΧΩΡΟΣ', slug: 'exoterikos-xoros', children: [] },
-    { name: 'ΑΞΕΣΟΥΑΡ', slug: 'aksesouar', children: [] },
-    { name: 'ΦΩΤΙΣΜΟΣ', slug: 'fotismos', children: [] },
-    { name: 'ΔΙΑΚΟΣΜΗΣΗ', slug: 'diakosmisi', children: [] },
-    { name: 'ΧΡΙΣΤΟΥΓΕΝΝΙΑΤΙΚΑ', slug: 'christougenniatika', children: [] },
+    { name: 'ΓΡΑΦΕΙΟ', slug: 'grafeio' },
+    { name: 'ΣΑΛΟΝΙ', slug: 'saloni' },
+    { name: 'ΚΡΕΒΑΤΟΚΑΜΑΡΑ', slug: 'krevatokamara' },
+    { name: 'ΕΞΩΤΕΡΙΚΟΣ ΧΩΡΟΣ', slug: 'exoterikos-xoros' },
+    { name: 'ΑΞΕΣΟΥΑΡ', slug: 'aksesouar' },
+    { name: 'ΦΩΤΙΣΜΟΣ', slug: 'fotismos' },
+    { name: 'ΔΙΑΚΟΣΜΗΣΗ', slug: 'diakosmisi' },
+    { name: 'ΧΡΙΣΤΟΥΓΕΝΝΙΑΤΙΚΑ', slug: 'christougenniatika' },
 ];
 
 export default function Header() {
@@ -59,40 +59,6 @@ export default function Header() {
   const router = useRouter();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-
-  const firestore = useFirestore();
-  const categoriesQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
-    return collection(firestore, 'categories');
-  }, [firestore]);
-  const { data: fetchedCategories } = useCollection<Omit<StoreCategory, 'children'>>(categoriesQuery);
-
-  const menuCategories = useMemo(() => {
-    if (!fetchedCategories) {
-      return mainCategories;
-    }
-
-    const categoriesById: Record<string, StoreCategory & { children: StoreCategory[] }> = {};
-    const rootCategories: (StoreCategory & { children: StoreCategory[] })[] = [];
-
-    fetchedCategories.forEach(cat => {
-        categoriesById[cat.id] = { ...cat, children: [] };
-    });
-
-    fetchedCategories.forEach(cat => {
-        if (cat.parentId && categoriesById[cat.parentId]) {
-            categoriesById[cat.parentId].children.push(categoriesById[cat.id]);
-        } else {
-            rootCategories.push(categoriesById[cat.id]);
-        }
-    });
-
-    return rootCategories.map(cat => ({
-        ...cat,
-        slug: createSlug(cat.name),
-    }));
-  }, [fetchedCategories]);
-
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -106,32 +72,17 @@ export default function Header() {
     setIsMobileMenuOpen(false);
   };
 
-  const renderMobileTree = (nodes: typeof menuCategories) => {
+  const renderMobileTree = (nodes: typeof mainCategories) => {
     return nodes.map(main => (
         <Collapsible key={main.slug} className="group border-b">
             <div className="flex items-center justify-between p-4">
                  <Link href={`/category/${main.slug}`} onClick={handleLinkClick} className="font-semibold flex-grow">{main.name}</Link>
-                 {main.children && main.children.length > 0 && (
-                     <CollapsibleTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8">
-                            <ChevronRight className="h-4 w-4 transition-transform group-data-[state=open]:rotate-90"/>
-                        </Button>
-                     </CollapsibleTrigger>
-                 )}
+                 <CollapsibleTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-8 w-8">
+                        <ChevronRight className="h-4 w-4 transition-transform group-data-[state=open]:rotate-90"/>
+                    </Button>
+                 </CollapsibleTrigger>
             </div>
-            {main.children && main.children.length > 0 && (
-                <CollapsibleContent className="pl-8 pb-2">
-                    <ul className="space-y-2">
-                        {main.children.map((sub: any) => (
-                             <li key={sub.slug}>
-                                <Link href={`/category/${main.slug}/${sub.slug}`} onClick={handleLinkClick} className="block py-1 text-sm text-muted-foreground hover:text-foreground">
-                                    {sub.name}
-                                </Link>
-                             </li>
-                        ))}
-                    </ul>
-                </CollapsibleContent>
-            )}
         </Collapsible>
     ))
   }
@@ -150,7 +101,7 @@ export default function Header() {
         
         <NavigationMenu className="hidden lg:flex">
             <NavigationMenuList>
-                 {menuCategories.map((category) => (
+                 {mainCategories.map((category) => (
                     <NavigationMenuItem key={category.slug}>
                         <Link href={`/category/${category.slug}`} legacyBehavior passHref>
                            <NavigationMenuLink className={navigationMenuTriggerStyle()}>
@@ -235,7 +186,7 @@ export default function Header() {
                         </Button>
                     </form>
                     <nav className="flex flex-col divide-y bg-background">
-                        {renderMobileTree(menuCategories)}
+                        {renderMobileTree(mainCategories)}
                     </nav>
                 </div>
             </div>
