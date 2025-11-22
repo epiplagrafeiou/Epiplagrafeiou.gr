@@ -32,11 +32,19 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-
-import { createSlug, cn } from '@/lib/utils';
+import { createSlug } from '@/lib/utils';
 import { useWishlist } from '@/lib/wishlist-context';
 import type { StoreCategory } from '@/components/admin/CategoryManager';
 import React from 'react';
+
+// This is a placeholder for your promotional images.
+// You can replace these with real image URLs.
+const promoImages: { [key: string]: string } = {
+  'ΓΡΑΦΕΙΟ': 'https://images.unsplash.com/photo-1556761175-5973dc0f32e7?q=80&w=1935&auto=format&fit=crop',
+  'ΣΑΛΟΝΙ': 'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?q=80&w=2070&auto=format&fit=crop',
+  'ΚΡΕΒΑΤΟΚΑΜΑΡΑ': 'https://images.unsplash.com/photo-1560185007-c5ca9d2c014d?q=80&w=2070&auto=format&fit=crop',
+};
+
 
 export default function Header() {
   const { itemCount } = useCart();
@@ -75,7 +83,6 @@ export default function Header() {
 
     normalized.forEach(cat => {
       const node = categoriesById[cat.id];
-
       if (node.parentId && categoriesById[node.parentId]) {
         categoriesById[node.parentId].children.push(node);
       } else {
@@ -127,12 +134,12 @@ export default function Header() {
         return (
           <Collapsible key={node.id} className="group">
             <div className="flex w-full items-center justify-between py-2 text-left text-sm font-medium">
-              <Link href={`/category${currentSlug}`} onClick={() => setIsMobileMenuOpen(false)} className="flex-grow">
-                {node.name}
-              </Link>
-              <CollapsibleTrigger className="p-2 -mr-2">
-                <ChevronRight className="h-4 w-4 transition-transform duration-200 group-data-[state=open]:rotate-90" />
-              </CollapsibleTrigger>
+                <Link href={`/category${currentSlug}`} onClick={(e) => { e.stopPropagation(); setIsMobileMenuOpen(false); }} className="flex-grow">
+                    {node.name}
+                </Link>
+                <CollapsibleTrigger className="p-2 -mr-2" onClick={(e) => e.stopPropagation()}>
+                    <ChevronRight className="h-4 w-4 transition-transform duration-200 group-data-[state=open]:rotate-90" />
+                </CollapsibleTrigger>
             </div>
             <CollapsibleContent className="pl-4">
               <ul className="space-y-1">
@@ -155,36 +162,41 @@ export default function Header() {
 
   const desktopNav = (
     <nav className="flex items-center gap-2">
-        {categoryTree.map(category => (
-          <Popover key={category.id}>
-            <PopoverTrigger asChild>
-              <Button variant="ghost" className="font-medium">{category.name}</Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-screen max-w-4xl p-0">
-                <div className="grid grid-cols-3 gap-4 p-6">
-                    <div className="col-span-2">
-                        <h3 className="font-bold mb-4 text-lg">{category.name}</h3>
-                        <ul className="grid grid-cols-2 gap-x-4 gap-y-2">
-                            {category.children.map(child => (
-                                <li key={child.id}>
-                                    <Link href={`/category/${createSlug(category.name)}/${createSlug(child.name)}`} className="hover:text-primary text-sm py-1 block">
-                                        {child.name}
-                                    </Link>
-                                </li>
-                            ))}
-                        </ul>
-                    </div>
-                    <div className="col-span-1">
-                       {/* Placeholder for promotional image */}
-                       <div className="bg-secondary rounded-lg w-full h-full min-h-[200px] flex items-center justify-center">
-                           <p className="text-muted-foreground text-sm">Promo Image</p>
-                       </div>
-                    </div>
-                </div>
-            </PopoverContent>
-          </Popover>
-        ))}
-         <Link href="/blog" className="font-medium text-sm px-4 py-2 hover:bg-accent rounded-md">Blog</Link>
+      {categoryTree.map(category => (
+        <Popover key={category.id}>
+          <PopoverTrigger asChild>
+            <Button variant="ghost" className="font-medium">{category.name}</Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-screen max-w-4xl p-0">
+              <div className="grid grid-cols-3 gap-6 p-6">
+                  <div className="col-span-2">
+                      <h3 className="font-bold mb-4 text-lg">{category.name}</h3>
+                      <ul className="grid grid-cols-2 gap-x-6 gap-y-2 md:grid-cols-3">
+                          {category.children.map(child => (
+                              <li key={child.id}>
+                                  <Link href={`/category/${createSlug(category.name)}/${createSlug(child.name)}`} className="hover:text-primary text-sm py-1 block font-medium">
+                                      {child.name}
+                                  </Link>
+                              </li>
+                          ))}
+                      </ul>
+                  </div>
+                  <div className="col-span-1 hidden md:block">
+                     <div className="aspect-w-4 aspect-h-3 w-full h-full rounded-lg overflow-hidden bg-muted">
+                        {promoImages[category.name.toUpperCase()] ? (
+                             <img src={promoImages[category.name.toUpperCase()]} alt={category.name} className="w-full h-full object-cover" />
+                        ) : (
+                           <div className="flex items-center justify-center h-full">
+                                <p className="text-sm text-muted-foreground">Promo Image</p>
+                           </div>
+                        )}
+                     </div>
+                  </div>
+              </div>
+          </PopoverContent>
+        </Popover>
+      ))}
+      <Link href="/blog" className="font-medium text-sm px-4 py-2 hover:bg-accent hover:text-accent-foreground rounded-md">Blog</Link>
     </nav>
   );
 
@@ -198,6 +210,7 @@ export default function Header() {
           <X className="h-6 w-6 text-foreground" />
         </Button>
       </div>
+
       <div className="p-4 overflow-y-auto h-[calc(100vh-4rem)]">
         <form onSubmit={handleSearch} className="relative mb-4">
           <Input 
@@ -208,6 +221,7 @@ export default function Header() {
           />
           <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
         </form>
+
         <nav className="flex flex-col divide-y">
           {renderCategoryTree(categoryTree)}
         </nav>
@@ -227,6 +241,7 @@ export default function Header() {
               <Logo />
             </Link>
           </div>
+
           <div className="hidden flex-1 px-4 lg:px-12 md:block">
             <form onSubmit={handleSearch} className="relative">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-foreground" />
@@ -238,6 +253,7 @@ export default function Header() {
               />
             </form>
           </div>
+
           <div className="flex items-center gap-2">
             <LoginDialog>
               <Button variant="ghost" className="hidden md:flex items-center gap-2">
@@ -245,6 +261,7 @@ export default function Header() {
                 <span className="text-sm font-medium text-foreground">Σύνδεση/Εγγραφή</span>
               </Button>
             </LoginDialog>
+
             <Button variant="ghost" size="icon" asChild className="hidden md:inline-flex relative">
               <Link href="/wishlist">
                 <Heart className="text-foreground" />
@@ -255,6 +272,7 @@ export default function Header() {
                 )}
               </Link>
             </Button>
+
             <Button variant="ghost" size="icon" asChild>
               <Link href="/cart">
                 <div className="relative">
@@ -269,10 +287,12 @@ export default function Header() {
             </Button>
           </div>
         </div>
+
         <div className="hidden h-12 items-center justify-center md:flex">
           {desktopNav}
         </div>
       </div>
+
       {mobileNav}
     </header>
   );
