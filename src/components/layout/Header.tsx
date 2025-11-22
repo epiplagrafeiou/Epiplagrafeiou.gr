@@ -277,7 +277,7 @@ export default function Header() {
   /* ---------------------- MOBILE NAV ------------------------ */
   const mobileNav = (
     <div
-      className={`fixed inset-0 z-50 bg-background transition-transform duration-300 md:hidden 
+      className={`fixed inset-0 z-50 bg-background transition-transform duration-300 lg:hidden 
       ${isMobileMenuOpen ? 'translate-x-0' : 'translate-x-full'}`}
     >
       <div className="flex h-20 items-center justify-between border-b px-4">
@@ -318,7 +318,7 @@ export default function Header() {
         <div className="flex h-20 items-center justify-between gap-4">
           {/* Left side (logo + mobile menu) */}
           <div className="flex items-center gap-4">
-             <div className="md:hidden">
+             <div className="lg:hidden">
                 <Button
                     variant="ghost"
                     size="icon"
@@ -334,7 +334,7 @@ export default function Header() {
           </div>
 
           {/* Desktop search */}
-          <div className="hidden flex-1 px-4 lg:px-12 md:block">
+          <div className="hidden flex-1 px-4 lg:px-12 lg:block">
             <form onSubmit={handleSearch} className="relative">
               <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-foreground" />
               <Input
@@ -392,7 +392,7 @@ export default function Header() {
         </div>
 
         {/* Desktop nav */}
-        <div className="hidden h-12 items-center justify-center md:flex">
+        <div className="hidden h-12 items-center justify-center lg:flex">
           {desktopNav}
         </div>
       </div>
