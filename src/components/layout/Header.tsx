@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useMemo } from 'react';
@@ -83,52 +82,62 @@ export default function Header() {
   }, [firestore]);
   const { data: fetchedCategories } = useCollection<Omit<StoreCategory, 'children'>>(categoriesQuery);
 
-  const categoryTree = useMemo(() => {
+const categoryTree = useMemo(() => {
     if (!fetchedCategories) return [];
 
-    const categoriesById: { [id: string]: StoreCategory } = {};
-    
-    // First pass: create a map of all categories and initialize children array.
-    fetchedCategories.forEach(cat => {
-      categoriesById[cat.id] = { ...cat, children: [] };
-    });
-    
+    const categoriesById: Record<string, StoreCategory> = {};
     const rootCategories: StoreCategory[] = [];
-    
-    // Second pass: link children to parents and identify true root categories.
-    for (const catId in categoriesById) {
-      const category = categoriesById[catId];
-      if (category.parentId && categoriesById[category.parentId]) {
-          categoriesById[category.parentId].children.push(category);
-      } else {
-          rootCategories.push(category);
-      }
-    }
   
-    const desiredOrder = ['ΓΡΑΦΕΙΟ', 'ΣΑΛΟΝΙ', 'ΚΡΕΒΑΤΟΚΑΜΑΡΑ', 'ΕΞΩΤΕΡΙΚΟΣ ΧΩΡΟΣ', 'ΑΞΕΣΟΥΑΡ', 'ΦΩΤΙΣΜΟΣ', 'ΔΙΑΚΟΣΜΗΣΗ', 'ΧΡΙΣΤΟΥΓΕΝΝΙΑΤΙΚΑ'];
-    
-    const sortRecursive = (categories: StoreCategory[]) => {
-      if (!categories || categories.length === 0) return;
-      categories.sort((a, b) => (a.order || 0) - (b.order || 0));
-      categories.forEach(c => sortRecursive(c.children));
-    };
-    
-    sortRecursive(rootCategories);
-  
-    rootCategories.sort((a, b) => {
-        const nameA = a.name.toUpperCase().trim();
-        const nameB = b.name.toUpperCase().trim();
-        const indexA = desiredOrder.indexOf(nameA);
-        const indexB = desiredOrder.indexOf(nameB);
-  
-        if (indexA !== -1 && indexB !== -1) return indexA - indexB;
-        if (indexA !== -1) return -1;
-        if (indexB !== -1) return 1;
-        return nameA.localeCompare(nameB);
+    // Normalize parentId and create structure
+    fetchedCategories.forEach(cat => {
+        categoriesById[cat.id] = {
+            ...cat,
+            parentId: cat.parentId || null,  // Normalize: "" → null
+            children: []
+        };
     });
-  
+
+    // Build tree
+    fetchedCategories.forEach(cat => {
+        const node = categoriesById[cat.id];
+
+        if (node.parentId && categoriesById[node.parentId]) {
+            categoriesById[node.parentId].children.push(node);
+        } else {
+            // Prevent duplicate insertion
+            if (!rootCategories.find(rootCat => rootCat.id === node.id)) {
+                rootCategories.push(node);
+            }
+        }
+    });
+
+    // Sort children and parent categories
+    const sortRecursive = (categories: StoreCategory[]) => {
+        categories.forEach(c => sortRecursive(c.children));
+        categories.sort((a, b) => (a.order || 0) - (b.order || 0));
+    };
+    sortRecursive(rootCategories);
+
+    // Custom order
+    const desiredOrder = [
+        'ΓΡΑΦΕΙΟ',
+        'ΣΑΛΟΝΙ',
+        'ΚΡΕΒΑΤΟΚΑΜΑΡΑ',
+        'ΕΞΩΤΕΡΙΚΟΣ ΧΩΡΟΣ',
+        'Αξεσουάρ',
+        'ΦΩΤΙΣΜΟΣ',
+        'ΔΙΑΚΟΣΜΗΣΗ',
+        'Χριστουγεννιάτικα'
+    ];
+
+    rootCategories.sort((a, b) => {
+        const indexA = desiredOrder.indexOf(a.name.toUpperCase());
+        const indexB = desiredOrder.indexOf(b.name.toUpperCase());
+        return (indexA === -1 ? 999 : indexA) - (indexB === -1 ? 999 : indexB);
+    });
+
     return rootCategories;
-  }, [fetchedCategories]);
+}, [fetchedCategories]);
 
 
   const handleSearch = (e: React.FormEvent<HTMLFormElement>) => {
@@ -193,9 +202,11 @@ export default function Header() {
            </NavigationMenuItem>
         ))}
          <NavigationMenuItem>
-            <NavigationMenuLink href="/blog" className={navigationMenuTriggerStyle()}>
-              Blog
-            </NavigationMenuLink>
+            <Link href="/blog" legacyBehavior passHref>
+                <NavigationMenuLink className={navigationMenuTriggerStyle()}>
+                Blog
+                </NavigationMenuLink>
+            </Link>
         </NavigationMenuItem>
       </NavigationMenuList>
     </NavigationMenu>
