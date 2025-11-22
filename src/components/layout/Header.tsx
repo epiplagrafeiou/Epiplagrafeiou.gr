@@ -114,7 +114,6 @@ const categoryTree = [
         { id: 'sub-6-7', name: 'Κεριά', href: '/category/diakosmisi/keria', image: 'https://picsum.photos/seed/keria/200/200' },
         { id: 'sub-6-8', name: 'Κουβέρτες & Ριχτάρια', href: '/category/diakosmisi/koybertes-kai-rixtaria', image: 'https://picsum.photos/seed/koybertes-rixtaria/200/200' },
         { id: 'sub-6-9', name: 'Επένδυση & Διακόσμηση Τοίχου', href: '/category/diakosmisi/ependysi-kai-diakosmisi-toixou', image: 'https://picsum.photos/seed/ependysi-toixou/200/200' },
-        { id: 'sub-6-10', name: 'Διακόσμηση & Ατμόσφαιρα', href: '/category/diakosmisi/diakosmisi-atmosfaira', image: 'https://picsum.photos/seed/diakosmisi-atmosfaira/200/200' },
         { id: 'sub-6-11', name: 'Διαχύτες Αρωμάτων', href: '/category/diakosmisi/diaxytes-aromaton', image: 'https://picsum.photos/seed/diaxytes/200/200' },
         { id: 'sub-6-12', name: 'Κορνίζες', href: '/category/diakosmisi/kornizes', image: 'https://picsum.photos/seed/kornizes/200/200' },
         { id: 'sub-6-13', name: 'Ρολόγια', href: '/category/diakosmisi/rologia', image: 'https://picsum.photos/seed/rologia/200/200' },
