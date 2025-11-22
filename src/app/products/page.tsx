@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useProducts } from '@/lib/products-context';
 import { ProductCard } from '@/components/products/ProductCard';
@@ -167,7 +167,7 @@ function ProductsPageContent() {
     }
 
     return filtered;
-  }, [products, isLoaded, searchTerm, selectedCategories, priceRange, sortBy, inStockOnly]);
+  }, [products, isLoaded, searchTerm, selectedCategories, priceRange, sortBy, inStockOnly, categoryTree]);
   
 
   const handleCategoryChange = (categoryId: string, checked: boolean) => {
@@ -331,5 +331,9 @@ function ProductsPageContent() {
 }
 
 export default function ProductsPage() {
-  return <ProductsPageContent />;
+  return (
+    <Suspense fallback={<div>Loading products...</div>}>
+      <ProductsPageContent />
+    </Suspense>
+  );
 }
