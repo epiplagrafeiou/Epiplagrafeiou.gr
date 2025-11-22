@@ -1,7 +1,6 @@
-
 'use client';
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Logo } from '@/components/icons/Logo';
@@ -18,9 +17,6 @@ import {
 } from 'lucide-react';
 import { useCart } from '@/lib/cart-context';
 import { useUser } from '@/firebase';
-import { useFirestore, useMemoFirebase } from '@/firebase';
-import { useCollection } from '@/firebase/firestore/use-collection';
-import { collection } from 'firebase/firestore';
 import { LoginDialog } from '@/components/layout/LoginDialog';
 import {
   Collapsible,
@@ -35,11 +31,111 @@ import {
   NavigationMenuList,
   NavigationMenuTrigger,
   navigationMenuTriggerStyle,
+  NavigationMenuViewport
 } from '@/components/ui/navigation-menu';
 import { createSlug, cn } from '@/lib/utils';
 import { useWishlist } from '@/lib/wishlist-context';
-import type { StoreCategory } from '@/components/admin/CategoryManager';
 import Image from 'next/image';
+
+const categoryTree = [
+  {
+    id: 'cat-grafeio',
+    name: 'ΓΡΑΦΕΙΟ',
+    children: [
+      { id: 'sub-1-1', name: 'Γραφεία', href: '/category/grafeio/grafeia', image: 'https://picsum.photos/seed/grafeia/200/200' },
+      { id: 'sub-1-2', name: 'Καρέκλες Γραφείου', href: '/category/grafeio/karekles-grafeiou', image: 'https://picsum.photos/seed/karekles/200/200' },
+      { id: 'sub-1-3', name: 'Βιβλιοθήκες', href: '/category/grafeio/bibliothikes', image: 'https://picsum.photos/seed/bibliothikes/200/200' },
+      { id: 'sub-1-4', name: 'Συρταριέρες', href: '/category/grafeio/syrtarieres', image: 'https://picsum.photos/seed/syrtarieres/200/200' },
+      { id: 'sub-1-5', name: 'Ραφιέρες', href: '/category/grafeio/rafieres', image: 'https://picsum.photos/seed/rafieres/200/200' },
+      { id: 'sub-1-6', name: 'Ντουλάπες', href: '/category/grafeio/ntoulapes', image: 'https://picsum.photos/seed/ntoulapes/200/200' },
+    ],
+    promoImage: 'https://picsum.photos/seed/promo-grafeio/400/600'
+  },
+  {
+    id: 'cat-saloni',
+    name: 'ΣΑΛΟΝΙ',
+    children: [
+      { id: 'sub-2-1', name: 'Καναπέδες', href: '/category/saloni/kanapedes', image: 'https://picsum.photos/seed/kanapedes/200/200' },
+      { id: 'sub-2-2', name: 'Πολυθρόνες', href: '/category/saloni/polythrones', image: 'https://picsum.photos/seed/polythrones/200/200' },
+      { id: 'sub-2-3', name: 'Τραπεζάκια Σαλονιού', href: '/category/saloni/trapezakia-saloniou', image: 'https://picsum.photos/seed/trapezakia/200/200' },
+      { id: 'sub-2-4', name: 'Έπιπλα TV', href: '/category/saloni/epipla-tv', image: 'https://picsum.photos/seed/epipla-tv/200/200' },
+      { id: 'sub-2-5', name: 'Συνθέσεις Σαλονιού', href: '/category/saloni/syntheseis-saloniou', image: 'https://picsum.photos/seed/syntheseis/200/200' },
+      { id: 'sub-2-6', name: 'Μπουφέδες', href: '/category/saloni/mpoufedes', image: 'https://picsum.photos/seed/mpoufedes/200/200' },
+    ],
+    promoImage: 'https://picsum.photos/seed/promo-saloni/400/600'
+  },
+  {
+    id: 'cat-krevatokamara',
+    name: 'ΚΡΕΒΑΤΟΚΑΜΑΡΑ',
+    children: [
+       { id: 'sub-3-1', name: 'Κρεβάτια', href: '/category/krevatokamara/krevatia', image: 'https://picsum.photos/seed/krevatia/200/200' },
+       { id: 'sub-3-2', name: 'Κομοδίνα', href: '/category/krevatokamara/komodina', image: 'https://picsum.photos/seed/komodina/200/200' },
+       { id: 'sub-3-3', name: 'Συρταριέρες', href: '/category/krevatokamara/syrtarieres', image: 'https://picsum.photos/seed/syrtarieres-krev/200/200' },
+       { id: 'sub-3-4', name: 'Ντουλάπες', href: '/category/krevatokamara/ntoulapes', image: 'https://picsum.photos/seed/ntoulapes-krev/200/200' },
+       { id: 'sub-3-5', name: 'Λευκά Είδη', href: '/category/krevatokamara/lefka-eidi', image: 'https://picsum.photos/seed/lefka-eidi/200/200' },
+    ],
+    promoImage: 'https://picsum.photos/seed/promo-krevatokamara/400/600'
+  },
+  {
+    id: 'cat-exoterikos',
+    name: 'ΕΞΩΤΕΡΙΚΟΣ ΧΩΡΟΣ',
+    children: [
+        { id: 'sub-4-1', name: 'Σετ Τραπεζαρίες Κήπου', href: '/category/exoterikos-xoros/set-trapezaries-kipou', image: 'https://picsum.photos/seed/set-kipou/200/200' },
+        { id: 'sub-4-2', name: 'Καρέκλες Κήπου', href: '/category/exoterikos-xoros/karekles-kipou', image: 'https://picsum.photos/seed/karekles-kipou/200/200' },
+        { id: 'sub-4-3', name: 'Τραπέζια Κήπου', href: '/category/exoterikos-xoros/trapezia-kipou', image: 'https://picsum.photos/seed/trapezia-kipou/200/200' },
+        { id: 'sub-4-4', name: 'Ομπρέλες & Σκίαση', href: '/category/exoterikos-xoros/ombreles-skiasi', image: 'https://picsum.photos/seed/ombreles/200/200' },
+        { id: 'sub-4-5', name: 'Αιώρες', href: '/category/exoterikos-xoros/aiores', image: 'https://picsum.photos/seed/aiores/200/200' },
+    ],
+    promoImage: 'https://picsum.photos/seed/promo-exoterikos/400/600'
+  },
+  {
+    id: 'cat-fotismos',
+    name: 'ΦΩΤΙΣΜΟΣ',
+    children: [
+        { id: 'sub-5-1', name: 'Φωτιστικά Οροφής', href: '/category/fotismos/fotistika-orofis', image: 'https://picsum.photos/seed/orofis/200/200' },
+        { id: 'sub-5-2', name: 'Φωτιστικά Δαπέδου', href: '/category/fotismos/fotistika-dapedou', image: 'https://picsum.photos/seed/dapedou/200/200' },
+        { id: 'sub-5-3', name: 'Επιτραπέζια Φωτιστικά', href: '/category/fotismos/epitrapezia-fotistika', image: 'https://picsum.photos/seed/epitrapezia/200/200' },
+        { id: 'sub-5-4', name: 'Απλίκες', href: '/category/fotismos/aplikes', image: 'https://picsum.photos/seed/aplikes/200/200' },
+        { id: 'sub-5-5', name: 'Ταινίες LED', href: '/category/fotismos/tainies-led', image: 'https://picsum.photos/seed/led/200/200' },
+        { id: 'sub-5-6', name: 'Παιδικά Φωτιστικά', href: '/category/fotismos/paidika-fotistika', image: 'https://picsum.photos/seed/paidika/200/200' },
+    ],
+    promoImage: 'https://picsum.photos/seed/promo-fotismos/400/600'
+  },
+  {
+    id: 'cat-diakosmisi',
+    name: 'ΔΙΑΚΟΣΜΗΣΗ',
+    children: [
+        { id: 'sub-6-1', name: 'Καθρέπτες', href: '/category/diakosmisi/kathreptes', image: 'https://picsum.photos/seed/kathreptes/200/200' },
+        { id: 'sub-6-2', name: 'Ρολόγια Τοίχου', href: '/category/diakosmisi/rologia-toixou', image: 'https://picsum.photos/seed/rologia/200/200' },
+        { id: 'sub-6-3', name: 'Πίνακες', href: '/category/diakosmisi/pinakes', image: 'https://picsum.photos/seed/pinakes/200/200' },
+        { id: 'sub-6-4', name: 'Διακοσμητικά Μαξιλάρια', href: '/category/diakosmisi/diakosmitika-maxilaria', image: 'https://picsum.photos/seed/maxilaria/200/200' },
+        { id: 'sub-6-5', name: 'Κεριά & Αρωματικά', href: '/category/diakosmisi/keria-aromatika', image: 'https://picsum.photos/seed/keria/200/200' },
+        { id: 'sub-6-6', name: 'Τεχνητά Φυτά', href: '/category/diakosmisi/texnita-fyta', image: 'https://picsum.photos/seed/fyta/200/200' },
+    ],
+    promoImage: 'https://picsum.photos/seed/promo-diakosmisi/400/600'
+  },
+   {
+    id: 'cat-aksesouar',
+    name: 'Αξεσουάρ',
+    children: [
+       { id: 'sub-7-1', name: 'Καλόγεροι', href: '/category/aksesouar/kalogeroi', image: 'https://picsum.photos/seed/kalogeroi/200/200' },
+       { id: 'sub-7-2', name: 'Κρεμάστρες', href: '/category/aksesouar/kremastres', image: 'https://picsum.photos/seed/kremastres/200/200' },
+       { id: 'sub-7-3', name: 'Παπουτσοθήκες', href: '/category/aksesouar/papoutsothikes', image: 'https://picsum.photos/seed/papoutsothikes/200/200' },
+    ],
+    promoImage: 'https://picsum.photos/seed/promo-aksesouar/400/600'
+  },
+  {
+    id: 'cat-xmas',
+    name: 'Χριστουγεννιάτικα',
+    children: [
+        { id: 'sub-8-1', name: 'Χριστουγεννιάτικα Δέντρα', href: '/category/xristougenniatika/dentra', image: 'https://picsum.photos/seed/xmas-dentra/200/200' },
+        { id: 'sub-8-2', name: 'Χριστουγεννιάτικα Στολίδια', href: '/category/xristougenniatika/stolidia', image: 'https://picsum.photos/seed/xmas-stolidia/200/200' },
+        { id: 'sub-8-3', name: 'Χριστουγεννιάτικα Λαμπάκια', href: '/category/xristougenniatika/lampakia', image: 'https://picsum.photos/seed/xmas-lampakia/200/200' },
+    ],
+    promoImage: 'https://picsum.photos/seed/promo-xmas/400/600'
+  }
+];
+
 
 const ListItem = React.forwardRef<
   React.ElementRef<'a'>,
@@ -88,67 +184,6 @@ export default function Header() {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
 
-  const firestore = useFirestore();
-  const categoriesQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
-    return collection(firestore, 'categories');
-  }, [firestore]);
-  const { data: fetchedCategories } =
-    useCollection<Omit<StoreCategory, 'children'>>(categoriesQuery);
-
-  const categoryTree = useMemo(() => {
-    if (!fetchedCategories) return [];
-
-    const normalized = fetchedCategories.map((cat) => ({
-      ...cat,
-      parentId:
-        cat.parentId === '' || cat.parentId == null ? null : cat.parentId,
-    }));
-
-    const categoriesById: Record<string, StoreCategory> = {};
-    const rootCategories: StoreCategory[] = [];
-
-    normalized.forEach((cat) => {
-      categoriesById[cat.id] = { ...cat, children: [] };
-    });
-
-    normalized.forEach((cat) => {
-      const node = categoriesById[cat.id];
-      if (node.parentId && categoriesById[node.parentId]) {
-        categoriesById[node.parentId].children.push(node);
-      } else {
-        if (!rootCategories.some((r) => r.id === node.id)) {
-          rootCategories.push(node);
-        }
-      }
-    });
-
-    const sortRecursive = (list: StoreCategory[]) => {
-      list.forEach((c) => sortRecursive(c.children));
-      list.sort((a, b) => (a.order || 0) - (b.order || 0));
-    };
-    sortRecursive(rootCategories);
-
-    const desiredOrder = [
-      'ΓΡΑΦΕΙΟ',
-      'ΣΑΛΟΝΙ',
-      'ΚΡΕΒΑΤΟΚΑΜΑΡΑ',
-      'ΕΞΩΤΕΡΙΚΟΣ ΧΩΡΟΣ',
-      'ΑΞΕΣΟΥΑΡ',
-      'ΦΩΤΙΣΜΟΣ',
-      'ΔΙΑΚΟΣΜΗΣΗ',
-      'ΧΡΙΣΤΟΥΓΕΝΝΙΑΤΙΚΑ',
-    ];
-
-    rootCategories.sort((a, b) => {
-      const A = desiredOrder.indexOf(a.name.toUpperCase());
-      const B = desiredOrder.indexOf(b.name.toUpperCase());
-      return (A === -1 ? 999 : A) - (B === -1 ? 999 : B);
-    });
-
-    return rootCategories;
-  }, [fetchedCategories]);
-
   const handleSearch = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!searchQuery.trim()) return;
@@ -156,8 +191,8 @@ export default function Header() {
     setSearchQuery('');
     if (isMobileMenuOpen) setIsMobileMenuOpen(false);
   };
-
-  const renderMobileTree = (nodes: StoreCategory[], parentSlug = '') => {
+  
+  const renderMobileTree = (nodes: typeof categoryTree, parentSlug = '') => {
     return nodes.map((node) => {
       const currentSlug = `${parentSlug}/${createSlug(node.name)}`;
 
@@ -176,7 +211,7 @@ export default function Header() {
             </CollapsibleTrigger>
             <CollapsibleContent className="pl-4">
               <ul className="space-y-1">
-                {renderMobileTree(node.children, currentSlug)}
+                {renderMobileTree(node.children as typeof categoryTree, currentSlug)}
               </ul>
             </CollapsibleContent>
           </Collapsible>
@@ -204,38 +239,31 @@ export default function Header() {
           <NavigationMenuItem key={category.id}>
             <NavigationMenuTrigger>{category.name}</NavigationMenuTrigger>
             <NavigationMenuContent>
-               <div className="container mx-auto">
-                 <div className="grid w-full grid-cols-[3fr_1fr] gap-6 p-4">
+                <div className="grid w-full grid-cols-[3fr_1fr] gap-6 p-4 container mx-auto">
                     <ul className="grid grid-cols-6 gap-3">
-                      {(category.children || []).map((child) => (
+                    {(category.children || []).map((child) => (
                         <ListItem
-                          key={child.id}
-                          title={child.name}
-                          href={`/category/${createSlug(category.name)}/${createSlug(
-                            child.name
-                          )}`}
-                          image={(child as any).image || 'https://picsum.photos/seed/submenu/200/200'}
+                        key={child.id}
+                        title={child.name}
+                        href={child.href}
+                        image={child.image}
                         />
-                      ))}
+                    ))}
                     </ul>
                     <div className="relative hidden h-full min-h-[300px] w-full overflow-hidden rounded-md lg:block">
-                      <Image
-                        src={
-                          (category as any).promoImage ||
-                          'https://picsum.photos/seed/promo/400/600'
-                        }
+                    <Image
+                        src={category.promoImage}
                         alt={`${category.name} Promotion`}
                         fill
                         className="object-cover"
-                      />
-                       <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-                       <div className="absolute bottom-4 left-4 text-white">
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                    <div className="absolute bottom-4 left-4 text-white">
                             <h3 className="text-lg font-bold">{category.name}</h3>
                             <p className="text-sm">Ανακάλυψε τις προσφορές μας</p>
-                       </div>
                     </div>
-                  </div>
-               </div>
+                    </div>
+                </div>
             </NavigationMenuContent>
           </NavigationMenuItem>
         ))}
@@ -376,7 +404,6 @@ export default function Header() {
           {desktopNav}
         </div>
       </div>
-
       {mobileNav}
     </header>
   );
