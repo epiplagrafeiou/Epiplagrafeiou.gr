@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Logo } from '@/components/icons/Logo';
@@ -124,34 +124,26 @@ export default function Header() {
   };
 
   const desktopNav = (
-    <NavigationMenu>
-      <NavigationMenuList>
-        {staticCategories.map(category => (
-          <NavigationMenuItem key={category.name}>
-            <NavigationMenuTrigger>{category.name}</NavigationMenuTrigger>
-            <NavigationMenuContent>
-              <ul className="grid w-[400px] gap-3 p-4 md:w-[500px] md:grid-cols-2 lg:w-[600px]">
-                {category.children.map((component) => (
-                  <ListItem
-                    key={component.name}
-                    title={component.name}
-                    href={`/category/${createSlug(category.name)}/${createSlug(component.name)}`}
-                  />
-                ))}
-              </ul>
-            </NavigationMenuContent>
-          </NavigationMenuItem>
-        ))}
-
-        <NavigationMenuItem>
-            <Link href="/blog" legacyBehavior passHref>
-              <NavigationMenuLink className={navigationMenuTriggerStyle()}>
-                Blog
-              </NavigationMenuLink>
-            </Link>
-        </NavigationMenuItem>
-      </NavigationMenuList>
-    </NavigationMenu>
+      <NavigationMenu>
+        <NavigationMenuList>
+          {staticCategories.map(category => (
+            <NavigationMenuItem key={category.name}>
+              <NavigationMenuTrigger>{category.name}</NavigationMenuTrigger>
+              <NavigationMenuContent>
+                <ul className="grid w-[400px] gap-3 p-4 md:w-[500px] md:grid-cols-2 lg:w-[600px]">
+                  {category.children.map((component) => (
+                    <ListItem
+                      key={component.name}
+                      title={component.name}
+                      href={`/category/${createSlug(category.name)}/${createSlug(component.name)}`}
+                    />
+                  ))}
+                </ul>
+              </NavigationMenuContent>
+            </NavigationMenuItem>
+          ))}
+        </NavigationMenuList>
+      </NavigationMenu>
   );
 
   const mobileNav = (
