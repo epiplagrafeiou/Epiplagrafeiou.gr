@@ -279,7 +279,7 @@ export default function Header() {
       className={`fixed inset-0 z-50 bg-background transition-transform duration-300 md:hidden 
       ${isMobileMenuOpen ? 'translate-x-0' : 'translate-x-full'}`}
     >
-      <div className="flex h-16 items-center justify-between border-b px-4">
+      <div className="flex h-20 items-center justify-between border-b px-4">
         <Link href="/" onClick={() => setIsMobileMenuOpen(false)}>
           <Logo />
         </Link>
@@ -312,19 +312,20 @@ export default function Header() {
 
   /* ------------------- FINAL RENDER ---------------------- */
   return (
-    <header className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur-sm md:bg-background/95">
+    <header className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur-sm">
       <div className="container mx-auto px-4">
         <div className="flex h-20 items-center justify-between gap-4">
           {/* Left side (logo + mobile menu) */}
           <div className="flex items-center gap-4">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="md:hidden"
-              onClick={() => setIsMobileMenuOpen(true)}
-            >
-              <Menu className="h-6 w-6 text-foreground" />
-            </Button>
+             <div className="md:hidden">
+                <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setIsMobileMenuOpen(true)}
+                >
+                    <Menu className="h-6 w-6 text-foreground" />
+                </Button>
+            </div>
             <Link href="/" className="shrink-0">
               <Logo />
             </Link>

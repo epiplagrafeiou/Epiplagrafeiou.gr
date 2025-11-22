@@ -332,7 +332,7 @@ function ProductsPageContent() {
 
 export default function ProductsPage() {
   return (
-    <Suspense fallback={<div>Loading products...</div>}>
+    <Suspense fallback={<div className="container mx-auto px-4 py-8">Loading...</div>}>
       <ProductsPageContent />
     </Suspense>
   );

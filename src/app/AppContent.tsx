@@ -1,0 +1,62 @@
+'use client';
+
+import { usePathname } from 'next/navigation';
+import { useState, useEffect } from 'react';
+import { SuppliersProvider } from '@/lib/suppliers-context';
+import { ProductsProvider } from '@/lib/products-context';
+import { CartProvider } from '@/lib/cart-context';
+import { WishlistProvider } from '@/lib/wishlist-context';
+import Header from '@/components/layout/Header';
+import Footer from '@/components/layout/Footer';
+import TopBar from '@/components/layout/TopBar';
+import { Toaster } from "@/components/ui/toaster";
+import NewsletterPopup from "@/components/layout/NewsletterPopup";
+import { SidebarProvider, SidebarInset, Sidebar } from '@/components/ui/sidebar';
+import AdminSidebar from '@/components/admin/AdminSidebar';
+
+export function AppContent({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
+  const isAdminPage = pathname.startsWith('/admin');
+  const [isClient, setIsClient] = useState(false);
+
+  // This effect ensures that the content is only rendered on the client side,
+  // preventing server-side execution of hooks that depend on browser APIs or Firebase.
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
+  // Render nothing on the server to avoid initialization errors.
+  if (!isClient) {
+    return null; 
+  }
+
+  return (
+    <SuppliersProvider>
+      <ProductsProvider>
+        <CartProvider>
+          <WishlistProvider>
+            {isAdminPage ? (
+              <SidebarProvider>
+                <Sidebar>
+                  <AdminSidebar />
+                </Sidebar>
+                <SidebarInset>{children}</SidebarInset>
+              </SidebarProvider>
+            ) : (
+              <div className="flex min-h-screen flex-col">
+                <TopBar />
+                <Header />
+                <main className="flex-grow bg-white">
+                  {children}
+                </main>
+                <Footer />
+                <NewsletterPopup />
+              </div>
+            )}
+            <Toaster />
+          </WishlistProvider>
+        </CartProvider>
+      </ProductsProvider>
+    </SuppliersProvider>
+  );
+}

@@ -8,6 +8,11 @@ import { getFirestore } from 'firebase/firestore'
 
 // This function should only be called on the client side.
 export function initializeFirebase() {
+  if (typeof window === 'undefined') {
+    // Return null or a mock during server-side rendering (build time)
+    return { firebaseApp: null, auth: null, firestore: null };
+  }
+
   if (getApps().length) {
     return getSdks(getApp());
   }
