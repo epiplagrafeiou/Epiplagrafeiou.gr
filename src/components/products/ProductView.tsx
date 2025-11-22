@@ -21,6 +21,7 @@ import { Truck, Award, Star, ShieldCheck } from 'lucide-react';
 import { PaymentIcons } from '@/components/icons/PaymentIcons';
 import type { StoreCategory } from '@/components/admin/CategoryManager';
 import { Button } from '../ui/button';
+import { Input } from '../ui/input';
 
 interface ProductViewProps {
     product: Product;
@@ -32,6 +33,7 @@ interface ProductViewProps {
 export function ProductView({ product, allProducts, categoryPath, variants }: ProductViewProps) {
   const [api, setApi] = useState<CarouselApi>()
   const [current, setCurrent] = useState(0)
+  const [quantity, setQuantity] = useState(1);
   const router = useRouter();
  
   const allImages = useMemo(() => {
@@ -277,9 +279,17 @@ export function ProductView({ product, allProducts, categoryPath, variants }: Pr
               Κερδίζεις {pointsEarned} πόντους με αυτή την αγορά!
           </div>
 
-          <div className="mt-6">
-            <AddToCartButton product={product} size="lg" className="w-full" />
+          <div className="mt-6 flex items-center gap-4">
+            <Input
+              type="number"
+              value={quantity}
+              onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
+              className="h-11 w-20 text-center"
+              min="1"
+            />
+            <AddToCartButton product={product} quantity={quantity} size="lg" className="w-full" />
           </div>
+
 
           {variants && variants.length > 1 && (
             <div className="mt-6">
