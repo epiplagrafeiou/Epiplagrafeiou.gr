@@ -24,27 +24,27 @@ export default function CategoryPage() {
   
   const slugPath = useMemo(() => Array.isArray(params.slug) ? params.slug.join('/') : (params.slug || ''), [params.slug]);
 
-  const { categoryPath, pageTitle, breadcrumbs, filteredProducts } = useMemo(() => {
-    if (!isLoaded) return { categoryPath: '', pageTitle: '', breadcrumbs: [], filteredProducts: [] };
+  const { categoryPathString, pageTitle, breadcrumbs, filteredProducts } = useMemo(() => {
+    if (!isLoaded) return { categoryPathString: '', pageTitle: '', breadcrumbs: [], filteredProducts: [] };
+
+    const allCategoryPaths = Array.from(new Set(products.map(p => p.category)));
 
     // Find the correct category string by matching its generated slug to the URL slug.
-    const pathString = products
-      .map(p => p.category)
-      .find(catString => {
+    const pathString = allCategoryPaths.find(catString => {
         const catSlug = (catString || '').split(' > ').map(createSlug).join('/');
         return catSlug === slugPath;
-      });
-
-    if (!pathString) {
-      // Return empty state to be handled by notFound()
-      return { categoryPath: null, pageTitle: '', breadcrumbs: [], filteredProducts: [] };
-    }
-
-    const productsForCategory = products.filter(product => {
-      return (product.category || '').startsWith(pathString);
     });
 
-    const categoryParts = pathString.split(' > ');
+    if (!pathString && isLoaded) {
+      // Return a specific state to trigger notFound outside the memo
+      return { categoryPathString: null, pageTitle: '', breadcrumbs: [], filteredProducts: [] };
+    }
+
+    const productsForCategory = pathString ? products.filter(product => {
+      return (product.category || '').startsWith(pathString);
+    }) : [];
+
+    const categoryParts = pathString ? pathString.split(' > ') : slugPath.split('/').map(s => s.replace(/-/g, ' '));
     const title = categoryParts[categoryParts.length - 1];
 
     let currentHref = '';
@@ -58,15 +58,15 @@ export default function CategoryPage() {
     });
 
     return {
-      categoryPath: pathString,
+      categoryPathString: pathString,
       pageTitle: title,
       breadcrumbs: breadcrumbData,
       filteredProducts: productsForCategory
     };
   }, [isLoaded, products, slugPath]);
 
-  // Handle not found case after data is loaded
-  if (isLoaded && categoryPath === null) {
+  // Handle not found case after data is loaded and memo is calculated
+  if (isLoaded && categoryPathString === null) {
     notFound();
   }
 
@@ -99,7 +99,7 @@ export default function CategoryPage() {
     <div className="container mx-auto px-4 py-8">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }} />
       <nav>
-        <ol className="mb-6 flex items-center gap-2 text-sm text-muted-foreground">
+        <ol className="mb-6 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
           <li><Link href="/" className="hover:text-foreground">Home</Link></li>
           <li>/</li>
           <li><Link href="/products" className="hover:text-foreground">Products</Link></li>
