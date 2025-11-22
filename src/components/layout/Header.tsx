@@ -26,11 +26,14 @@ import {
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
 import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { createSlug } from '@/lib/utils';
+    NavigationMenu,
+    NavigationMenuContent,
+    NavigationMenuItem,
+    NavigationMenuLink,
+    NavigationMenuList,
+    NavigationMenuTrigger,
+    navigationMenuTriggerStyle,
+} from "@/components/ui/navigation-menu";
 import { useWishlist } from '@/lib/wishlist-context';
 
 const mainCategories: Array<{
@@ -171,41 +174,45 @@ export default function Header() {
   };
   
   const desktopNav = (
-      <nav className="flex items-center gap-1">
+      <NavigationMenu>
+        <NavigationMenuList>
         {mainCategories.map(category => (
-            <Popover key={category.slug}>
-                <PopoverTrigger asChild>
-                    <Button variant="ghost" className="font-medium">{category.name}</Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-screen max-w-4xl p-0" sideOffset={15}>
-                    <div className="grid grid-cols-4 gap-6 p-6">
-                        <ul className="col-span-3 grid grid-cols-2 gap-x-6 gap-y-4 md:grid-cols-3">
+            <NavigationMenuItem key={category.slug}>
+                <NavigationMenuTrigger>{category.name}</NavigationMenuTrigger>
+                <NavigationMenuContent>
+                    <div className="flex w-screen max-w-4xl p-6">
+                        <ul className="grid grid-cols-3 gap-x-6 gap-y-4 w-2/3">
                             {category.children.map(child => (
                                 <li key={child.slug} className="group">
-                                    <Link href={`/category/${category.slug}/${child.slug}`} className="flex flex-col items-center gap-2 text-center no-underline">
+                                   <Link href={`/category/${category.slug}/${child.slug}`} legacyBehavior passHref>
+                                     <NavigationMenuLink className="flex flex-col items-center gap-2 text-center no-underline">
                                         <div className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-md bg-muted/30 transition-colors group-hover:bg-muted/60">
-                                           {child.image ? (
-                                              <Image src={child.image} alt={child.name} width={64} height={64} className="h-auto w-auto max-h-[64px] max-w-[64px]" unoptimized/>
-                                            ) : (
-                                              <div className="h-16 w-16 bg-secondary" />
-                                            )}
+                                            <Image src={child.image} alt={child.name} width={64} height={64} className="h-auto w-auto max-h-[64px] max-w-[64px]" unoptimized/>
                                         </div>
                                         <span className="text-sm font-medium text-foreground group-hover:text-primary">{child.name}</span>
-                                    </Link>
+                                      </NavigationMenuLink>
+                                   </Link>
                                 </li>
                             ))}
                         </ul>
-                        <div className="col-span-1 hidden md:block">
+                        <div className="w-1/3">
                             <Link href={`/category/${category.slug}`} className="block h-full w-full overflow-hidden rounded-lg">
                                 <Image src={category.promoImage} alt={category.name} width={400} height={400} className="h-full w-full object-cover" />
                             </Link>
                         </div>
                     </div>
-                </PopoverContent>
-            </Popover>
+                </NavigationMenuContent>
+            </NavigationMenuItem>
         ))}
-         <Link href="/blog" className="font-medium text-sm px-4 py-2 hover:bg-accent hover:text-accent-foreground rounded-md">Blog</Link>
-    </nav>
+         <NavigationMenuItem>
+            <Link href="/blog" legacyBehavior passHref>
+                <NavigationMenuLink className={navigationMenuTriggerStyle()}>
+                Blog
+                </NavigationMenuLink>
+            </Link>
+        </NavigationMenuItem>
+        </NavigationMenuList>
+    </NavigationMenu>
   );
 
   const mobileNav = (
