@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Logo } from '@/components/icons/Logo';
@@ -14,13 +14,10 @@ import {
   Menu,
   X,
   Heart,
-  ChevronRight
+  ChevronRight,
 } from 'lucide-react';
 import { useCart } from '@/lib/cart-context';
 import { useUser } from '@/firebase';
-import { useFirestore, useMemoFirebase } from '@/firebase';
-import { useCollection } from '@/firebase/firestore/use-collection';
-import { collection } from 'firebase/firestore';
 import { LoginDialog } from '@/components/layout/LoginDialog';
 import {
   Collapsible,
@@ -39,7 +36,9 @@ import {
 import { createSlug, cn } from '@/lib/utils';
 import { useWishlist } from '@/lib/wishlist-context';
 import type { StoreCategory } from '@/components/admin/CategoryManager';
-import React from 'react';
+import { useFirestore, useMemoFirebase } from '@/firebase';
+import { useCollection } from '@/firebase/firestore/use-collection';
+import { collection } from 'firebase/firestore';
 
 const ListItem = React.forwardRef<
   React.ElementRef<"a">,
@@ -76,9 +75,6 @@ export default function Header() {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
 
-  // ──────────────────────────────────────────────────────────
-  // FIRESTORE CATEGORY FETCH
-  // ──────────────────────────────────────────────────────────
   const firestore = useFirestore();
   const categoriesQuery = useMemoFirebase(() => {
     if (!firestore) return null;
@@ -88,13 +84,9 @@ export default function Header() {
   const { data: fetchedCategories } =
     useCollection<Omit<StoreCategory, 'children'>>(categoriesQuery);
 
-  // ──────────────────────────────────────────────────────────
-  // CATEGORY TREE (DUPE FIXED)
-  // ──────────────────────────────────────────────────────────
   const categoryTree = useMemo(() => {
     if (!fetchedCategories) return [];
 
-    // 1. Normalize category parentId
     const normalized = fetchedCategories.map(cat => ({
       ...cat,
       parentId: cat.parentId === '' || cat.parentId == null ? null : cat.parentId
@@ -103,7 +95,6 @@ export default function Header() {
     const categoriesById: Record<string, StoreCategory> = {};
     const rootCategories: StoreCategory[] = [];
 
-    // 2. Construct base structure
     normalized.forEach(cat => {
       categoriesById[cat.id] = {
         ...cat,
@@ -111,7 +102,6 @@ export default function Header() {
       };
     });
 
-    // 3. Build tree safely (no duplicates)
     normalized.forEach(cat => {
       const node = categoriesById[cat.id];
 
@@ -124,14 +114,12 @@ export default function Header() {
       }
     });
 
-    // 4. Sort children recursively
     const sortRecursive = (list: StoreCategory[]) => {
       list.forEach(c => sortRecursive(c.children));
       list.sort((a, b) => (a.order || 0) - (b.order || 0));
     };
     sortRecursive(rootCategories);
 
-    // 5. Custom main-category order
     const desiredOrder = [
       'ΓΡΑΦΕΙΟ',
       'ΣΑΛΟΝΙ',
@@ -152,10 +140,6 @@ export default function Header() {
     return rootCategories;
   }, [fetchedCategories]);
 
-
-  // ──────────────────────────────────────────────────────────
-  // SEARCH HANDLER
-  // ──────────────────────────────────────────────────────────
   const handleSearch = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!searchQuery.trim()) return;
@@ -164,10 +148,6 @@ export default function Header() {
     if (isMobileMenuOpen) setIsMobileMenuOpen(false);
   };
 
-
-  // ──────────────────────────────────────────────────────────
-  // CATEGORY TREE FOR MOBILE (COLLAPSIBLE)
-  // ──────────────────────────────────────────────────────────
   const renderCategoryTree = (nodes: StoreCategory[], parentSlug = '') => {
     return nodes.map(node => {
       const currentSlug = `${parentSlug}/${createSlug(node.name)}`;
@@ -175,12 +155,14 @@ export default function Header() {
       if (node.children && node.children.length > 0) {
         return (
           <Collapsible key={node.id} className="group">
-            <CollapsibleTrigger className="flex w-full items-center justify-between py-2 text-left text-sm font-medium">
-              <Link href={`/category${currentSlug}`} onClick={() => setIsMobileMenuOpen(false)} className="flex-grow">
+            <div className="flex w-full items-center justify-between py-2 text-left text-sm font-medium">
+              <Link href={`/category${currentSlug}`} onClick={(e) => { e.stopPropagation(); setIsMobileMenuOpen(false);}} className="flex-grow">
                 {node.name}
               </Link>
-              <ChevronRight className="h-4 w-4 transition-transform duration-200 group-data-[state=open]:rotate-90" />
-            </CollapsibleTrigger>
+              <CollapsibleTrigger className="p-2" onClick={(e) => e.stopPropagation()}>
+                <ChevronRight className="h-4 w-4 transition-transform duration-200 group-data-[state=open]:rotate-90" />
+              </CollapsibleTrigger>
+            </div>
             <CollapsibleContent className="pl-4">
               <ul className="space-y-1">
                 {renderCategoryTree(node.children, currentSlug)}
@@ -200,10 +182,6 @@ export default function Header() {
     });
   };
 
-
-  // ──────────────────────────────────────────────────────────
-  // DESKTOP NAV
-  // ──────────────────────────────────────────────────────────
   const desktopNav = (
     <NavigationMenu>
       <NavigationMenuList>
@@ -223,7 +201,6 @@ export default function Header() {
             </NavigationMenuContent>
           </NavigationMenuItem>
         ))}
-
         <NavigationMenuItem>
           <Link href="/blog" legacyBehavior passHref>
             <NavigationMenuLink className={navigationMenuTriggerStyle()}>
@@ -235,12 +212,8 @@ export default function Header() {
     </NavigationMenu>
   );
 
-
-  // ──────────────────────────────────────────────────────────
-  // MOBILE NAV
-  // ──────────────────────────────────────────────────────────
   const mobileNav = (
-    <div className={`fixed inset-0 z-50 bg-background transition-transform duration-300 md:hidden ${isMobileMenuOpen ? 'translate-x-0' : 'translate-x-full'}`}>
+    <div className={`fixed inset-0 z-50 bg-background/80 backdrop-blur-sm transition-transform duration-300 md:hidden ${isMobileMenuOpen ? 'translate-x-0' : 'translate-x-full'}`}>
       <div className="flex h-16 items-center justify-between border-b px-4">
         <Link href="/" onClick={() => setIsMobileMenuOpen(false)}>
           <Logo />
@@ -249,7 +222,6 @@ export default function Header() {
           <X className="h-6 w-6 text-foreground" />
         </Button>
       </div>
-
       <div className="p-4 overflow-y-auto h-[calc(100vh-4rem)]">
         <form onSubmit={handleSearch} className="relative mb-4">
           <Input 
@@ -260,18 +232,13 @@ export default function Header() {
           />
           <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
         </form>
-
-        <nav className="flex flex-col divide-y">
+        <nav className="flex flex-col divide-y bg-background">
           {renderCategoryTree(categoryTree)}
         </nav>
       </div>
     </div>
   );
 
-
-  // ──────────────────────────────────────────────────────────
-  // HEADER LAYOUT
-  // ──────────────────────────────────────────────────────────
   return (
     <header className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur-sm">
       <div className="container mx-auto px-4">
@@ -335,7 +302,6 @@ export default function Header() {
           {desktopNav}
         </div>
       </div>
-
       {mobileNav}
     </header>
   );
