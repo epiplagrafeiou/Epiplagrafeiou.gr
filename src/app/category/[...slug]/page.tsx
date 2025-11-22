@@ -1,20 +1,14 @@
-
 'use client';
 
-import { useMemo } from 'react';
-import Image from 'next/image';
-import { useParams, notFound } from 'next/navigation';
-import { useCollection } from '@/firebase/firestore/use-collection';
-import { useFirestore, useMemoFirebase } from '@/firebase';
-import { collection } from 'firebase/firestore';
 import { ProductCard } from '@/components/products/ProductCard';
 import { useProducts } from '@/lib/products-context';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { useParams, notFound } from 'next/navigation';
 import { createSlug } from '@/lib/utils';
 import Link from 'next/link';
-import type { StoreCategory } from '@/components/admin/CategoryManager';
+import { useMemo } from 'react';
 
 const featuredCategories = [
     { name: 'Γραφεία', href: '/category/grafeia' },
@@ -23,90 +17,51 @@ const featuredCategories = [
 ]
 
 export default function CategoryPage() {
-  const { products: allProducts, isLoaded: areProductsLoaded } = useProducts();
+  const { products, isLoaded } = useProducts();
   const params = useParams();
-  const firestore = useFirestore();
-
-  const categoriesQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
-    return collection(firestore, 'categories');
-  }, [firestore]);
-  const { data: fetchedCategories, isLoading: areCategoriesLoading } = useCollection<Omit<StoreCategory, 'children'>>(categoriesQuery);
-
-  const categoryTree = useMemo(() => {
-    if (!fetchedCategories) return [];
-    const categoriesById: Record<string, StoreCategory> = {};
-    const rootCategories: StoreCategory[] = [];
-  
-    fetchedCategories.forEach(cat => {
-      categoriesById[cat.id] = { ...cat, children: [] };
-    });
-  
-    fetchedCategories.forEach(cat => {
-        if (cat.parentId && categoriesById[cat.parentId]) {
-            categoriesById[cat.parentId].children.push(categoriesById[cat.id]);
-        } else {
-            rootCategories.push(categoriesById[cat.id]);
-        }
-    });
-    
-    return rootCategories;
-  }, [fetchedCategories]);
   
   const slugPath = useMemo(() => Array.isArray(params.slug) ? params.slug.join('/') : (params.slug || ''), [params.slug]);
 
-  const { currentCategory, breadcrumbs } = useMemo(() => {
-    if (categoryTree.length === 0) return { currentCategory: null, breadcrumbs: [] };
-
-    let category: StoreCategory | null = null;
-    let breadcrumbs: { name: string; href: string; isLast: boolean }[] = [];
-    let currentHref = '/category';
-    
-    const pathParts = slugPath.split('/');
-    let currentChildren = categoryTree;
-
-    for (const part of pathParts) {
-        const found = currentChildren.find(c => createSlug(c.name) === part);
-        if (found) {
-            category = found;
-            currentHref += `/${createSlug(found.name)}`;
-            breadcrumbs.push({ name: found.name, href: currentHref, isLast: false });
-            currentChildren = found.children;
-        } else {
-            category = null;
-            break;
-        }
-    }
-
-    if (breadcrumbs.length > 0) breadcrumbs[breadcrumbs.length - 1].isLast = true;
-
-    return { currentCategory: category, breadcrumbs };
-  }, [slugPath, categoryTree]);
+  // This will hold the correct Greek category path if found
+  const categoryPathString = useMemo(() => {
+    if (!isLoaded) return '';
+    // Find the category whose slug matches the URL
+    return products.map(p => p.category).find(catString => {
+        const catSlug = catString.split(' > ').map(createSlug).join('/');
+        return catSlug === slugPath;
+    }) || '';
+  }, [isLoaded, products, slugPath]);
 
 
-  const filteredProducts = useMemo(() => {
-    if (!areProductsLoaded || !currentCategory) return [];
-
-    const allChildCategoryIds = new Set<string>();
-    const collectCategoryIds = (category: StoreCategory) => {
-        allChildCategoryIds.add(category.id);
-        if (category.children) {
-            category.children.forEach(collectCategoryIds);
-        }
-    };
-    collectCategoryIds(currentCategory);
-
-    return allProducts.filter(product => product.categoryId && allChildCategoryIds.has(product.categoryId));
-  }, [areProductsLoaded, allProducts, currentCategory]);
-  
-  const isLoading = areProductsLoaded === false || areCategoriesLoading === true;
-
-  if (!isLoading && !currentCategory) {
+  // If the page is loaded and we still couldn't find a matching category path, show a 404.
+  if (isLoaded && !categoryPathString) {
     notFound();
   }
-  
-  const pageTitle = currentCategory?.name || slugPath.split('/').pop()?.replace(/-/g, ' ') || 'Products';
 
+  const filteredProducts = useMemo(() => {
+    if (!isLoaded || !categoryPathString) return [];
+    // Filter products that start with the found category path
+    return products.filter(product => {
+      return product.category.startsWith(categoryPathString);
+    });
+  }, [isLoaded, products, categoryPathString]);
+  
+  // Use the Greek path for display, and slugs for links
+  const categoryParts = useMemo(() => categoryPathString ? categoryPathString.split(' > ') : [], [categoryPathString]);
+  
+  let currentHref = '';
+  const breadcrumbs = useMemo(() => categoryParts.map((part, index) => {
+    const partSlug = createSlug(part);
+    currentHref += `${currentHref ? '/' : ''}${partSlug}`;
+    return {
+      name: part, // Use the real Greek name for display
+      href: `/category/${currentHref}`, // Use the English slug for the link
+      isLast: index === categoryParts.length - 1
+    };
+  }), [categoryParts]);
+
+  const pageTitle = categoryParts.length > 0 ? categoryParts[categoryParts.length - 1] : "Προϊόντα";
+  
   const breadcrumbSchema = {
     '@context': 'https://schema.org',
     '@type': 'BreadcrumbList',
@@ -134,7 +89,7 @@ export default function CategoryPage() {
 
   return (
     <div className="container mx-auto px-4 py-8">
-       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }} />
       <div className="mb-6 flex items-center space-x-2 text-sm text-muted-foreground">
         <Link href="/" className="hover:text-foreground">Home</Link>
         <span>/</span>
@@ -152,38 +107,9 @@ export default function CategoryPage() {
       </div>
 
       <h1 className="mb-8 text-3xl font-bold capitalize">{pageTitle}</h1>
-      
-      {currentCategory && currentCategory.children.length > 0 && (
-        <section className="mb-12">
-            <h2 className="mb-8 text-center font-headline text-2xl font-bold">
-              Εξερευνήστε τις Υποκατηγορίες
-            </h2>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-6 md:gap-8">
-            {currentCategory.children.map((subCat) => (
-              <Link 
-                href={`${breadcrumbs.length > 0 ? breadcrumbs[breadcrumbs.length-1].href : ''}/${createSlug(subCat.name)}`} 
-                key={subCat.id} 
-                className="group flex flex-col items-center gap-3 transition-transform duration-200 hover:-translate-y-2 text-center"
-              >
-                <div className="relative w-full aspect-square overflow-hidden rounded-lg shadow-md transition-shadow group-hover:shadow-xl">
-                  <Image
-                    src={`https://picsum.photos/seed/${createSlug(subCat.name)}/300/300`}
-                    alt={subCat.name}
-                    fill
-                    className="object-cover transition-transform duration-300 group-hover:scale-110"
-                    data-ai-hint={`${subCat.name} furniture`}
-                  />
-                </div>
-                <span className="font-medium text-foreground">{subCat.name}</span>
-              </Link>
-            ))}
-            </div>
-        </section>
-      )}
-
 
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-        {isLoading ? (
+        {!isLoaded ? (
           Array.from({ length: 12 }).map((_, index) => (
             <Card key={index}>
               <Skeleton className="h-64 w-full" />
@@ -203,7 +129,7 @@ export default function CategoryPage() {
         )}
       </div>
 
-      {!isLoading && filteredProducts.length === 0 && (
+      {isLoaded && filteredProducts.length === 0 && (
         <div className="text-center col-span-full py-16">
             <h2 className="text-xl font-semibold">No Products Found</h2>
             <p className="text-muted-foreground mt-2">There are no products in this category yet.</p>
