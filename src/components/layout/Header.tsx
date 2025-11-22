@@ -31,6 +31,7 @@ import {
   NavigationMenuLink,
   NavigationMenuList,
   NavigationMenuTrigger,
+  navigationMenuTriggerStyle,
 } from '@/components/ui/navigation-menu';
 import { createSlug } from '@/lib/utils';
 import { useWishlist } from '@/lib/wishlist-context';
@@ -40,7 +41,6 @@ import { useCollection } from '@/firebase/firestore/use-collection';
 import { collection } from 'firebase/firestore';
 
 
-// Correct, simple list of main categories as it was before.
 const mainCategories = [
     { name: 'ΓΡΑΦΕΙΟ', slug: 'grafeio', children: [] },
     { name: 'ΣΑΛΟΝΙ', slug: 'saloni', children: [] },
