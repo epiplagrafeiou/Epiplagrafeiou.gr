@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useEffect, useMemo, useState } from 'react';
+import { useState, useMemo } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Logo } from '@/components/icons/Logo';
@@ -18,6 +18,9 @@ import {
 } from 'lucide-react';
 import { useCart } from '@/lib/cart-context';
 import { useUser } from '@/firebase';
+import { useFirestore, useMemoFirebase } from '@/firebase';
+import { useCollection } from '@/firebase/firestore/use-collection';
+import { collection } from 'firebase/firestore';
 import { LoginDialog } from '@/components/layout/LoginDialog';
 import {
   Collapsible,
@@ -25,47 +28,15 @@ import {
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
 import {
-  NavigationMenu,
-  NavigationMenuContent,
-  NavigationMenuItem,
-  NavigationMenuLink,
-  NavigationMenuList,
-  NavigationMenuTrigger,
-  navigationMenuTriggerStyle,
-} from "@/components/ui/navigation-menu";
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+
 import { createSlug, cn } from '@/lib/utils';
 import { useWishlist } from '@/lib/wishlist-context';
 import type { StoreCategory } from '@/components/admin/CategoryManager';
-import { useFirestore, useMemoFirebase } from '@/firebase';
-import { useCollection } from '@/firebase/firestore/use-collection';
-import { collection } from 'firebase/firestore';
-
-const ListItem = React.forwardRef<
-  React.ElementRef<"a">,
-  React.ComponentPropsWithoutRef<"a">
->(({ className, title, children, ...props }, ref) => {
-  return (
-    <li>
-      <NavigationMenuLink asChild>
-        <a
-          ref={ref}
-          className={cn(
-            "block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground",
-            className
-          )}
-          {...props}
-        >
-          <div className="text-sm font-medium leading-none">{title}</div>
-          <p className="line-clamp-2 text-sm leading-snug text-muted-foreground">
-            {children}
-          </p>
-        </a>
-      </NavigationMenuLink>
-    </li>
-  );
-});
-ListItem.displayName = "ListItem";
-
+import React from 'react';
 
 export default function Header() {
   const { itemCount } = useCart();
@@ -156,10 +127,10 @@ export default function Header() {
         return (
           <Collapsible key={node.id} className="group">
             <div className="flex w-full items-center justify-between py-2 text-left text-sm font-medium">
-              <Link href={`/category${currentSlug}`} onClick={(e) => { e.stopPropagation(); setIsMobileMenuOpen(false);}} className="flex-grow">
+              <Link href={`/category${currentSlug}`} onClick={() => setIsMobileMenuOpen(false)} className="flex-grow">
                 {node.name}
               </Link>
-              <CollapsibleTrigger className="p-2" onClick={(e) => e.stopPropagation()}>
+              <CollapsibleTrigger className="p-2 -mr-2">
                 <ChevronRight className="h-4 w-4 transition-transform duration-200 group-data-[state=open]:rotate-90" />
               </CollapsibleTrigger>
             </div>
@@ -183,37 +154,42 @@ export default function Header() {
   };
 
   const desktopNav = (
-    <NavigationMenu>
-      <NavigationMenuList>
+    <nav className="flex items-center gap-2">
         {categoryTree.map(category => (
-          <NavigationMenuItem key={category.id}>
-            <NavigationMenuTrigger>{category.name}</NavigationMenuTrigger>
-            <NavigationMenuContent>
-              <ul className="grid w-[400px] gap-3 p-4 md:w-[500px] md:grid-cols-2 lg:w-[600px]">
-                {category.children.map(child => (
-                  <ListItem
-                    key={child.id}
-                    title={child.name}
-                    href={`/category/${createSlug(category.name)}/${createSlug(child.name)}`}
-                  />
-                ))}
-              </ul>
-            </NavigationMenuContent>
-          </NavigationMenuItem>
+          <Popover key={category.id}>
+            <PopoverTrigger asChild>
+              <Button variant="ghost" className="font-medium">{category.name}</Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-screen max-w-4xl p-0">
+                <div className="grid grid-cols-3 gap-4 p-6">
+                    <div className="col-span-2">
+                        <h3 className="font-bold mb-4 text-lg">{category.name}</h3>
+                        <ul className="grid grid-cols-2 gap-x-4 gap-y-2">
+                            {category.children.map(child => (
+                                <li key={child.id}>
+                                    <Link href={`/category/${createSlug(category.name)}/${createSlug(child.name)}`} className="hover:text-primary text-sm py-1 block">
+                                        {child.name}
+                                    </Link>
+                                </li>
+                            ))}
+                        </ul>
+                    </div>
+                    <div className="col-span-1">
+                       {/* Placeholder for promotional image */}
+                       <div className="bg-secondary rounded-lg w-full h-full min-h-[200px] flex items-center justify-center">
+                           <p className="text-muted-foreground text-sm">Promo Image</p>
+                       </div>
+                    </div>
+                </div>
+            </PopoverContent>
+          </Popover>
         ))}
-        <NavigationMenuItem>
-          <Link href="/blog" legacyBehavior passHref>
-            <NavigationMenuLink className={navigationMenuTriggerStyle()}>
-              Blog
-            </NavigationMenuLink>
-          </Link>
-        </NavigationMenuItem>
-      </NavigationMenuList>
-    </NavigationMenu>
+         <Link href="/blog" className="font-medium text-sm px-4 py-2 hover:bg-accent rounded-md">Blog</Link>
+    </nav>
   );
 
   const mobileNav = (
-    <div className={`fixed inset-0 z-50 bg-background/80 backdrop-blur-sm transition-transform duration-300 md:hidden ${isMobileMenuOpen ? 'translate-x-0' : 'translate-x-full'}`}>
+    <div className={`fixed inset-0 z-50 bg-background transition-transform duration-300 md:hidden ${isMobileMenuOpen ? 'translate-x-0' : 'translate-x-full'}`}>
       <div className="flex h-16 items-center justify-between border-b px-4">
         <Link href="/" onClick={() => setIsMobileMenuOpen(false)}>
           <Logo />
@@ -232,7 +208,7 @@ export default function Header() {
           />
           <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
         </form>
-        <nav className="flex flex-col divide-y bg-background">
+        <nav className="flex flex-col divide-y">
           {renderCategoryTree(categoryTree)}
         </nav>
       </div>
@@ -251,7 +227,6 @@ export default function Header() {
               <Logo />
             </Link>
           </div>
-
           <div className="hidden flex-1 px-4 lg:px-12 md:block">
             <form onSubmit={handleSearch} className="relative">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-foreground" />
@@ -263,7 +238,6 @@ export default function Header() {
               />
             </form>
           </div>
-
           <div className="flex items-center gap-2">
             <LoginDialog>
               <Button variant="ghost" className="hidden md:flex items-center gap-2">
@@ -271,7 +245,6 @@ export default function Header() {
                 <span className="text-sm font-medium text-foreground">Σύνδεση/Εγγραφή</span>
               </Button>
             </LoginDialog>
-
             <Button variant="ghost" size="icon" asChild className="hidden md:inline-flex relative">
               <Link href="/wishlist">
                 <Heart className="text-foreground" />
@@ -282,7 +255,6 @@ export default function Header() {
                 )}
               </Link>
             </Button>
-
             <Button variant="ghost" size="icon" asChild>
               <Link href="/cart">
                 <div className="relative">
@@ -297,7 +269,6 @@ export default function Header() {
             </Button>
           </div>
         </div>
-
         <div className="hidden h-12 items-center justify-center md:flex">
           {desktopNav}
         </div>
