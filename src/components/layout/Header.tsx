@@ -35,7 +35,6 @@ import {
   NavigationMenuList,
   NavigationMenuTrigger,
   navigationMenuTriggerStyle,
-  NavigationMenuViewport,
 } from '@/components/ui/navigation-menu';
 import { createSlug, cn } from '@/lib/utils';
 import { useWishlist } from '@/lib/wishlist-context';
@@ -52,12 +51,12 @@ const ListItem = React.forwardRef<
         <a
           ref={ref}
           className={cn(
-            'group flex h-full w-full select-none flex-col rounded-md p-2 no-underline outline-none transition-colors hover:bg-accent/50 focus:bg-accent/50',
+            'group flex h-full w-full select-none flex-col items-center justify-start gap-2 rounded-md p-3 text-center no-underline outline-none transition-colors hover:bg-accent/50 focus:bg-accent/50',
             className
           )}
           {...props}
         >
-          <div className="relative h-20 w-full overflow-hidden rounded-md bg-secondary">
+          <div className="relative h-20 w-20 flex-shrink-0 overflow-hidden rounded-md bg-secondary">
             {image ? (
               <Image
                 src={image}
@@ -71,7 +70,7 @@ const ListItem = React.forwardRef<
               </div>
             )}
           </div>
-          <div className="mt-2 text-sm font-medium leading-tight text-foreground">
+          <div className="text-sm font-medium leading-tight text-foreground">
             {title}
           </div>
         </a>
@@ -205,36 +204,38 @@ export default function Header() {
           <NavigationMenuItem key={category.id}>
             <NavigationMenuTrigger>{category.name}</NavigationMenuTrigger>
             <NavigationMenuContent>
-              <div className="grid w-screen max-w-4xl grid-cols-[2fr_1fr] gap-6 p-4">
-                <ul className="grid grid-cols-2 gap-3 md:grid-cols-3">
-                  {(category.children || []).map((child) => (
-                    <ListItem
-                      key={child.id}
-                      title={child.name}
-                      href={`/category/${createSlug(category.name)}/${createSlug(
-                        child.name
-                      )}`}
-                      image={(child as any).image} // Placeholder for subcategory image
-                    />
-                  ))}
-                </ul>
-                <div className="relative hidden h-full min-h-[300px] w-full overflow-hidden rounded-md lg:block">
-                  <Image
-                    src={
-                      (category as any).promoImage ||
-                      'https://picsum.photos/seed/promo/400/600'
-                    }
-                    alt={`${category.name} Promotion`}
-                    fill
-                    className="object-cover"
-                  />
-                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-                   <div className="absolute bottom-4 left-4 text-white">
-                        <h3 className="text-lg font-bold">{category.name}</h3>
-                        <p className="text-sm">Ανακάλυψε τις προσφορές μας</p>
-                   </div>
-                </div>
-              </div>
+               <div className="container mx-auto">
+                 <div className="grid w-full grid-cols-[3fr_1fr] gap-6 p-4">
+                    <ul className="grid grid-cols-3 gap-3">
+                      {(category.children || []).map((child) => (
+                        <ListItem
+                          key={child.id}
+                          title={child.name}
+                          href={`/category/${createSlug(category.name)}/${createSlug(
+                            child.name
+                          )}`}
+                          image={(child as any).image || 'https://picsum.photos/seed/submenu/200/200'}
+                        />
+                      ))}
+                    </ul>
+                    <div className="relative hidden h-full min-h-[300px] w-full overflow-hidden rounded-md lg:block">
+                      <Image
+                        src={
+                          (category as any).promoImage ||
+                          'https://picsum.photos/seed/promo/400/600'
+                        }
+                        alt={`${category.name} Promotion`}
+                        fill
+                        className="object-cover"
+                      />
+                       <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                       <div className="absolute bottom-4 left-4 text-white">
+                            <h3 className="text-lg font-bold">{category.name}</h3>
+                            <p className="text-sm">Ανακάλυψε τις προσφορές μας</p>
+                       </div>
+                    </div>
+                  </div>
+               </div>
             </NavigationMenuContent>
           </NavigationMenuItem>
         ))}
@@ -247,7 +248,6 @@ export default function Header() {
           </Link>
         </NavigationMenuItem>
       </NavigationMenuList>
-      <NavigationMenuViewport />
     </NavigationMenu>
   );
 
