@@ -1,4 +1,3 @@
-
 'use client';
 import Image from 'next/image';
 import { formatCurrency, cn, createSlug } from '@/lib/utils';
@@ -17,7 +16,7 @@ import {
   type CarouselApi,
 } from "@/components/ui/carousel"
 import { Card, CardContent } from "@/components/ui/card"
-import { Truck, Award, Star, ShieldCheck } from 'lucide-react';
+import { Truck, Award, Star, ShieldCheck, Minus, Plus } from 'lucide-react';
 import { PaymentIcons } from '@/components/icons/PaymentIcons';
 import type { StoreCategory } from '@/components/admin/CategoryManager';
 import { Button } from '../ui/button';
@@ -279,15 +278,17 @@ export function ProductView({ product, allProducts, categoryPath, variants }: Pr
               Κερδίζεις {pointsEarned} πόντους με αυτή την αγορά!
           </div>
 
-          <div className="mt-6 flex items-center gap-4">
-            <Input
-              type="number"
-              value={quantity}
-              onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
-              className="h-11 w-20 text-center"
-              min="1"
-            />
-            <AddToCartButton product={product} quantity={quantity} size="lg" className="w-full" />
+          <div className="mt-6 grid grid-cols-2 gap-4">
+              <div className="flex items-center justify-center rounded-md border">
+                  <Button variant="ghost" size="icon" onClick={() => setQuantity(q => Math.max(1, q - 1))}>
+                      <Minus className="h-4 w-4" />
+                  </Button>
+                  <span className="w-12 text-center font-bold">{quantity}</span>
+                  <Button variant="ghost" size="icon" onClick={() => setQuantity(q => q + 1)}>
+                      <Plus className="h-4 w-4" />
+                  </Button>
+              </div>
+              <AddToCartButton product={product} quantity={quantity} size="lg" className="h-full" />
           </div>
 
 
