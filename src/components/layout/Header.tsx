@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Logo } from '@/components/icons/Logo';
@@ -33,13 +33,7 @@ import {
   NavigationMenuTrigger,
   navigationMenuTriggerStyle,
 } from '@/components/ui/navigation-menu';
-import { createSlug } from '@/lib/utils';
 import { useWishlist } from '@/lib/wishlist-context';
-import type { StoreCategory } from '@/components/admin/CategoryManager';
-import { useFirestore, useMemoFirebase } from '@/firebase';
-import { useCollection } from '@/firebase/firestore/use-collection';
-import { collection } from 'firebase/firestore';
-
 
 const mainCategories = [
     { name: 'ΓΡΑΦΕΙΟ', slug: 'grafeio' },
@@ -74,65 +68,67 @@ export default function Header() {
 
   const renderMobileTree = (nodes: typeof mainCategories) => {
     return nodes.map(main => (
-        <Collapsible key={main.slug} className="group border-b">
-            <div className="flex items-center justify-between p-4">
-                 <Link href={`/category/${main.slug}`} onClick={handleLinkClick} className="font-semibold flex-grow">{main.name}</Link>
-                 <CollapsibleTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-8 w-8">
-                        <ChevronRight className="h-4 w-4 transition-transform group-data-[state=open]:rotate-90"/>
-                    </Button>
-                 </CollapsibleTrigger>
-            </div>
-        </Collapsible>
+        <div key={main.slug} className="border-b">
+             <Link href={`/category/${main.slug}`} onClick={handleLinkClick} className="flex items-center justify-between p-4 font-semibold">
+                {main.name}
+            </Link>
+        </div>
     ))
   }
 
   return (
-    <header className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur-sm">
-      <div className="container mx-auto flex h-20 items-center justify-between px-4">
-        <div className="flex items-center gap-2">
-            <Button variant="ghost" size="icon" className="lg:hidden" onClick={() => setIsMobileMenuOpen(true)}>
-                <Menu className="h-6 w-6" />
-            </Button>
-            <Link href="/">
-                <Logo />
-            </Link>
-        </div>
-        
-        <NavigationMenu className="hidden lg:flex">
-            <NavigationMenuList>
-                 {mainCategories.map((category) => (
-                    <NavigationMenuItem key={category.slug}>
-                        <Link href={`/category/${category.slug}`} legacyBehavior passHref>
-                           <NavigationMenuLink className={navigationMenuTriggerStyle()}>
-                               {category.name}
-                           </NavigationMenuLink>
-                        </Link>
-                    </NavigationMenuItem>
-                 ))}
-            </NavigationMenuList>
-        </NavigationMenu>
-
-        <div className="flex items-center gap-2">
-            <form onSubmit={handleSearch} className="relative hidden md:block">
-                <Input 
-                    placeholder="Αναζήτηση..." 
-                    className="w-64 pr-10" 
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                />
-                <Button type="submit" variant="ghost" size="icon" className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8">
-                    <Search className="h-5 w-5 text-muted-foreground" />
+    <>
+      <header className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur-sm">
+        <div className="container mx-auto px-4">
+          <div className="flex h-20 items-center justify-between gap-4">
+            <div className="flex items-center gap-2 lg:gap-4">
+              <div className="lg:hidden">
+                <Button variant="ghost" size="icon" onClick={() => setIsMobileMenuOpen(true)}>
+                  <Menu className="h-6 w-6 text-foreground" />
                 </Button>
-            </form>
+              </div>
+
+              <Link href="/" className="shrink-0">
+                <Logo />
+              </Link>
+            </div>
+
+            <div className="hidden flex-1 px-4 lg:flex justify-center">
+               <NavigationMenu>
+                    <NavigationMenuList>
+                         {mainCategories.map((category) => (
+                            <NavigationMenuItem key={category.slug}>
+                                <Link href={`/category/${category.slug}`} passHref>
+                                   <NavigationMenuLink className={navigationMenuTriggerStyle()}>
+                                       {category.name}
+                                   </NavigationMenuLink>
+                                </Link>
+                            </NavigationMenuItem>
+                         ))}
+                    </NavigationMenuList>
+                </NavigationMenu>
+            </div>
+
+            <div className="flex items-center gap-2">
+                <form onSubmit={handleSearch} className="relative hidden md:block">
+                    <Input 
+                        placeholder="Αναζήτηση..." 
+                        className="w-40 sm:w-64 pr-10" 
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                    />
+                    <Button type="submit" variant="ghost" size="icon" className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8">
+                        <Search className="h-5 w-5 text-muted-foreground" />
+                    </Button>
+                </form>
           
-            <LoginDialog>
+              <LoginDialog>
                 <Button variant="ghost" size="icon" aria-label="My Account">
                     <User />
                 </Button>
-            </LoginDialog>
+              </LoginDialog>
 
-            <Button variant="ghost" size="icon" asChild className="relative">
+              <Button variant="ghost" size="icon" asChild className="relative">
                 <Link href="/wishlist">
                   <Heart />
                    {wishlistCount > 0 && (
@@ -141,9 +137,9 @@ export default function Header() {
                     </span>
                   )}
                 </Link>
-            </Button>
+              </Button>
           
-            <Button variant="ghost" size="icon" asChild aria-label="Cart">
+              <Button variant="ghost" size="icon" asChild aria-label="Cart">
                 <Link href="/cart">
                     <div className="relative">
                         <ShoppingCart />
@@ -154,9 +150,11 @@ export default function Header() {
                         )}
                     </div>
                 </Link>
-            </Button>
+              </Button>
+            </div>
+          </div>
         </div>
-      </div>
+      </header>
       
        {/* Mobile Menu Drawer */}
        <div className={`fixed inset-0 z-50 lg:hidden ${ isMobileMenuOpen ? 'pointer-events-auto' : 'pointer-events-none' }`}>
@@ -191,6 +189,6 @@ export default function Header() {
                 </div>
             </div>
        </div>
-    </header>
+    </>
   );
 }
