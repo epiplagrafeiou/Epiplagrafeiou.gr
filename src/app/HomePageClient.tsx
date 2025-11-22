@@ -4,14 +4,10 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
-import { Armchair, Briefcase, Sofa, Bed, Umbrella, Wrench, Lightbulb, Palmtree, Sparkles, Gift } from 'lucide-react';
+import { Armchair, Briefcase, Sofa, Bed, Palmtree, Wrench, Lightbulb, Sparkles, Gift } from 'lucide-react';
 import { ProductCard } from '@/components/products/ProductCard';
 import { useProducts } from '@/lib/products-context';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useCollection } from '@/firebase/firestore/use-collection';
-import { collection } from 'firebase/firestore';
-import { useFirestore, useMemoFirebase } from '@/firebase';
-import { useMemo } from 'react';
 import {
   Carousel,
   CarouselContent,
@@ -19,9 +15,7 @@ import {
   CarouselNext,
   CarouselPrevious,
 } from "@/components/ui/carousel";
-import { type StoreCategory } from '@/components/admin/CategoryManager';
 import { createSlug } from '@/lib/utils';
-
 
 const iconMap: { [key: string]: React.ElementType } = {
   'ΓΡΑΦΕΙΟ': Briefcase,
@@ -35,43 +29,22 @@ const iconMap: { [key: string]: React.ElementType } = {
   'default': Armchair,
 };
 
+const mainCategories = [
+  { name: 'ΓΡΑΦΕΙΟ', slug: 'γραφειο' },
+  { name: 'ΣΑΛΟΝΙ', slug: 'σαλονι' },
+  { name: 'ΚΡΕΒΑΤΟΚΑΜΑΡΑ', slug: 'κρεβατοκαμαρα' },
+  { name: 'ΕΞΩΤΕΡΙΚΟΣ ΧΩΡΟΣ', slug: 'εξωτερικοσ-χωροσ' },
+  { name: 'ΑΞΕΣΟΥΑΡ', slug: 'αξεσουαρ' },
+  { name: 'ΦΩΤΙΣΜΟΣ', slug: 'φωτισμοσ' },
+  { name: 'ΔΙΑΚΟΣΜΗΣΗ', slug: 'διακοσμηση' },
+  { name: 'ΧΡΙΣΤΟΥΓΕΝΝΙΑΤΙΚΑ', slug: 'χριστουγεννιατικα' },
+];
+
 
 export default function HomePageClient() {
   const { products, isLoaded } = useProducts();
-  const firestore = useFirestore();
   const featuredProducts = products.slice(0, 8);
   const heroSlides = PlaceHolderImages.filter(img => img.id.startsWith('hero-slide-'));
-
-  const categoriesQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
-    return collection(firestore, 'categories');
-  }, [firestore]);
-  const { data: fetchedCategories } = useCollection<StoreCategory>(categoriesQuery);
-
-  const mainCategories = useMemo(() => {
-    if (!fetchedCategories) return [];
-    
-    const desiredOrder = ['ΓΡΑΦΕΙΟ', 'ΣΑΛΟΝΙ', 'ΚΡΕΒΑΤΟΚΑΜΑΡΑ', 'ΕΞΩΤΕΡΙΚΟΣ ΧΩΡΟΣ', 'Αξεσουάρ', 'ΦΩΤΙΣΜΟΣ', 'ΔΙΑΚΟΣΜΗΣΗ', 'Χριστουγεννιάτικα'];
-
-    return fetchedCategories
-      .filter(cat => !cat.parentId)
-      .sort((a, b) => {
-        const nameA = a.name.toUpperCase().trim();
-        const nameB = b.name.toUpperCase().trim();
-        const indexA = desiredOrder.indexOf(nameA);
-        const indexB = desiredOrder.indexOf(nameB);
-  
-        if (indexA !== -1 && indexB !== -1) return indexA - indexB;
-        if (indexA !== -1) return -1;
-        if (indexB !== -1) return 1;
-        return nameA.localeCompare(nameB);
-      })
-      .map(cat => ({
-        ...cat,
-        Icon: iconMap[cat.name.toUpperCase().trim()] || iconMap.default,
-        slug: createSlug(cat.name),
-      }));
-  }, [fetchedCategories]);
 
   return (
     <div className="flex flex-col">
@@ -123,7 +96,7 @@ export default function HomePageClient() {
             {mainCategories.map(({ name, slug }) => {
               const Icon = iconMap[name.toUpperCase().trim()] || iconMap.default;
               return (
-              <Link href={`/category/${slug}`} key={slug} className="group flex flex-col items-center gap-3 transition-transform duration-200 hover:-translate-y-2">
+              <Link href={`/category/${createSlug(slug)}`} key={slug} className="group flex flex-col items-center gap-3 transition-transform duration-200 hover:-translate-y-2">
                 <div className="flex h-28 w-28 items-center justify-center rounded-full bg-secondary transition-colors group-hover:bg-primary/10">
                   <Icon className="h-12 w-12 text-muted-foreground transition-colors group-hover:text-primary" />
                 </div>

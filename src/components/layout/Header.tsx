@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Logo } from '@/components/icons/Logo';
@@ -17,9 +17,7 @@ import {
   ChevronRight
 } from 'lucide-react';
 import { useCart } from '@/lib/cart-context';
-import { useUser, useFirestore, useMemoFirebase } from '@/firebase';
-import { useCollection } from '@/firebase/firestore/use-collection';
-import { collection } from 'firebase/firestore';
+import { useUser } from '@/firebase';
 import { LoginDialog } from '@/components/layout/LoginDialog';
 import {
   Collapsible,
@@ -37,10 +35,19 @@ import {
 } from "@/components/ui/navigation-menu"
 import { createSlug, cn } from '@/lib/utils';
 import { useWishlist } from '@/lib/wishlist-context';
-import type { StoreCategory } from '@/components/admin/CategoryManager';
 import React from 'react';
 
-/* ---------------- REUSABLE LIST ITEM ----------------- */
+const staticCategories = [
+  { name: 'ΓΡΑΦΕΙΟ', children: [ { name: 'Καρέκλες γραφείου' }, { name: 'Γραφεία' }, { name: 'Συρταριέρες Γραφείου' }, { name: 'Βιβλιοθήκες' }, { name: 'Ραφιέρες / Αποθηκευτικά Κουτιά' }, { name: 'Ντουλάπες' }, { name: 'Ανταλλακτικά' }, { name: 'Γραφεία υποδοχής / Reception' } ] },
+  { name: 'ΣΑΛΟΝΙ', children: [ { name: 'Καναπέδες' }, { name: 'Πολυθρόνες' }, { name: 'Καρέκλες τραπεζαρίας' }, { name: 'Τραπέζια' }, { name: 'Τραπεζάκια σαλονιού' }, { name: 'Τραπεζάκια Βοηθητικά' }, { name: 'Έπιπλα τηλεόρασης' }, { name: 'Συνθέσεις Σαλονιού' }, { name: 'Έπιπλα Εισόδου' }, { name: 'Παπουτσοθήκες' }, { name: 'Μπουφέδες' }, { name: 'Κονσόλες' }, { name: 'Σκαμπώ μπαρ' }, { name: 'Πουφ & Σκαμπό' }, { name: 'Κουρτίνες & Κουρτινόξυλα' } ] },
+  { name: 'ΚΡΕΒΑΤΟΚΑΜΑΡΑ', children: [ { name: 'Κρεβάτια' }, { name: 'Κομοδίνα' }, { name: 'Συρταριέρες' }, { name: 'Ντουλάπες' }, { name: 'Φουσκωτά στρώματα' }, { name: 'Λευκά Είδη' } ] },
+  { name: 'ΕΞΩΤΕΡΙΚΟΣ ΧΩΡΟΣ', children: [ { name: 'Καρέκλες κήπου' }, { name: 'Τραπέζια εξωτερικού χώρου' }, { name: 'Σετ τραπεζαρίες κήπου' }, { name: 'Βάσεις ομπρελών' }, { name: 'Ομπρέλες κήπου / παραλίας' }, { name: 'Κουτιά Αποθήκευσης Κήπου' }, { name: 'Διακόσμηση & Οργάνωση Μπαλκονιού' }, { name: 'Αιώρες Κήπου & Βεράντας' }, { name: 'Λυσεις σκίασης για μπαλκόνι' }, { name: 'Φαναράκια' } ] },
+  { name: 'ΑΞΕΣΟΥΑΡ', children: [ { name: 'Καλόγεροι' }, { name: 'Κρεμάστρες Δαπέδου' }, { name: 'Πολύπριζα' }, { name: 'Βάσεις Τηλεόρασης' }, { name: 'Σταχτοδοχεία' }, { name: 'Στόπ Πόρτας' }, { name: 'Σκάλες' } ] },
+  { name: 'ΦΩΤΙΣΜΟΣ', children: [ { name: 'Φωτιστικά οροφής' }, { name: 'Φωτιστικά Δαπέδου' }, { name: 'Επιτραπέζια φωτιστικά' }, { name: 'Απλίκες' }, { name: 'Ταινίες Led' }, { name: 'Παιδικά φωτιστικά οροφής' }, { name: 'Γιρλάντες απο Σχοινί' }, { name: 'Φώτα Πάρτη' } ] },
+  { name: 'ΔΙΑΚΟΣΜΗΣΗ', children: [ { name: 'Πίνακες' }, { name: 'Καθρέπτες' }, { name: 'Τεχνητά φυτά' }, { name: 'Διακόσμηση τοίχου' }, { name: 'Διακοσμητικά Μαξιλάρια' }, { name: 'Χαλιά' }, { name: 'Κεριά' }, { name: 'Κουβέρτες & Ριχτάρια' }, { name: 'Επένδυση & Διακόσμηση Τοίχου' }, { name: 'Διαχύτες Αρωμάτων' }, { name: 'Κορνίζες' }, { name: 'Ρολόγια' }, { name: 'Ψάθινα & Υφασμάτινα Καλάθια' }, { name: 'Luxury Decor' } ] },
+  { name: 'ΧΡΙΣΤΟΥΓΕΝΝΙΑΤΙΚΑ', children: [ { name: 'Χριστουγεννιάτικα Δέντρα' }, { name: 'Βάσεις Χριστουγεννιάτιων Δέντρων' }, { name: 'Χριστουγεννιάτικα λαμπάκια Led' }, { name: 'Ξύλινα στολίδια δέντρου' }, { name: 'Φάτνη Χριστουγεννων' }, { name: 'Χριστουγεννιάτικα Φωτεινά Στοιχεία' }, { name: 'Χριστουγεννιάτικη Διακόσμηση' }, { name: 'Μινιατούρες & Στοιχεία για το Χριστουγεννιάτικο Χωριό' }, { name: 'Κηροπήγια & Κηροσβέστες' }, { name: 'Χριστουγεννιάτικες Φιγούρες' } ] }
+];
+
 const ListItem = React.forwardRef<
   React.ElementRef<"a">,
   React.ComponentPropsWithoutRef<"a">
@@ -68,82 +75,13 @@ const ListItem = React.forwardRef<
 ListItem.displayName = "ListItem";
 
 
-/* ------------------------ HEADER ------------------------ */
 export default function Header() {
   const { itemCount } = useCart();
   const { wishlistCount } = useWishlist();
   const { user } = useUser();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [treeReady, setTreeReady] = useState(false);
   const router = useRouter();
-
-  const firestore = useFirestore();
-  const categoriesQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
-    return collection(firestore, 'categories');
-  }, [firestore]);
-
-  const { data: fetchedCategories } = useCollection<Omit<StoreCategory, 'children'>>(categoriesQuery);
-
-  const categoryTree = useMemo(() => {
-    if (!fetchedCategories) return [];
-
-    const categoriesById: Record<string, StoreCategory> = {};
-    const rootCategories: StoreCategory[] = [];
-  
-    // Normalize parentId and create structure
-    fetchedCategories.forEach(cat => {
-        categoriesById[cat.id] = {
-            ...cat,
-            parentId: cat.parentId || null,  // Normalize: "" → null
-            children: []
-        };
-    });
-
-    // Build tree
-    for (const catId in categoriesById) {
-      const category = categoriesById[catId];
-      if (category.parentId && categoriesById[category.parentId]) {
-        categoriesById[category.parentId].children.push(category);
-      } else {
-        rootCategories.push(category);
-      }
-    }
-
-    // Sort children and parent categories
-    const sortRecursive = (categories: StoreCategory[]) => {
-        categories.forEach(c => sortRecursive(c.children));
-        categories.sort((a, b) => (a.order || 0) - (b.order || 0));
-    };
-    sortRecursive(rootCategories);
-
-    // Custom order
-    const desiredOrder = [
-        'ΓΡΑΦΕΙΟ',
-        'ΣΑΛΟΝΙ',
-        'ΚΡΕΒΑΤΟΚΑΜΑΡΑ',
-        'ΕΞΩΤΕΡΙΚΟΣ ΧΩΡΟΣ',
-        'ΑΞΕΣΟΥΑΡ',
-        'ΦΩΤΙΣΜΟΣ',
-        'ΔΙΑΚΟΣΜΗΣΗ',
-        'ΧΡΙΣΤΟΥΓΕΝΝΙΑΤΙΚΑ'
-    ];
-
-    rootCategories.sort((a, b) => {
-        const indexA = desiredOrder.indexOf(a.name.toUpperCase());
-        const indexB = desiredOrder.indexOf(b.name.toUpperCase());
-        return (indexA === -1 ? 999 : indexA) - (indexB === -1 ? 999 : indexB);
-    });
-
-    return [...new Map(rootCategories.map(item => [item.id, item])).values()];
-  }, [fetchedCategories]);
-
-  useEffect(() => {
-    if (categoryTree.length > 0) {
-      setTreeReady(true);
-    }
-  }, [categoryTree]);
 
   const handleSearch = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -152,15 +90,19 @@ export default function Header() {
     setSearchQuery('');
     if (isMobileMenuOpen) setIsMobileMenuOpen(false);
   };
+  
+  const handleMobileLinkClick = () => {
+    setIsMobileMenuOpen(false);
+  }
 
-  const renderCategoryTree = (nodes: StoreCategory[], parentSlug = '') => {
+  const renderCategoryTree = (nodes: typeof staticCategories, parentSlug = '') => {
     return nodes.map(node => {
       const currentSlug = `${parentSlug}/${createSlug(node.name)}`;
       if (node.children && node.children.length > 0) {
         return (
-          <Collapsible key={node.id} className="group">
+          <Collapsible key={node.name} className="group">
             <CollapsibleTrigger className="flex w-full items-center justify-between py-2 text-left text-sm font-medium">
-              <Link href={`/category${currentSlug}`} className="flex-grow">{node.name}</Link>
+              <Link href={`/category${currentSlug}`} onClick={handleMobileLinkClick} className="flex-grow">{node.name}</Link>
               <ChevronRight className="h-4 w-4 transition-transform duration-200 group-data-[state=open]:rotate-90" />
             </CollapsibleTrigger>
             <CollapsibleContent className="pl-4">
@@ -172,8 +114,8 @@ export default function Header() {
         );
       }
       return (
-        <li key={node.id}>
-          <Link href={`/category${currentSlug}`} className="block py-2 text-sm">
+        <li key={node.name}>
+          <Link href={`/category${currentSlug}`} onClick={handleMobileLinkClick} className="block py-2 text-sm">
             {node.name}
           </Link>
         </li>
@@ -181,25 +123,17 @@ export default function Header() {
     });
   };
 
-  if (!treeReady) {
-    return (
-      <header className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur-sm h-20 flex items-center px-4">
-        <Logo />
-      </header>
-    );
-  }
-
   const desktopNav = (
     <NavigationMenu>
       <NavigationMenuList>
-        {categoryTree.map(category => (
-          <NavigationMenuItem key={category.id}>
+        {staticCategories.map(category => (
+          <NavigationMenuItem key={category.name}>
             <NavigationMenuTrigger>{category.name}</NavigationMenuTrigger>
             <NavigationMenuContent>
               <ul className="grid w-[400px] gap-3 p-4 md:w-[500px] md:grid-cols-2 lg:w-[600px]">
                 {category.children.map((component) => (
                   <ListItem
-                    key={component.id}
+                    key={component.name}
                     title={component.name}
                     href={`/category/${createSlug(category.name)}/${createSlug(component.name)}`}
                   />
@@ -210,11 +144,11 @@ export default function Header() {
         ))}
 
         <NavigationMenuItem>
-            <NavigationMenuLink asChild className={navigationMenuTriggerStyle()}>
-              <Link href="/blog">
+            <Link href="/blog" legacyBehavior passHref>
+              <NavigationMenuLink className={navigationMenuTriggerStyle()}>
                 Blog
-              </Link>
-            </NavigationMenuLink>
+              </NavigationMenuLink>
+            </Link>
         </NavigationMenuItem>
       </NavigationMenuList>
     </NavigationMenu>
@@ -224,7 +158,7 @@ export default function Header() {
     <div className={`fixed inset-0 z-50 bg-background transition-transform duration-300 md:hidden 
       ${isMobileMenuOpen ? 'translate-x-0' : 'translate-x-full'}`}>
       <div className="flex h-16 items-center justify-between border-b px-4">
-        <Link href="/" onClick={() => setIsMobileMenuOpen(false)}>
+        <Link href="/" onClick={handleMobileLinkClick}>
           <Logo />
         </Link>
         <Button variant="ghost" size="icon" onClick={() => setIsMobileMenuOpen(false)}>
@@ -244,7 +178,7 @@ export default function Header() {
         </form>
 
         <nav className="flex flex-col divide-y">
-          {renderCategoryTree(categoryTree)}
+          {renderCategoryTree(staticCategories)}
         </nav>
       </div>
     </div>
