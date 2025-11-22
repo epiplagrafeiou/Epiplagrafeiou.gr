@@ -1,6 +1,7 @@
+
 'use client';
 
-import { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Logo } from '@/components/icons/Logo';
@@ -33,32 +34,36 @@ import {
   NavigationMenuLink,
   NavigationMenuList,
   NavigationMenuTrigger,
-  navigationMenuTriggerStyle,
 } from "@/components/ui/navigation-menu";
 import { createSlug, cn } from '@/lib/utils';
 import { useWishlist } from '@/lib/wishlist-context';
 import type { StoreCategory } from '@/components/admin/CategoryManager';
-import React from 'react';
+import Image from 'next/image';
+
 
 const ListItem = React.forwardRef<
   React.ElementRef<"a">,
-  React.ComponentPropsWithoutRef<"a">
->(({ className, title, children, ...props }, ref) => {
+  React.ComponentPropsWithoutRef<"a"> & { image?: string }
+>(({ className, title, children, image, ...props }, ref) => {
   return (
     <li>
       <NavigationMenuLink asChild>
         <a
           ref={ref}
           className={cn(
-            "block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground",
+            "group flex h-full w-full flex-col items-start gap-2 rounded-md p-2 no-underline transition-colors hover:bg-accent/50",
             className
           )}
           {...props}
         >
-          <div className="text-sm font-medium leading-none">{title}</div>
-          <p className="line-clamp-2 text-sm leading-snug text-muted-foreground">
-            {children}
-          </p>
+          <div className="flex h-20 w-full items-center justify-center overflow-hidden rounded-md bg-muted/30">
+            {image ? (
+              <Image src={image} alt={title || ''} width={80} height={80} className="h-full w-full object-contain transition-transform group-hover:scale-105" />
+            ) : (
+              <div className="text-xs text-muted-foreground">{title}</div>
+            )}
+          </div>
+          <div className="text-sm font-medium text-foreground">{title}</div>
         </a>
       </NavigationMenuLink>
     </li>
@@ -75,25 +80,17 @@ export default function Header() {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
 
-  // ──────────────────────────────────────────────────────────
-  // FIRESTORE CATEGORY FETCH
-  // ──────────────────────────────────────────────────────────
   const firestore = useFirestore();
   const categoriesQuery = useMemoFirebase(() => {
     if (!firestore) return null;
     return collection(firestore, 'categories');
   }, [firestore]);
 
-  const { data: fetchedCategories } =
-    useCollection<Omit<StoreCategory, 'children'>>(categoriesQuery);
+  const { data: fetchedCategories } = useCollection<Omit<StoreCategory, 'children'>>(categoriesQuery);
 
-  // ──────────────────────────────────────────────────────────
-  // CATEGORY TREE (DUPE FIXED)
-  // ──────────────────────────────────────────────────────────
   const categoryTree = useMemo(() => {
     if (!fetchedCategories) return [];
 
-    // 1. Normalize category parentId
     const normalized = fetchedCategories.map(cat => ({
       ...cat,
       parentId: cat.parentId === '' || cat.parentId == null ? null : cat.parentId
@@ -102,18 +99,12 @@ export default function Header() {
     const categoriesById: Record<string, StoreCategory> = {};
     const rootCategories: StoreCategory[] = [];
 
-    // 2. Construct base structure
     normalized.forEach(cat => {
-      categoriesById[cat.id] = {
-        ...cat,
-        children: []
-      };
+      categoriesById[cat.id] = { ...cat, children: [] };
     });
 
-    // 3. Build tree safely (no duplicates)
     normalized.forEach(cat => {
       const node = categoriesById[cat.id];
-
       if (node.parentId && categoriesById[node.parentId]) {
         categoriesById[node.parentId].children.push(node);
       } else {
@@ -123,25 +114,17 @@ export default function Header() {
       }
     });
 
-    // 4. Sort children recursively
     const sortRecursive = (list: StoreCategory[]) => {
       list.forEach(c => sortRecursive(c.children));
       list.sort((a, b) => (a.order || 0) - (b.order || 0));
     };
     sortRecursive(rootCategories);
-
-    // 5. Custom main-category order
+    
     const desiredOrder = [
-      'ΓΡΑΦΕΙΟ',
-      'ΣΑΛΟΝΙ',
-      'ΚΡΕΒΑΤΟΚΑΜΑΡΑ',
-      'ΕΞΩΤΕΡΙΚΟΣ ΧΩΡΟΣ',
-      'ΑΞΕΣΟΥΑΡ',
-      'ΦΩΤΙΣΜΟΣ',
-      'ΔΙΑΚΟΣΜΗΣΗ',
-      'ΧΡΙΣΤΟΥΓΕΝΝΙΑΤΙΚΑ'
+      'ΓΡΑΦΕΙΟ', 'ΣΑΛΟΝΙ', 'ΚΡΕΒΑΤΟΚΑΜΑΡΑ', 'ΕΞΩΤΕΡΙΚΟΣ ΧΩΡΟΣ', 
+      'ΑΞΕΣΟΥΑΡ', 'ΦΩΤΙΣΜΟΣ', 'ΔΙΑΚΟΣΜΗΣΗ', 'ΧΡΙΣΤΟΥΓΕΝΝΙΑΤΙΚΑ'
     ];
-
+    
     rootCategories.sort((a, b) => {
       const A = desiredOrder.indexOf(a.name.toUpperCase());
       const B = desiredOrder.indexOf(b.name.toUpperCase());
@@ -151,10 +134,6 @@ export default function Header() {
     return rootCategories;
   }, [fetchedCategories]);
 
-
-  // ──────────────────────────────────────────────────────────
-  // SEARCH HANDLER
-  // ──────────────────────────────────────────────────────────
   const handleSearch = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!searchQuery.trim()) return;
@@ -163,10 +142,6 @@ export default function Header() {
     if (isMobileMenuOpen) setIsMobileMenuOpen(false);
   };
 
-
-  // ──────────────────────────────────────────────────────────
-  // CATEGORY TREE FOR MOBILE (COLLAPSIBLE)
-  // ──────────────────────────────────────────────────────────
   const renderCategoryTree = (nodes: StoreCategory[], parentSlug = '') => {
     return nodes.map(node => {
       const currentSlug = `${parentSlug}/${createSlug(node.name)}`;
@@ -199,10 +174,6 @@ export default function Header() {
     });
   };
 
-
-  // ──────────────────────────────────────────────────────────
-  // DESKTOP NAV
-  // ──────────────────────────────────────────────────────────
   const desktopNav = (
     <NavigationMenu>
       <NavigationMenuList>
@@ -210,34 +181,41 @@ export default function Header() {
           <NavigationMenuItem key={category.id}>
             <NavigationMenuTrigger>{category.name}</NavigationMenuTrigger>
             <NavigationMenuContent>
-              <ul className="grid w-[400px] gap-3 p-4 md:w-[500px] md:grid-cols-2 lg:w-[600px]">
-                {category.children.map(child => (
-                  <ListItem
-                    key={child.id}
-                    title={child.name}
-                    href={`/category/${createSlug(category.name)}/${createSlug(child.name)}`}
+              <div className="flex w-screen max-w-4xl gap-6 p-4">
+                <ul className="grid flex-1 grid-cols-2 gap-3 md:grid-cols-3">
+                  {(category.children || []).map(child => (
+                    <ListItem
+                      key={child.id}
+                      title={child.name}
+                      href={`/category/${createSlug(category.name)}/${createSlug(child.name)}`}
+                      image={(child as any).image} // Placeholder for subcategory image
+                    />
+                  ))}
+                </ul>
+                <div className="relative hidden w-1/3 overflow-hidden rounded-md lg:block">
+                  <Image 
+                    src={(category as any).promoImage || "https://picsum.photos/seed/promo/400/600"} 
+                    alt={`${category.name} Promotion`} 
+                    fill 
+                    className="object-cover" 
                   />
-                ))}
-              </ul>
+                </div>
+              </div>
             </NavigationMenuContent>
           </NavigationMenuItem>
         ))}
 
         <NavigationMenuItem>
-          <Link href="/blog" legacyBehavior passHref>
-            <NavigationMenuLink className={navigationMenuTriggerStyle()}>
-              Blog
-            </NavigationMenuLink>
-          </Link>
+            <Link href="/blog" legacyBehavior passHref>
+                 <NavigationMenuLink className="group inline-flex h-10 w-max items-center justify-center rounded-md bg-background px-4 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground focus:outline-none disabled:pointer-events-none disabled:opacity-50 data-[active]:bg-accent/50 data-[state=open]:bg-accent/50">
+                    Blog
+                </NavigationMenuLink>
+            </Link>
         </NavigationMenuItem>
       </NavigationMenuList>
     </NavigationMenu>
   );
 
-
-  // ──────────────────────────────────────────────────────────
-  // MOBILE NAV
-  // ──────────────────────────────────────────────────────────
   const mobileNav = (
     <div className={`fixed inset-0 z-50 bg-background transition-transform duration-300 md:hidden ${isMobileMenuOpen ? 'translate-x-0' : 'translate-x-full'}`}>
       <div className="flex h-16 items-center justify-between border-b px-4">
@@ -267,10 +245,6 @@ export default function Header() {
     </div>
   );
 
-
-  // ──────────────────────────────────────────────────────────
-  // HEADER LAYOUT
-  // ──────────────────────────────────────────────────────────
   return (
     <header className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur-sm">
       <div className="container mx-auto px-4">
