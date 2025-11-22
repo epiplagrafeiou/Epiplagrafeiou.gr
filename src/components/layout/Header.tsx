@@ -14,7 +14,7 @@ import {
   Menu,
   X,
   Heart,
-  ChevronRight
+  ChevronRight,
 } from 'lucide-react';
 import { useCart } from '@/lib/cart-context';
 import { useUser } from '@/firebase';
@@ -34,16 +34,17 @@ import {
   NavigationMenuLink,
   NavigationMenuList,
   NavigationMenuTrigger,
-} from "@/components/ui/navigation-menu";
+  navigationMenuTriggerStyle,
+  NavigationMenuViewport,
+} from '@/components/ui/navigation-menu';
 import { createSlug, cn } from '@/lib/utils';
 import { useWishlist } from '@/lib/wishlist-context';
 import type { StoreCategory } from '@/components/admin/CategoryManager';
 import Image from 'next/image';
 
-
 const ListItem = React.forwardRef<
-  React.ElementRef<"a">,
-  React.ComponentPropsWithoutRef<"a"> & { image?: string }
+  React.ElementRef<'a'>,
+  React.ComponentPropsWithoutRef<'a'> & { image?: string }
 >(({ className, title, children, image, ...props }, ref) => {
   return (
     <li>
@@ -51,26 +52,34 @@ const ListItem = React.forwardRef<
         <a
           ref={ref}
           className={cn(
-            "group flex h-full w-full flex-col items-start gap-2 rounded-md p-2 no-underline transition-colors hover:bg-accent/50",
+            'group flex h-full w-full select-none flex-col rounded-md p-2 no-underline outline-none transition-colors hover:bg-accent/50 focus:bg-accent/50',
             className
           )}
           {...props}
         >
-          <div className="flex h-20 w-full items-center justify-center overflow-hidden rounded-md bg-muted/30">
+          <div className="relative h-20 w-full overflow-hidden rounded-md bg-secondary">
             {image ? (
-              <Image src={image} alt={title || ''} width={80} height={80} className="h-full w-full object-contain transition-transform group-hover:scale-105" />
+              <Image
+                src={image}
+                alt={title || ''}
+                fill
+                className="object-contain transition-transform duration-300 group-hover:scale-105"
+              />
             ) : (
-              <div className="text-xs text-muted-foreground">{title}</div>
+              <div className="flex h-full w-full items-center justify-center text-xs text-muted-foreground">
+                {title}
+              </div>
             )}
           </div>
-          <div className="text-sm font-medium text-foreground">{title}</div>
+          <div className="mt-2 text-sm font-medium leading-tight text-foreground">
+            {title}
+          </div>
         </a>
       </NavigationMenuLink>
     </li>
   );
 });
-ListItem.displayName = "ListItem";
-
+ListItem.displayName = 'ListItem';
 
 export default function Header() {
   const { itemCount } = useCart();
@@ -85,46 +94,53 @@ export default function Header() {
     if (!firestore) return null;
     return collection(firestore, 'categories');
   }, [firestore]);
-
-  const { data: fetchedCategories } = useCollection<Omit<StoreCategory, 'children'>>(categoriesQuery);
+  const { data: fetchedCategories } =
+    useCollection<Omit<StoreCategory, 'children'>>(categoriesQuery);
 
   const categoryTree = useMemo(() => {
     if (!fetchedCategories) return [];
 
-    const normalized = fetchedCategories.map(cat => ({
+    const normalized = fetchedCategories.map((cat) => ({
       ...cat,
-      parentId: cat.parentId === '' || cat.parentId == null ? null : cat.parentId
+      parentId:
+        cat.parentId === '' || cat.parentId == null ? null : cat.parentId,
     }));
 
     const categoriesById: Record<string, StoreCategory> = {};
     const rootCategories: StoreCategory[] = [];
 
-    normalized.forEach(cat => {
+    normalized.forEach((cat) => {
       categoriesById[cat.id] = { ...cat, children: [] };
     });
 
-    normalized.forEach(cat => {
+    normalized.forEach((cat) => {
       const node = categoriesById[cat.id];
       if (node.parentId && categoriesById[node.parentId]) {
         categoriesById[node.parentId].children.push(node);
       } else {
-        if (!rootCategories.some(r => r.id === node.id)) {
+        if (!rootCategories.some((r) => r.id === node.id)) {
           rootCategories.push(node);
         }
       }
     });
 
     const sortRecursive = (list: StoreCategory[]) => {
-      list.forEach(c => sortRecursive(c.children));
+      list.forEach((c) => sortRecursive(c.children));
       list.sort((a, b) => (a.order || 0) - (b.order || 0));
     };
     sortRecursive(rootCategories);
-    
+
     const desiredOrder = [
-      'ΓΡΑΦΕΙΟ', 'ΣΑΛΟΝΙ', 'ΚΡΕΒΑΤΟΚΑΜΑΡΑ', 'ΕΞΩΤΕΡΙΚΟΣ ΧΩΡΟΣ', 
-      'ΑΞΕΣΟΥΑΡ', 'ΦΩΤΙΣΜΟΣ', 'ΔΙΑΚΟΣΜΗΣΗ', 'ΧΡΙΣΤΟΥΓΕΝΝΙΑΤΙΚΑ'
+      'ΓΡΑΦΕΙΟ',
+      'ΣΑΛΟΝΙ',
+      'ΚΡΕΒΑΤΟΚΑΜΑΡΑ',
+      'ΕΞΩΤΕΡΙΚΟΣ ΧΩΡΟΣ',
+      'ΑΞΕΣΟΥΑΡ',
+      'ΦΩΤΙΣΜΟΣ',
+      'ΔΙΑΚΟΣΜΗΣΗ',
+      'ΧΡΙΣΤΟΥΓΕΝΝΙΑΤΙΚΑ',
     ];
-    
+
     rootCategories.sort((a, b) => {
       const A = desiredOrder.indexOf(a.name.toUpperCase());
       const B = desiredOrder.indexOf(b.name.toUpperCase());
@@ -142,22 +158,26 @@ export default function Header() {
     if (isMobileMenuOpen) setIsMobileMenuOpen(false);
   };
 
-  const renderCategoryTree = (nodes: StoreCategory[], parentSlug = '') => {
-    return nodes.map(node => {
+  const renderMobileTree = (nodes: StoreCategory[], parentSlug = '') => {
+    return nodes.map((node) => {
       const currentSlug = `${parentSlug}/${createSlug(node.name)}`;
 
       if (node.children && node.children.length > 0) {
         return (
           <Collapsible key={node.id} className="group">
             <CollapsibleTrigger className="flex w-full items-center justify-between py-2 text-left text-sm font-medium">
-              <Link href={`/category${currentSlug}`} onClick={() => setIsMobileMenuOpen(false)} className="flex-grow">
+              <Link
+                href={`/category${currentSlug}`}
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="flex-grow"
+              >
                 {node.name}
               </Link>
               <ChevronRight className="h-4 w-4 transition-transform duration-200 group-data-[state=open]:rotate-90" />
             </CollapsibleTrigger>
             <CollapsibleContent className="pl-4">
               <ul className="space-y-1">
-                {renderCategoryTree(node.children, currentSlug)}
+                {renderMobileTree(node.children, currentSlug)}
               </ul>
             </CollapsibleContent>
           </Collapsible>
@@ -166,7 +186,11 @@ export default function Header() {
 
       return (
         <li key={node.id}>
-          <Link href={`/category${currentSlug}`} onClick={() => setIsMobileMenuOpen(false)} className="block py-2 text-sm">
+          <Link
+            href={`/category${currentSlug}`}
+            onClick={() => setIsMobileMenuOpen(false)}
+            className="block py-2 text-sm"
+          >
             {node.name}
           </Link>
         </li>
@@ -177,28 +201,38 @@ export default function Header() {
   const desktopNav = (
     <NavigationMenu>
       <NavigationMenuList>
-        {categoryTree.map(category => (
+        {categoryTree.map((category) => (
           <NavigationMenuItem key={category.id}>
             <NavigationMenuTrigger>{category.name}</NavigationMenuTrigger>
             <NavigationMenuContent>
-              <div className="flex w-screen max-w-4xl gap-6 p-4">
-                <ul className="grid flex-1 grid-cols-2 gap-3 md:grid-cols-3">
-                  {(category.children || []).map(child => (
+              <div className="grid w-screen max-w-4xl grid-cols-[2fr_1fr] gap-6 p-4">
+                <ul className="grid grid-cols-2 gap-3 md:grid-cols-3">
+                  {(category.children || []).map((child) => (
                     <ListItem
                       key={child.id}
                       title={child.name}
-                      href={`/category/${createSlug(category.name)}/${createSlug(child.name)}`}
+                      href={`/category/${createSlug(category.name)}/${createSlug(
+                        child.name
+                      )}`}
                       image={(child as any).image} // Placeholder for subcategory image
                     />
                   ))}
                 </ul>
-                <div className="relative hidden w-1/3 overflow-hidden rounded-md lg:block">
-                  <Image 
-                    src={(category as any).promoImage || "https://picsum.photos/seed/promo/400/600"} 
-                    alt={`${category.name} Promotion`} 
-                    fill 
-                    className="object-cover" 
+                <div className="relative hidden h-full min-h-[300px] w-full overflow-hidden rounded-md lg:block">
+                  <Image
+                    src={
+                      (category as any).promoImage ||
+                      'https://picsum.photos/seed/promo/400/600'
+                    }
+                    alt={`${category.name} Promotion`}
+                    fill
+                    className="object-cover"
                   />
+                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                   <div className="absolute bottom-4 left-4 text-white">
+                        <h3 className="text-lg font-bold">{category.name}</h3>
+                        <p className="text-sm">Ανακάλυψε τις προσφορές μας</p>
+                   </div>
                 </div>
               </div>
             </NavigationMenuContent>
@@ -206,41 +240,60 @@ export default function Header() {
         ))}
 
         <NavigationMenuItem>
-            <Link href="/blog" legacyBehavior passHref>
-                 <NavigationMenuLink className="group inline-flex h-10 w-max items-center justify-center rounded-md bg-background px-4 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground focus:outline-none disabled:pointer-events-none disabled:opacity-50 data-[active]:bg-accent/50 data-[state=open]:bg-accent/50">
-                    Blog
-                </NavigationMenuLink>
-            </Link>
+          <Link href="/blog" legacyBehavior passHref>
+            <NavigationMenuLink className={navigationMenuTriggerStyle()}>
+              Blog
+            </NavigationMenuLink>
+          </Link>
         </NavigationMenuItem>
       </NavigationMenuList>
+      <NavigationMenuViewport />
     </NavigationMenu>
   );
 
   const mobileNav = (
-    <div className={`fixed inset-0 z-50 bg-background transition-transform duration-300 md:hidden ${isMobileMenuOpen ? 'translate-x-0' : 'translate-x-full'}`}>
-      <div className="flex h-16 items-center justify-between border-b px-4">
-        <Link href="/" onClick={() => setIsMobileMenuOpen(false)}>
-          <Logo />
-        </Link>
-        <Button variant="ghost" size="icon" onClick={() => setIsMobileMenuOpen(false)}>
-          <X className="h-6 w-6 text-foreground" />
-        </Button>
-      </div>
+    <div
+      className={`fixed inset-0 z-50 transition-opacity duration-300 md:hidden ${
+        isMobileMenuOpen
+          ? 'pointer-events-auto opacity-100'
+          : 'pointer-events-none opacity-0'
+      }`}
+    >
+      <div
+        className="absolute inset-0 bg-black/50"
+        onClick={() => setIsMobileMenuOpen(false)}
+      />
+      <div
+        className={`absolute right-0 top-0 h-full w-[90%] max-w-[420px] transform bg-background shadow-lg transition-transform duration-300 ${
+          isMobileMenuOpen ? 'translate-x-0' : 'translate-x-full'
+        }`}
+      >
+        <div className="flex h-16 items-center justify-between border-b px-4">
+          <Link href="/" onClick={() => setIsMobileMenuOpen(false)}>
+            <Logo />
+          </Link>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setIsMobileMenuOpen(false)}
+          >
+            <X className="h-6 w-6 text-foreground" />
+          </Button>
+        </div>
 
-      <div className="p-4 overflow-y-auto h-[calc(100vh-4rem)]">
-        <form onSubmit={handleSearch} className="relative mb-4">
-          <Input 
-            placeholder="Αναζήτηση..." 
-            className="pr-10" 
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
-          <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-        </form>
+        <div className="h-[calc(100vh-4rem)] overflow-y-auto">
+          <form onSubmit={handleSearch} className="p-4">
+            <Input
+              placeholder="Αναζήτηση..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </form>
 
-        <nav className="flex flex-col divide-y">
-          {renderCategoryTree(categoryTree)}
-        </nav>
+          <nav className="flex flex-col divide-y">
+            {renderMobileTree(categoryTree)}
+          </nav>
+        </div>
       </div>
     </div>
   );
@@ -250,7 +303,12 @@ export default function Header() {
       <div className="container mx-auto px-4">
         <div className="flex h-20 items-center justify-between gap-4">
           <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" className="md:hidden" onClick={() => setIsMobileMenuOpen(true)}>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="md:hidden"
+              onClick={() => setIsMobileMenuOpen(true)}
+            >
               <Menu className="h-6 w-6 text-foreground" />
             </Button>
             <Link href="/" className="shrink-0">
@@ -272,13 +330,23 @@ export default function Header() {
 
           <div className="flex items-center gap-2">
             <LoginDialog>
-              <Button variant="ghost" className="hidden md:flex items-center gap-2">
+              <Button
+                variant="ghost"
+                className="hidden md:flex items-center gap-2"
+              >
                 <User className="text-foreground" />
-                <span className="text-sm font-medium text-foreground">Σύνδεση/Εγγραφή</span>
+                <span className="text-sm font-medium text-foreground">
+                  Σύνδεση/Εγγραφή
+                </span>
               </Button>
             </LoginDialog>
 
-            <Button variant="ghost" size="icon" asChild className="hidden md:inline-flex relative">
+            <Button
+              variant="ghost"
+              size="icon"
+              asChild
+              className="hidden md:inline-flex relative"
+            >
               <Link href="/wishlist">
                 <Heart className="text-foreground" />
                 {wishlistCount > 0 && (
@@ -313,3 +381,4 @@ export default function Header() {
     </header>
   );
 }
+
