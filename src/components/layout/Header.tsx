@@ -40,24 +40,12 @@ import { useFirestore, useMemoFirebase } from '@/firebase';
 import { useCollection } from '@/firebase/firestore/use-collection';
 import { collection } from 'firebase/firestore';
 
-/**
- * Full Header with:
- * - immediate static menu (no flicker)
- * - merges Firestore categories when available
- * - deduplicates categories by id/name
- * - desktop mega dropdown with subcategory tiles + promo image
- * - mobile drawer with collapsible groups and dark backdrop
- *
- * Replace or extend staticCategories with your own images/slugs.
- */
-
-/* -------------------- Static fallback (immediate render) -------------------- */
 const staticCategories: Array<{
   id?: string;
   name: string;
   slug?: string;
   children?: { id?: string; name: string; slug?: string; image?: string }[];
-  promoImage?: string; // large right-side image for mega menu
+  promoImage?: string; 
 }> = [
   {
     id: 'static-grafeio',
@@ -135,7 +123,6 @@ const staticCategories: Array<{
   }
 ];
 
-/* --------------------------- Helper Utilities --------------------------- */
 function normalizeNameKey(s: string | undefined) {
   return (s || '').trim().toLowerCase().replace(/\s+/g, ' ');
 }
@@ -145,7 +132,6 @@ function buildCategorySlug(mainName: string, childName?: string) {
   return `/category/${createSlug(mainName)}/${createSlug(childName)}`;
 }
 
-/* --------------------------- Header Component --------------------------- */
 export default function Header() {
   const { itemCount } = useCart();
   const { wishlistCount } = useWishlist();
@@ -154,7 +140,6 @@ export default function Header() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
   const [searchQuery, setSearchQuery] = React.useState('');
 
-  /* -------------------- Firestore categories (optional) -------------------- */
   const firestore = useFirestore();
   const categoriesQuery = useMemoFirebase(() => {
     if (!firestore) return null;
@@ -162,7 +147,6 @@ export default function Header() {
   }, [firestore]);
   const { data: fetchedCategories } = useCollection<Omit<StoreCategory, 'children'>>(categoriesQuery);
 
-  /* -------------------- merged categories state (no flicker) -------------------- */
   const [menuCategories, setMenuCategories] = useState(() => {
     return staticCategories.map((c) => ({
       ...c,
@@ -174,7 +158,6 @@ export default function Header() {
     }));
   });
 
-  /* --------------------- Merge + dedupe when Firestore arrives --------------------- */
   useEffect(() => {
     if (!fetchedCategories) return;
 
@@ -233,9 +216,9 @@ export default function Header() {
     });
 
     setMenuCategories(merged);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fetchedCategories]);
 
-  /* -------------------------- Helpers for rendering -------------------------- */
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (!searchQuery.trim()) return;
@@ -244,7 +227,6 @@ export default function Header() {
     setIsMobileMenuOpen(false);
   };
 
-  /* ---------------------------- Desktop Mega Menu --------------------------- */
   const desktopMenu = (
     <NavigationMenu>
       <NavigationMenuList>
@@ -292,17 +274,16 @@ export default function Header() {
         ))}
 
         <NavigationMenuItem>
-            <Link href="/blog" legacyBehavior passHref>
-                <NavigationMenuLink className={navigationMenuTriggerStyle()}>
-                Blog
-                </NavigationMenuLink>
-            </Link>
+           <Link href="/blog" legacyBehavior passHref>
+              <NavigationMenuLink className={navigationMenuTriggerStyle()}>
+              Blog
+              </NavigationMenuLink>
+          </Link>
         </NavigationMenuItem>
       </NavigationMenuList>
     </NavigationMenu>
   );
 
-  /* ---------------------------- Mobile Drawer Menu --------------------------- */
   const renderMobileTree = (nodes: typeof menuCategories) => {
     return nodes.map((main) => (
       <div key={main.id || main.name} className="border-b">
@@ -311,29 +292,27 @@ export default function Header() {
             <Link href={`/category/${createSlug(main.name)}`} onClick={() => setIsMobileMenuOpen(false)}>
               {main.name}
             </Link>
-            {(main.children && main.children.length > 0) && <ChevronRight className="h-4 w-4" />}
+            <ChevronRight className="h-4 w-4" />
           </CollapsibleTrigger>
-          {(main.children && main.children.length > 0) && (
-            <CollapsibleContent className="pl-4 pb-2">
-                <ul className="space-y-1">
-                {(main.children || []).map((sub) => (
-                    <li key={sub.id || sub.name}>
-                    <Link
-                        href={
-                        sub.slug
-                            ? `/category/${sub.slug}`
-                            : buildCategorySlug(main.name, sub.name)
-                        }
-                        onClick={() => setIsMobileMenuOpen(false)}
-                        className="block px-4 py-2 text-sm"
-                    >
-                        {sub.name}
-                    </Link>
-                    </li>
-                ))}
-                </ul>
-            </CollapsibleContent>
-          )}
+          <CollapsibleContent className="pl-4 pb-2">
+            <ul className="space-y-1">
+              {(main.children || []).map((sub) => (
+                <li key={sub.id || sub.name}>
+                  <Link
+                    href={
+                      sub.slug
+                        ? `/category/${sub.slug}`
+                        : buildCategorySlug(main.name, sub.name)
+                    }
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className="block px-4 py-2 text-sm"
+                  >
+                    {sub.name}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </CollapsibleContent>
         </Collapsible>
       </div>
     ));
@@ -450,3 +429,5 @@ export default function Header() {
     </>
   );
 }
+
+    
