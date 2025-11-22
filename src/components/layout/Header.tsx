@@ -1,10 +1,9 @@
-
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import Image from 'next/image';
+import { useRouter } from 'next/navigation';
 import { Logo } from '@/components/icons/Logo';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -18,7 +17,9 @@ import {
   ChevronRight,
 } from 'lucide-react';
 import { useCart } from '@/lib/cart-context';
-import { useUser } from '@/firebase';
+import { useUser, useFirestore, useMemoFirebase } from '@/firebase';
+import { useCollection } from '@/firebase/firestore/use-collection';
+import { collection } from 'firebase/firestore';
 import { LoginDialog } from '@/components/layout/LoginDialog';
 import {
   Collapsible,
@@ -26,16 +27,20 @@ import {
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
 import {
-    NavigationMenu,
-    NavigationMenuContent,
-    NavigationMenuItem,
-    NavigationMenuLink,
-    NavigationMenuList,
-    NavigationMenuTrigger,
-    navigationMenuTriggerStyle,
-} from "@/components/ui/navigation-menu";
+  NavigationMenu,
+  NavigationMenuContent,
+  NavigationMenuItem,
+  NavigationMenuLink,
+  NavigationMenuList,
+  NavigationMenuTrigger,
+  navigationMenuTriggerStyle,
+} from '@/components/ui/navigation-menu';
+import { createSlug, cn } from '@/lib/utils';
 import { useWishlist } from '@/lib/wishlist-context';
+import type { StoreCategory } from '@/components/admin/CategoryManager';
 
+// This is a static representation of your category structure.
+// It ensures the menu is interactive immediately on page load.
 const mainCategories: Array<{
   name: string;
   slug: string;
@@ -131,6 +136,39 @@ export default function Header() {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
 
+  const firestore = useFirestore();
+  const categoriesQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return collection(firestore, 'categories');
+  }, [firestore]);
+  
+  const { data: fetchedCategories } = useCollection<Omit<StoreCategory, 'children'>>(categoriesQuery);
+
+  const categoryTree = useMemo(() => {
+    if (!fetchedCategories || fetchedCategories.length === 0) {
+      return mainCategories; 
+    }
+
+    const categoriesById: Record<string, StoreCategory & { children: StoreCategory[] }> = {};
+    const rootCategories: (StoreCategory & { children: StoreCategory[] })[] = [];
+
+    fetchedCategories.forEach(cat => {
+      categoriesById[cat.id] = { ...cat, children: [] };
+    });
+
+    fetchedCategories.forEach(cat => {
+      if (cat.parentId && categoriesById[cat.parentId]) {
+        categoriesById[cat.parentId].children.push(categoriesById[cat.id]);
+      } else {
+        rootCategories.push(categoriesById[cat.id]);
+      }
+    });
+    
+    // Fallback to static if tree is empty after processing
+    return rootCategories.length > 0 ? rootCategories : mainCategories;
+  }, [fetchedCategories]);
+
+
   const handleSearch = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!searchQuery.trim()) return;
@@ -139,7 +177,7 @@ export default function Header() {
     if (isMobileMenuOpen) setIsMobileMenuOpen(false);
   };
   
-  const renderMobileTree = (nodes: typeof mainCategories) => {
+  const renderMobileTree = (nodes: typeof categoryTree) => {
     return nodes.map((main) => (
       <Collapsible key={main.slug} className="border-b">
         <CollapsibleTrigger className="flex w-full items-center justify-between px-4 py-3 text-left text-base font-semibold">
@@ -176,31 +214,35 @@ export default function Header() {
   const desktopNav = (
       <NavigationMenu>
         <NavigationMenuList>
-        {mainCategories.map(category => (
+        {categoryTree.map(category => (
             <NavigationMenuItem key={category.slug}>
                 <NavigationMenuTrigger>{category.name}</NavigationMenuTrigger>
                 <NavigationMenuContent>
-                    <div className="flex w-screen max-w-4xl p-6">
-                        <ul className="grid grid-cols-3 gap-x-6 gap-y-4 w-2/3">
-                            {category.children.map(child => (
-                                <li key={child.slug} className="group">
-                                   <Link href={`/category/${category.slug}/${child.slug}`} legacyBehavior passHref>
-                                     <NavigationMenuLink className="flex flex-col items-center gap-2 text-center no-underline">
-                                        <div className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-md bg-muted/30 transition-colors group-hover:bg-muted/60">
-                                            <Image src={child.image} alt={child.name} width={64} height={64} className="h-auto w-auto max-h-[64px] max-w-[64px]" unoptimized/>
-                                        </div>
-                                        <span className="text-sm font-medium text-foreground group-hover:text-primary">{child.name}</span>
-                                      </NavigationMenuLink>
-                                   </Link>
-                                </li>
-                            ))}
-                        </ul>
-                        <div className="w-1/3">
-                            <Link href={`/category/${category.slug}`} className="block h-full w-full overflow-hidden rounded-lg">
-                                <Image src={category.promoImage} alt={category.name} width={400} height={400} className="h-full w-full object-cover" />
-                            </Link>
+                  <div className="absolute left-0 top-0 w-full">
+                    <div className="container mx-auto">
+                        <div className="flex gap-6 p-6">
+                            <ul className="grid grid-cols-3 gap-x-6 gap-y-4 w-2/3">
+                                {(category.children || []).map(child => (
+                                    <li key={child.slug} className="group">
+                                    <Link href={`/category/${category.slug}/${child.slug}`} legacyBehavior passHref>
+                                        <NavigationMenuLink className="flex flex-col items-center gap-2 text-center no-underline">
+                                            <div className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-md bg-muted/30 transition-colors group-hover:bg-muted/60">
+                                                <Image src={child.image} alt={child.name} width={64} height={64} className="h-auto w-auto max-h-[64px] max-w-[64px]" unoptimized/>
+                                            </div>
+                                            <span className="text-sm font-medium text-foreground group-hover:text-primary">{child.name}</span>
+                                        </NavigationMenuLink>
+                                    </Link>
+                                    </li>
+                                ))}
+                            </ul>
+                            <div className="w-1/3">
+                                <Link href={`/category/${category.slug}`} className="block h-full w-full overflow-hidden rounded-lg">
+                                    <Image src={category.promoImage} alt={category.name} width={400} height={400} className="h-full w-full object-cover" />
+                                </Link>
+                            </div>
                         </div>
                     </div>
+                  </div>
                 </NavigationMenuContent>
             </NavigationMenuItem>
         ))}
@@ -229,7 +271,7 @@ export default function Header() {
                 <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
             </form>
             <nav className="flex flex-col bg-background divide-y">
-              {renderMobileTree(mainCategories)}
+              {renderMobileTree(categoryTree)}
             </nav>
         </div>
     </div>
