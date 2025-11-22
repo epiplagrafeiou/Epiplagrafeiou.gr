@@ -112,7 +112,7 @@ export default function XmlImporterPage() {
     }
     // Apply default rule if no specific range matched
     if (!ruleApplied) {
-        const defaultRule = sortedRules.find(r => r.from === 0) || { markup: 0 };
+        const defaultRule = sortedRules.find(r => r.to === 99999) || { markup: 30 };
         markedUpPrice = price * (1 + defaultRule.markup / 100);
     }
     
