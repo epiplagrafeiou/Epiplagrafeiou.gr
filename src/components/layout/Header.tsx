@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState } from 'react';
@@ -34,6 +33,7 @@ import {
   navigationMenuTriggerStyle,
 } from '@/components/ui/navigation-menu';
 import { useWishlist } from '@/lib/wishlist-context';
+import { createSlug } from '@/lib/utils';
 
 const mainCategories = [
     { name: 'ΓΡΑΦΕΙΟ', slug: 'grafeio' },
@@ -76,10 +76,29 @@ export default function Header() {
     ))
   }
 
+  const desktopNav = (
+    <nav className="hidden items-center gap-6 md:flex">
+      <NavigationMenu>
+        <NavigationMenuList>
+          {mainCategories.map((category) => (
+            <NavigationMenuItem key={category.slug}>
+              <Link href={`/category/${category.slug}`} passHref>
+                 <NavigationMenuLink className={navigationMenuTriggerStyle()}>
+                     {category.name}
+                 </NavigationMenuLink>
+              </Link>
+            </NavigationMenuItem>
+          ))}
+        </NavigationMenuList>
+      </NavigationMenu>
+    </nav>
+  );
+
   return (
     <>
       <header className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur-sm">
         <div className="container mx-auto px-4">
+          {/* Top row: Logo, Search, Icons */}
           <div className="flex h-20 items-center justify-between gap-4">
             <div className="flex items-center gap-2 lg:gap-4">
               <div className="lg:hidden">
@@ -92,36 +111,22 @@ export default function Header() {
                 <Logo />
               </Link>
             </div>
-
-            <div className="hidden flex-1 px-4 lg:flex justify-center">
-               <NavigationMenu>
-                    <NavigationMenuList>
-                         {mainCategories.map((category) => (
-                            <NavigationMenuItem key={category.slug}>
-                                <Link href={`/category/${category.slug}`} passHref>
-                                   <NavigationMenuLink className={navigationMenuTriggerStyle()}>
-                                       {category.name}
-                                   </NavigationMenuLink>
-                                </Link>
-                            </NavigationMenuItem>
-                         ))}
-                    </NavigationMenuList>
-                </NavigationMenu>
+            
+            <div className="hidden lg:flex flex-1 justify-center px-8">
+              <form onSubmit={handleSearch} className="w-full max-w-md relative">
+                <Input 
+                    placeholder="Αναζήτηση..." 
+                    className="pr-10" 
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                />
+                <Button type="submit" variant="ghost" size="icon" className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8">
+                    <Search className="h-5 w-5 text-muted-foreground" />
+                </Button>
+              </form>
             </div>
 
             <div className="flex items-center gap-2">
-                <form onSubmit={handleSearch} className="relative hidden md:block">
-                    <Input 
-                        placeholder="Αναζήτηση..." 
-                        className="w-40 sm:w-64 pr-10" 
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                    />
-                    <Button type="submit" variant="ghost" size="icon" className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8">
-                        <Search className="h-5 w-5 text-muted-foreground" />
-                    </Button>
-                </form>
-          
               <LoginDialog>
                 <Button variant="ghost" size="icon" aria-label="My Account">
                     <User />
@@ -152,6 +157,11 @@ export default function Header() {
                 </Link>
               </Button>
             </div>
+          </div>
+          
+          {/* Bottom row: Desktop Navigation */}
+          <div className="hidden h-12 items-center justify-center lg:flex">
+             {desktopNav}
           </div>
         </div>
       </header>
