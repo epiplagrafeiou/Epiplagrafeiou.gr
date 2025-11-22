@@ -1,3 +1,4 @@
+
 'use client';
 import { useState, useMemo, useCallback } from 'react';
 import {
@@ -218,7 +219,7 @@ export default function AdminProductsPage() {
             price: parseFloat(data.price),
             stock: parseInt(data.stock, 10),
             imageId: data.images[0] || '',
-            category: data.category || 'ΓΡΑΦΕΙΟ > Ανταλλακτικά Για Καρέκλες Γραφείου',
+            category: data.category || 'ΓΡΑΦΕΙΟ > Ανταλλακτικά',
         }
         addProducts([newProduct]);
         toast({ title: "Product Added", description: `${data.name} has been added to your store.` });

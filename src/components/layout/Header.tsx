@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useMemo } from 'react';
@@ -84,7 +85,7 @@ export default function Header() {
         { name: 'Ντουλάπες' },
         {
           name: 'Ανταλλακτικά',
-          slug: 'grafeio/antallaktika-gia-karekles-grafeiou',
+          slug: 'grafeio/antallaktika',
         },
         { name: 'Γραφεία υποδοχής / Reception' },
       ],
@@ -322,6 +323,7 @@ export default function Header() {
                     variant="ghost"
                     size="icon"
                     onClick={() => setIsMobileMenuOpen(true)}
+                    className="bg-background"
                 >
                     <Menu className="h-6 w-6 text-foreground" />
                 </Button>
