@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo } from 'next';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
@@ -145,27 +145,43 @@ export default function Header() {
   const { data: fetchedCategories } = useCollection<Omit<StoreCategory, 'children'>>(categoriesQuery);
 
   const categoryTree = useMemo(() => {
-    if (!fetchedCategories || fetchedCategories.length === 0) {
-      return mainCategories; 
-    }
-
+    const categoriesToUse = fetchedCategories && fetchedCategories.length > 0 ? fetchedCategories : mainCategories.flatMap(mc => [{id: mc.slug, name: mc.name, parentId: null, order: 0, rawCategories:[]}, ...mc.children.map(c => ({id: c.slug, name: c.name, parentId: mc.slug, order: 0, rawCategories:[]}))]);
+    
     const categoriesById: Record<string, StoreCategory & { children: StoreCategory[] }> = {};
     const rootCategories: (StoreCategory & { children: StoreCategory[] })[] = [];
 
-    fetchedCategories.forEach(cat => {
+    categoriesToUse.forEach((cat: any) => {
       categoriesById[cat.id] = { ...cat, children: [] };
     });
 
-    fetchedCategories.forEach(cat => {
+    categoriesToUse.forEach((cat: any) => {
       if (cat.parentId && categoriesById[cat.parentId]) {
         categoriesById[cat.parentId].children.push(categoriesById[cat.id]);
       } else {
         rootCategories.push(categoriesById[cat.id]);
       }
     });
-    
-    // Fallback to static if tree is empty after processing
-    return rootCategories.length > 0 ? rootCategories : mainCategories;
+
+    const staticMap = new Map(mainCategories.map(c => [c.name, c]));
+
+    const finalTree = rootCategories.map(root => {
+        const staticData = staticMap.get(root.name);
+        return {
+            ...root,
+            slug: staticData?.slug || createSlug(root.name),
+            promoImage: staticData?.promoImage || '',
+            children: root.children.map(child => {
+                const staticChildData = staticData?.children.find(sc => sc.name === child.name);
+                return {
+                    ...child,
+                    slug: staticChildData?.slug || createSlug(child.name),
+                    image: staticChildData?.image || ''
+                }
+            })
+        }
+    })
+
+    return finalTree;
   }, [fetchedCategories]);
 
 
@@ -227,7 +243,9 @@ export default function Header() {
                                     <Link href={`/category/${category.slug}/${child.slug}`} legacyBehavior passHref>
                                         <NavigationMenuLink className="flex flex-col items-center gap-2 text-center no-underline">
                                             <div className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-md bg-muted/30 transition-colors group-hover:bg-muted/60">
-                                                <Image src={child.image} alt={child.name} width={64} height={64} className="h-auto w-auto max-h-[64px] max-w-[64px]" unoptimized/>
+                                                {child.image ? (
+                                                  <Image src={child.image} alt={child.name} width={64} height={64} className="h-auto w-auto max-h-[64px] max-w-[64px]" unoptimized/>
+                                                ) : <div className="text-xs text-muted-foreground">{child.name}</div> }
                                             </div>
                                             <span className="text-sm font-medium text-foreground group-hover:text-primary">{child.name}</span>
                                         </NavigationMenuLink>
