@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState } from 'react';
@@ -31,7 +32,6 @@ import {
   NavigationMenuList,
   NavigationMenuTrigger,
   navigationMenuTriggerStyle,
-  NavigationMenuViewport
 } from '@/components/ui/navigation-menu';
 import { createSlug, cn } from '@/lib/utils';
 import { useWishlist } from '@/lib/wishlist-context';
@@ -239,29 +239,33 @@ export default function Header() {
           <NavigationMenuItem key={category.id}>
             <NavigationMenuTrigger>{category.name}</NavigationMenuTrigger>
             <NavigationMenuContent>
-                <div className="grid w-full grid-cols-[3fr_1fr] gap-6 p-4 container mx-auto">
-                    <ul className="grid grid-cols-6 gap-3">
-                    {(category.children || []).map((child) => (
-                        <ListItem
-                        key={child.id}
-                        title={child.name}
-                        href={child.href}
-                        image={child.image}
+                <div className="container mx-auto">
+                    <div className="grid w-full grid-cols-[3fr_1fr] gap-6 p-4">
+                        <ul className="grid grid-cols-6 gap-3">
+                        {(category.children || []).map((child) => (
+                           <ListItem
+                              key={child.id}
+                              title={child.name}
+                              href={child.href}
+                              image={child.image}
+                            >
+                                {child.name}
+                            </ListItem>
+                        ))}
+                        </ul>
+                        <div className="relative hidden h-full min-h-[300px] w-full overflow-hidden rounded-md lg:block">
+                        <Image
+                            src={category.promoImage}
+                            alt={`${category.name} Promotion`}
+                            fill
+                            className="object-cover"
                         />
-                    ))}
-                    </ul>
-                    <div className="relative hidden h-full min-h-[300px] w-full overflow-hidden rounded-md lg:block">
-                    <Image
-                        src={category.promoImage}
-                        alt={`${category.name} Promotion`}
-                        fill
-                        className="object-cover"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-                    <div className="absolute bottom-4 left-4 text-white">
-                            <h3 className="text-lg font-bold">{category.name}</h3>
-                            <p className="text-sm">Ανακάλυψε τις προσφορές μας</p>
-                    </div>
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                        <div className="absolute bottom-4 left-4 text-white">
+                                <h3 className="text-lg font-bold">{category.name}</h3>
+                                <p className="text-sm">Ανακάλυψε τις προσφορές μας</p>
+                        </div>
+                        </div>
                     </div>
                 </div>
             </NavigationMenuContent>
