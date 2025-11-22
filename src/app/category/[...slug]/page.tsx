@@ -17,9 +17,9 @@ import Link from 'next/link';
 import type { StoreCategory } from '@/components/admin/CategoryManager';
 
 const featuredCategories = [
-    { name: 'Γραφεία', href: '/category/γραφεία' },
-    { name: 'Καρέκλες Γραφείου', href: '/category/καρέκλες-γραφείου' },
-    { name: 'Βιβλιοθήκες', href: '/category/βιβλιοθήκες' },
+    { name: 'Γραφεία', href: '/category/grafeia' },
+    { name: 'Καρέκλες Γραφείου', href: '/category/karekles-grafeiou' },
+    { name: 'Βιβλιοθήκες', href: '/category/bibliothikes' },
 ]
 
 export default function CategoryPage() {
@@ -53,7 +53,7 @@ export default function CategoryPage() {
     return rootCategories;
   }, [fetchedCategories]);
   
-  const slugPath = useMemo(() => Array.isArray(params.slug) ? params.slug.map(s => decodeURIComponent(s)).join('/') : (params.slug ? decodeURIComponent(params.slug) : ''), [params.slug]);
+  const slugPath = useMemo(() => Array.isArray(params.slug) ? params.slug.join('/') : (params.slug || ''), [params.slug]);
 
   const { currentCategory, breadcrumbs } = useMemo(() => {
     if (categoryTree.length === 0) return { currentCategory: null, breadcrumbs: [] };

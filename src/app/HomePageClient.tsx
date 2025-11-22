@@ -30,14 +30,14 @@ const iconMap: { [key: string]: React.ElementType } = {
 };
 
 const mainCategories = [
-  { name: 'ΓΡΑΦΕΙΟ', slug: 'γραφειο' },
-  { name: 'ΣΑΛΟΝΙ', slug: 'σαλονι' },
-  { name: 'ΚΡΕΒΑΤΟΚΑΜΑΡΑ', slug: 'κρεβατοκαμαρα' },
-  { name: 'ΕΞΩΤΕΡΙΚΟΣ ΧΩΡΟΣ', slug: 'εξωτερικοσ-χωροσ' },
-  { name: 'ΑΞΕΣΟΥΑΡ', slug: 'αξεσουαρ' },
-  { name: 'ΦΩΤΙΣΜΟΣ', slug: 'φωτισμοσ' },
-  { name: 'ΔΙΑΚΟΣΜΗΣΗ', slug: 'διακοσμηση' },
-  { name: 'ΧΡΙΣΤΟΥΓΕΝΝΙΑΤΙΚΑ', slug: 'χριστουγεννιατικα' },
+  { name: 'ΓΡΑΦΕΙΟ', slug: 'grafeio' },
+  { name: 'ΣΑΛΟΝΙ', slug: 'saloni' },
+  { name: 'ΚΡΕΒΑΤΟΚΑΜΑΡΑ', slug: 'krevatokamara' },
+  { name: 'ΕΞΩΤΕΡΙΚΟΣ ΧΩΡΟΣ', slug: 'exoterikos-xoros' },
+  { name: 'ΑΞΕΣΟΥΑΡ', slug: 'aksesouar' },
+  { name: 'ΦΩΤΙΣΜΟΣ', slug: 'fotismos' },
+  { name: 'ΔΙΑΚΟΣΜΗΣΗ', slug: 'diakosmisi' },
+  { name: 'ΧΡΙΣΤΟΥΓΕΝΝΙΑΤΙΚΑ', slug: 'christougenniatika' },
 ];
 
 
@@ -96,7 +96,7 @@ export default function HomePageClient() {
             {mainCategories.map(({ name, slug }) => {
               const Icon = iconMap[name.toUpperCase().trim()] || iconMap.default;
               return (
-              <Link href={`/category/${createSlug(slug)}`} key={slug} className="group flex flex-col items-center gap-3 transition-transform duration-200 hover:-translate-y-2">
+              <Link href={`/category/${slug}`} key={slug} className="group flex flex-col items-center gap-3 transition-transform duration-200 hover:-translate-y-2">
                 <div className="flex h-28 w-28 items-center justify-center rounded-full bg-secondary transition-colors group-hover:bg-primary/10">
                   <Icon className="h-12 w-12 text-muted-foreground transition-colors group-hover:text-primary" />
                 </div>

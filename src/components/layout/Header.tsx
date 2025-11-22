@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Logo } from '@/components/icons/Logo';
@@ -17,7 +17,9 @@ import {
   ChevronRight
 } from 'lucide-react';
 import { useCart } from '@/lib/cart-context';
-import { useUser } from '@/firebase';
+import { useUser, useFirestore, useMemoFirebase } from '@/firebase';
+import { useCollection } from '@/firebase/firestore/use-collection';
+import { collection } from 'firebase/firestore';
 import { LoginDialog } from '@/components/layout/LoginDialog';
 import {
   Collapsible,
@@ -35,18 +37,8 @@ import {
 } from "@/components/ui/navigation-menu"
 import { createSlug, cn } from '@/lib/utils';
 import { useWishlist } from '@/lib/wishlist-context';
+import type { StoreCategory } from '@/components/admin/CategoryManager';
 import React from 'react';
-
-const staticCategories = [
-  { name: 'ΓΡΑΦΕΙΟ', children: [ { name: 'Καρέκλες γραφείου' }, { name: 'Γραφεία' }, { name: 'Συρταριέρες Γραφείου' }, { name: 'Βιβλιοθήκες' }, { name: 'Ραφιέρες / Αποθηκευτικά Κουτιά' }, { name: 'Ντουλάπες' }, { name: 'Ανταλλακτικά' }, { name: 'Γραφεία υποδοχής / Reception' } ] },
-  { name: 'ΣΑΛΟΝΙ', children: [ { name: 'Καναπέδες' }, { name: 'Πολυθρόνες' }, { name: 'Καρέκλες τραπεζαρίας' }, { name: 'Τραπέζια' }, { name: 'Τραπεζάκια σαλονιού' }, { name: 'Τραπεζάκια Βοηθητικά' }, { name: 'Έπιπλα τηλεόρασης' }, { name: 'Συνθέσεις Σαλονιού' }, { name: 'Έπιπλα Εισόδου' }, { name: 'Παπουτσοθήκες' }, { name: 'Μπουφέδες' }, { name: 'Κονσόλες' }, { name: 'Σκαμπώ μπαρ' }, { name: 'Πουφ & Σκαμπό' }, { name: 'Κουρτίνες & Κουρτινόξυλα' } ] },
-  { name: 'ΚΡΕΒΑΤΟΚΑΜΑΡΑ', children: [ { name: 'Κρεβάτια' }, { name: 'Κομοδίνα' }, { name: 'Συρταριέρες' }, { name: 'Ντουλάπες' }, { name: 'Φουσκωτά στρώματα' }, { name: 'Λευκά Είδη' } ] },
-  { name: 'ΕΞΩΤΕΡΙΚΟΣ ΧΩΡΟΣ', children: [ { name: 'Καρέκλες κήπου' }, { name: 'Τραπέζια εξωτερικού χώρου' }, { name: 'Σετ τραπεζαρίες κήπου' }, { name: 'Βάσεις ομπρελών' }, { name: 'Ομπρέλες κήπου / παραλίας' }, { name: 'Κουτιά Αποθήκευσης Κήπου' }, { name: 'Διακόσμηση & Οργάνωση Μπαλκονιού' }, { name: 'Αιώρες Κήπου & Βεράντας' }, { name: 'Λυσεις σκίασης για μπαλκόνι' }, { name: 'Φαναράκια' } ] },
-  { name: 'ΑΞΕΣΟΥΑΡ', children: [ { name: 'Καλόγεροι' }, { name: 'Κρεμάστρες Δαπέδου' }, { name: 'Πολύπριζα' }, { name: 'Βάσεις Τηλεόρασης' }, { name: 'Σταχτοδοχεία' }, { name: 'Στόπ Πόρτας' }, { name: 'Σκάλες' } ] },
-  { name: 'ΦΩΤΙΣΜΟΣ', children: [ { name: 'Φωτιστικά οροφής' }, { name: 'Φωτιστικά Δαπέδου' }, { name: 'Επιτραπέζια φωτιστικά' }, { name: 'Απλίκες' }, { name: 'Ταινίες Led' }, { name: 'Παιδικά φωτιστικά οροφής' }, { name: 'Γιρλάντες απο Σχοινί' }, { name: 'Φώτα Πάρτη' } ] },
-  { name: 'ΔΙΑΚΟΣΜΗΣΗ', children: [ { name: 'Πίνακες' }, { name: 'Καθρέπτες' }, { name: 'Τεχνητά φυτά' }, { name: 'Διακόσμηση τοίχου' }, { name: 'Διακοσμητικά Μαξιλάρια' }, { name: 'Χαλιά' }, { name: 'Κεριά' }, { name: 'Κουβέρτες & Ριχτάρια' }, { name: 'Επένδυση & Διακόσμηση Τοίχου' }, { name: 'Διαχύτες Αρωμάτων' }, { name: 'Κορνίζες' }, { name: 'Ρολόγια' }, { name: 'Ψάθινα & Υφασμάτινα Καλάθια' }, { name: 'Luxury Decor' } ] },
-  { name: 'ΧΡΙΣΤΟΥΓΕΝΝΙΑΤΙΚΑ', children: [ { name: 'Χριστουγεννιάτικα Δέντρα' }, { name: 'Βάσεις Χριστουγεννιάτιων Δέντρων' }, { name: 'Χριστουγεννιάτικα λαμπάκια Led' }, { name: 'Ξύλινα στολίδια δέντρου' }, { name: 'Φάτνη Χριστουγεννων' }, { name: 'Χριστουγεννιάτικα Φωτεινά Στοιχεία' }, { name: 'Χριστουγεννιάτικη Διακόσμηση' }, { name: 'Μινιατούρες & Στοιχεία για το Χριστουγεννιάτικο Χωριό' }, { name: 'Κηροπήγια & Κηροσβέστες' }, { name: 'Χριστουγεννιάτικες Φιγούρες' } ] }
-];
 
 const ListItem = React.forwardRef<
   React.ElementRef<"a">,
@@ -82,6 +74,18 @@ export default function Header() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const router = useRouter();
+
+  const staticCategories = [
+    { name: 'ΓΡΑΦΕΙΟ', children: [ { name: 'Καρέκλες γραφείου' }, { name: 'Γραφεία' }, { name: 'Συρταριέρες Γραφείου' }, { name: 'Βιβλιοθήκες' }, { name: 'Ραφιέρες / Αποθηκευτικά Κουτιά' }, { name: 'Ντουλάπες' }, { name: 'Ανταλλακτικά' }, { name: 'Γραφεία υποδοχής / Reception' } ] },
+    { name: 'ΣΑΛΟΝΙ', children: [ { name: 'Καναπέδες' }, { name: 'Πολυθρόνες' }, { name: 'Καρέκλες τραπεζαρίας' }, { name: 'Τραπέζια' }, { name: 'Τραπεζάκια σαλονιού' }, { name: 'Τραπεζάκια Βοηθητικά' }, { name: 'Έπιπλα τηλεόρασης' }, { name: 'Συνθέσεις Σαλονιού' }, { name: 'Έπιπλα Εισόδου' }, { name: 'Παπουτσοθήκες' }, { name: 'Μπουφέδες' }, { name: 'Κονσόλες' }, { name: 'Σκαμπώ μπαρ' }, { name: 'Πουφ & Σκαμπό' }, { name: 'Κουρτίνες & Κουρτινόξυλα' } ] },
+    { name: 'ΚΡΕΒΑΤΟΚΑΜΑΡΑ', children: [ { name: 'Κρεβάτια' }, { name: 'Κομοδίνα' }, { name: 'Συρταριέρες' }, { name: 'Ντουλάπες' }, { name: 'Φουσκωτά στρώματα' }, { name: 'Λευκά Είδη' } ] },
+    { name: 'ΕΞΩΤΕΡΙΚΟΣ ΧΩΡΟΣ', children: [ { name: 'Καρέκλες κήπου' }, { name: 'Τραπέζια εξωτερικού χώρου' }, { name: 'Σετ τραπεζαρίες κήπου' }, { name: 'Βάσεις ομπρελών' }, { name: 'Ομπρέλες κήπου / παραλίας' }, { name: 'Κουτιά Αποθήκευσης Κήπου' }, { name: 'Διακόσμηση & Οργάνωση Μπαλκονιού' }, { name: 'Αιώρες Κήπου & Βεράντας' }, { name: 'Λυσεις σκίασης για μπαλκόνι' }, { name: 'Φαναράκια' } ] },
+    { name: 'ΑΞΕΣΟΥΑΡ', children: [ { name: 'Καλόγεροι' }, { name: 'Κρεμάστρες Δαπέδου' }, { name: 'Πολύπριζα' }, { name: 'Βάσεις Τηλεόρασης' }, { name: 'Σταχτοδοχεία' }, { name: 'Στόπ Πόρτας' }, { name: 'Σκάλες' } ] },
+    { name: 'ΦΩΤΙΣΜΟΣ', children: [ { name: 'Φωτιστικά οροφής' }, { name: 'Φωτιστικά Δαπέδου' }, { name: 'Επιτραπέζια φωτιστικά' }, { name: 'Απλίκες' }, { name: 'Ταινίες Led' }, { name: 'Παιδικά φωτιστικά οροφής' }, { name: 'Γιρλάντες απο Σχοινί' }, { name: 'Φώτα Πάρτη' } ] },
+    { name: 'ΔΙΑΚΟΣΜΗΣΗ', children: [ { name: 'Πίνακες' }, { name: 'Καθρέπτες' }, { name: 'Τεχνητά φυτά' }, { name: 'Διακόσμηση τοίχου' }, { name: 'Διακοσμητικά Μαξιλάρια' }, { name: 'Χαλιά' }, { name: 'Κεριά' }, { name: 'Κουβέρτες & Ριχτάρια' }, { name: 'Επένδυση & Διακόσμηση Τοίχου' }, { name: 'Διαχύτες Αρωμάτων' }, { name: 'Κορνίζες' }, { name: 'Ρολόγια' }, { name: 'Ψάθινα & Υφασμάτινα Καλάθια' }, { name: 'Luxury Decor' } ] },
+    { name: 'ΧΡΙΣΤΟΥΓΕΝΝΙΑΤΙΚΑ', children: [ { name: 'Χριστουγεννιάτικα Δέντρα' }, { name: 'Βάσεις Χριστουγεννιάτιων Δέντρων' }, { name: 'Χριστουγεννιάτικα λαμπάκια Led' }, { name: 'Ξύλινα στολίδια δέντρου' }, { name: 'Φάτνη Χριστουγεννων' }, { name: 'Χριστουγεννιάτικα Φωτεινά Στοιχεία' }, { name: 'Χριστουγεννιάτικη Διακόσμηση' }, { name: 'Μινιατούρες & Στοιχεία για το Χριστουγεννιάτικο Χωριό' }, { name: 'Κηροπήγια & Κηροσβέστες' }, { name: 'Χριστουγεννιάτικες Φιγούρες' } ] }
+  ];
+
 
   const handleSearch = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
