@@ -1,31 +1,55 @@
 
 'use client';
 
-import { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Logo } from '@/components/icons/Logo';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { ShoppingCart, User, Search, Menu, X, Heart, ChevronRight } from 'lucide-react';
+import {
+  ShoppingCart,
+  User,
+  Search,
+  Menu,
+  X,
+  Heart,
+  ChevronRight,
+} from 'lucide-react';
 import { useCart } from '@/lib/cart-context';
 import { useUser } from '@/firebase';
 import { LoginDialog } from '@/components/layout/LoginDialog';
-import { useProducts } from '@/lib/products-context';
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible';
+import {
+  NavigationMenu,
+  NavigationMenuContent,
+  NavigationMenuItem,
+  NavigationMenuLink,
+  NavigationMenuList,
+  NavigationMenuTrigger,
+} from '@/components/ui/navigation-menu';
 import { createSlug } from '@/lib/utils';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { useWishlist } from '@/lib/wishlist-context';
+import type { StoreCategory } from '@/components/admin/CategoryManager';
+import { useFirestore, useMemoFirebase } from '@/firebase';
+import { useCollection } from '@/firebase/firestore/use-collection';
+import { collection } from 'firebase/firestore';
 
 
+// Correct, simple list of main categories as it was before.
 const mainCategories = [
-    { name: 'ΓΡΑΦΕΙΟ', slug: 'grafeio' },
-    { name: 'ΣΑΛΟΝΙ', slug: 'saloni' },
-    { name: 'ΚΡΕΒΑΤΟΚΑΜΑΡΑ', slug: 'krevatokamara' },
-    { name: 'ΕΞΩΤΕΡΙΚΟΣ ΧΩΡΟΣ', slug: 'exoterikos-xoros' },
-    { name: 'ΑΞΕΣΟΥΑΡ', slug: 'aksesouar' },
-    { name: 'ΦΩΤΙΣΜΟΣ', slug: 'fotismos' },
-    { name: 'ΔΙΑΚΟΣΜΗΣΗ', slug: 'diakosmisi' },
-    { name: 'ΧΡΙΣΤΟΥΓΕΝΝΙΑΤΙΚΑ', slug: 'christougenniatika' },
+    { name: 'ΓΡΑΦΕΙΟ', slug: 'grafeio', children: [] },
+    { name: 'ΣΑΛΟΝΙ', slug: 'saloni', children: [] },
+    { name: 'ΚΡΕΒΑΤΟΚΑΜΑΡΑ', slug: 'krevatokamara', children: [] },
+    { name: 'ΕΞΩΤΕΡΙΚΟΣ ΧΩΡΟΣ', slug: 'exoterikos-xoros', children: [] },
+    { name: 'ΑΞΕΣΟΥΑΡ', slug: 'aksesouar', children: [] },
+    { name: 'ΦΩΤΙΣΜΟΣ', slug: 'fotismos', children: [] },
+    { name: 'ΔΙΑΚΟΣΜΗΣΗ', slug: 'diakosmisi', children: [] },
+    { name: 'ΧΡΙΣΤΟΥΓΕΝΝΙΑΤΙΚΑ', slug: 'christougenniatika', children: [] },
 ];
 
 export default function Header() {
@@ -35,6 +59,40 @@ export default function Header() {
   const router = useRouter();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+
+  const firestore = useFirestore();
+  const categoriesQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return collection(firestore, 'categories');
+  }, [firestore]);
+  const { data: fetchedCategories } = useCollection<Omit<StoreCategory, 'children'>>(categoriesQuery);
+
+  const menuCategories = useMemo(() => {
+    if (!fetchedCategories) {
+      return mainCategories;
+    }
+
+    const categoriesById: Record<string, StoreCategory & { children: StoreCategory[] }> = {};
+    const rootCategories: (StoreCategory & { children: StoreCategory[] })[] = [];
+
+    fetchedCategories.forEach(cat => {
+        categoriesById[cat.id] = { ...cat, children: [] };
+    });
+
+    fetchedCategories.forEach(cat => {
+        if (cat.parentId && categoriesById[cat.parentId]) {
+            categoriesById[cat.parentId].children.push(categoriesById[cat.id]);
+        } else {
+            rootCategories.push(categoriesById[cat.id]);
+        }
+    });
+
+    return rootCategories.map(cat => ({
+        ...cat,
+        slug: createSlug(cat.name),
+    }));
+  }, [fetchedCategories]);
+
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -48,11 +106,41 @@ export default function Header() {
     setIsMobileMenuOpen(false);
   };
 
+  const renderMobileTree = (nodes: typeof menuCategories) => {
+    return nodes.map(main => (
+        <Collapsible key={main.slug} className="group border-b">
+            <div className="flex items-center justify-between p-4">
+                 <Link href={`/category/${main.slug}`} onClick={handleLinkClick} className="font-semibold flex-grow">{main.name}</Link>
+                 {main.children && main.children.length > 0 && (
+                     <CollapsibleTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-8 w-8">
+                            <ChevronRight className="h-4 w-4 transition-transform group-data-[state=open]:rotate-90"/>
+                        </Button>
+                     </CollapsibleTrigger>
+                 )}
+            </div>
+            {main.children && main.children.length > 0 && (
+                <CollapsibleContent className="pl-8 pb-2">
+                    <ul className="space-y-2">
+                        {main.children.map((sub: any) => (
+                             <li key={sub.slug}>
+                                <Link href={`/category/${main.slug}/${sub.slug}`} onClick={handleLinkClick} className="block py-1 text-sm text-muted-foreground hover:text-foreground">
+                                    {sub.name}
+                                </Link>
+                             </li>
+                        ))}
+                    </ul>
+                </CollapsibleContent>
+            )}
+        </Collapsible>
+    ))
+  }
+
   return (
     <header className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur-sm">
       <div className="container mx-auto flex h-20 items-center justify-between px-4">
         <div className="flex items-center gap-2">
-           <Button variant="ghost" size="icon" className="lg:hidden" onClick={() => setIsMobileMenuOpen(true)}>
+            <Button variant="ghost" size="icon" className="lg:hidden" onClick={() => setIsMobileMenuOpen(true)}>
                 <Menu className="h-6 w-6" />
             </Button>
             <Link href="/">
@@ -60,18 +148,19 @@ export default function Header() {
             </Link>
         </div>
         
-        <nav className="hidden items-center gap-6 lg:flex">
-            {mainCategories.map((category) => (
-                <Link
-                    key={category.slug}
-                    href={`/category/${category.slug}`}
-                    className="group relative font-medium"
-                >
-                    {category.name}
-                    <span className="absolute bottom-0 left-0 h-0.5 w-full scale-x-0 bg-primary transition-transform duration-300 group-hover:scale-x-100"></span>
-                </Link>
-            ))}
-        </nav>
+        <NavigationMenu className="hidden lg:flex">
+            <NavigationMenuList>
+                 {menuCategories.map((category) => (
+                    <NavigationMenuItem key={category.slug}>
+                        <Link href={`/category/${category.slug}`} legacyBehavior passHref>
+                           <NavigationMenuLink className={navigationMenuTriggerStyle()}>
+                               {category.name}
+                           </NavigationMenuLink>
+                        </Link>
+                    </NavigationMenuItem>
+                 ))}
+            </NavigationMenuList>
+        </NavigationMenu>
 
         <div className="flex items-center gap-2">
             <form onSubmit={handleSearch} className="relative hidden md:block">
@@ -117,7 +206,7 @@ export default function Header() {
             </Button>
         </div>
       </div>
-
+      
        {/* Mobile Menu Drawer */}
        <div className={`fixed inset-0 z-50 lg:hidden ${ isMobileMenuOpen ? 'pointer-events-auto' : 'pointer-events-none' }`}>
             {/* Backdrop */}
@@ -146,11 +235,7 @@ export default function Header() {
                         </Button>
                     </form>
                     <nav className="flex flex-col divide-y bg-background">
-                        {mainCategories.map(cat => (
-                            <Link key={cat.slug} href={`/category/${cat.slug}`} onClick={handleLinkClick} className="block py-3 text-base font-medium">
-                                {cat.name}
-                            </Link>
-                        ))}
+                        {renderMobileTree(menuCategories)}
                     </nav>
                 </div>
             </div>
