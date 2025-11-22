@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState } from 'react';
@@ -170,7 +171,7 @@ export default function Header() {
   };
   
   const desktopNav = (
-    <nav className="flex items-center gap-1">
+      <nav className="flex items-center gap-1">
         {mainCategories.map(category => (
             <Popover key={category.slug}>
                 <PopoverTrigger asChild>
