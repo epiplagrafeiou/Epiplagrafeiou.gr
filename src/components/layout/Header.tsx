@@ -206,7 +206,7 @@ export default function Header() {
             <NavigationMenuContent>
                <div className="container mx-auto">
                  <div className="grid w-full grid-cols-[3fr_1fr] gap-6 p-4">
-                    <ul className="grid grid-cols-3 gap-3">
+                    <ul className="grid grid-cols-6 gap-3">
                       {(category.children || []).map((child) => (
                         <ListItem
                           key={child.id}
