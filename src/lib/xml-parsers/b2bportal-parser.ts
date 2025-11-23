@@ -9,15 +9,9 @@ import { mapCategory } from '../category-mapper';
 const getText = (node: any): string => {
   if (node == null) return '';
   if (typeof node === 'string' || typeof node === 'number') return String(node).trim();
-  // Handle complex objects by trying to find a text value
   if (typeof node === 'object') {
-    if (node['#text']) return String(node['#text']).trim();
-    if (node.__cdata) return String(node.__cdata).trim();
-    if (node._text) return String(node._text).trim();
-    // Fallback for deeply nested text
-    for (const key in node) {
-        if (typeof node[key] === 'string') return node[key].trim();
-    }
+    if ('__cdata' in node) return String(node.__cdata).trim();
+    if ('_text' in node) return String(node._text).trim();
   }
   return '';
 };
@@ -33,7 +27,7 @@ export async function b2bportalParser(url: string): Promise<XmlProduct[]> {
   const parser = new XMLParser({
     ignoreAttributes: false,
     attributeNamePrefix: '',
-    isArray: (name, jpath) => {
+    isArray: (name, jpath, isLeafNode, isAttribute) => {
       return jpath === 'b2bportal.products.product' ||
              jpath === 'mywebstore.products.product' ||
              jpath.endsWith('.gallery.image');
@@ -52,14 +46,14 @@ export async function b2bportalParser(url: string): Promise<XmlProduct[]> {
     parsed?.b2bportal?.products?.product ||
     parsed?.mywebstore?.products?.product;
 
-  if (!productArray) {
-    console.warn('B2B Parser: No products found in the XML feed.');
-    return [];
-  }
+    if (!productArray) {
+        console.warn('B2B Parser: No products found in the XML feed.');
+        return [];
+    }
   
-  if (!Array.isArray(productArray)) {
-    productArray = [productArray];
-  }
+    if (!Array.isArray(productArray)) {
+        productArray = [productArray];
+    }
 
   const products: XmlProduct[] = await Promise.all(productArray.map(async (p: any) => {
     let allImages: string[] = [];
@@ -77,6 +71,8 @@ export async function b2bportalParser(url: string): Promise<XmlProduct[]> {
       .filter(Boolean)
       .join(' > ');
     const productName = getText(p.title) || getText(p.name) || 'No Name';
+    const mappedCategory = await mapCategory(rawCategory, productName);
+
 
     const availabilityText = getText(p.availability).toLowerCase();
     const isAvailable = availabilityText === 'ναι' || availabilityText === '1';
@@ -92,8 +88,6 @@ export async function b2bportalParser(url: string): Promise<XmlProduct[]> {
     const retailPriceNum = parseFloat((getText(p.retail_price) || '0').replace(',', '.'));
     const wholesalePriceNum = parseFloat((getText(p.price) || '0').replace(',', '.'));
     const finalPriceNum = retailPriceNum > 0 ? retailPriceNum : wholesalePriceNum;
-    
-    const mappedCategory = await mapCategory(rawCategory, productName);
 
     return {
       id: getText(p.code) || `b2b-${Math.random()}`,

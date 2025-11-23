@@ -98,6 +98,7 @@ export async function megapapParser(url: string): Promise<XmlProduct[]> {
       
       const rawCategory = [p.category, p.subcategory].filter(Boolean).map(c => typeof c === 'object' ? c._text || '' : c).join(' > ');
       const productName = p.name || 'No Name';
+      const mappedCategory = await mapCategory(rawCategory, productName);
       
       const sku = p.id?.toString() || `temp-id-${Math.random()}`;
       
@@ -106,8 +107,6 @@ export async function megapapParser(url: string): Promise<XmlProduct[]> {
       if (productNameLower.includes('καναπ') || productNameLower.includes('sofa')) {
         finalWebOfferPrice += 75;
       }
-      
-      const mappedCategory = await mapCategory(rawCategory, productName);
 
       return {
         id: sku,

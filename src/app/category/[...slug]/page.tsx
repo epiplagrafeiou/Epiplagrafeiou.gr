@@ -7,10 +7,15 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useParams, notFound } from 'next/navigation';
-import { createSlug } from '@/lib/utils';
+import { createSlug, findCategoryPath } from '@/lib/utils';
 import Link from 'next/link';
 import { useMemo } from 'react';
 import React from 'react';
+import { useCollection } from '@/firebase/firestore/use-collection';
+import { collection } from 'firebase/firestore';
+import { useFirestore, useMemoFirebase } from '@/firebase';
+import type { StoreCategory } from '@/components/admin/CategoryManager';
+
 
 const featuredCategories = [
     { name: 'Γραφεία', href: '/category/grafeio' },
@@ -21,52 +26,77 @@ const featuredCategories = [
 export default function CategoryPage() {
   const { products, isLoaded } = useProducts();
   const params = useParams();
+  const firestore = useFirestore();
+
+  const categoriesQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return collection(firestore, 'categories');
+  }, [firestore]);
+  const { data: storeCategories, isLoading: areCategoriesLoading } = useCollection<StoreCategory>(categoriesQuery);
   
   const slugPath = useMemo(() => Array.isArray(params.slug) ? params.slug.join('/') : (params.slug || ''), [params.slug]);
 
-  const { categoryPathString, pageTitle, breadcrumbs, filteredProducts } = useMemo(() => {
-    if (!isLoaded) return { categoryPathString: '', pageTitle: '', breadcrumbs: [], filteredProducts: [] };
+  const { pageTitle, breadcrumbs, filteredProducts } = useMemo(() => {
+    if (!isLoaded || areCategoriesLoading || !storeCategories) return { pageTitle: '', breadcrumbs: [], filteredProducts: [] };
+    
+    // Find the category that matches the current slug path
+    let targetCategory: StoreCategory | undefined;
+    
+    const findCategoryBySlug = (categories: StoreCategory[], slugParts: string[]): StoreCategory | undefined => {
+        let currentCategories = categories;
+        let foundCategory: StoreCategory | undefined;
 
-    const allCategoryPaths = Array.from(new Set(products.map(p => p.category)));
+        for (const slugPart of slugParts) {
+            foundCategory = currentCategories.find(c => createSlug(c.name) === slugPart);
+            if (foundCategory) {
+                currentCategories = foundCategory.children || [];
+            } else {
+                return undefined;
+            }
+        }
+        return foundCategory;
+    };
 
-    // Find the correct category string by matching its generated slug to the URL slug.
-    const pathString = allCategoryPaths.find(catString => {
-        const catSlug = (catString || '').split(' > ').map(createSlug).join('/');
-        return catSlug === slugPath;
-    });
+    targetCategory = findCategoryBySlug(storeCategories, slugPath.split('/'));
 
-    if (!pathString && isLoaded) {
-      // Return a specific state to trigger notFound outside the memo
-      return { categoryPathString: null, pageTitle: '', breadcrumbs: [], filteredProducts: [] };
+    if (!targetCategory) {
+       return { pageTitle: null, breadcrumbs: [], filteredProducts: [] };
     }
 
-    const productsForCategory = pathString ? products.filter(product => {
-      return (product.category || '').startsWith(pathString);
-    }) : [];
+    const getAllChildCategoryIds = (category: StoreCategory): string[] => {
+        let ids = [category.id];
+        if (category.children) {
+            ids = ids.concat(...category.children.map(getAllChildCategoryIds));
+        }
+        return ids;
+    };
+    
+    const categoryIdsToFilter = getAllChildCategoryIds(targetCategory);
+    const categoryIdSet = new Set(categoryIdsToFilter);
 
-    const categoryParts = pathString ? pathString.split(' > ') : slugPath.split('/').map(s => s.replace(/-/g, ' '));
-    const title = categoryParts[categoryParts.length - 1];
+    const productsForCategory = products.filter(product => product.categoryId && categoryIdSet.has(product.categoryId));
+
+    const path = findCategoryPath(targetCategory.id, storeCategories);
 
     let currentHref = '';
-    const breadcrumbData = categoryParts.map(part => {
-      const partSlug = createSlug(part);
+    const breadcrumbData = path.map(part => {
+      const partSlug = createSlug(part.name);
       currentHref += `${currentHref ? '/' : ''}${partSlug}`;
       return {
-        name: part, // Use the real Greek name for display
-        href: `/category/${currentHref}`, // Use the English slug for the link
+        name: part.name, 
+        href: `/category/${currentHref}`,
       };
     });
 
     return {
-      categoryPathString: pathString,
-      pageTitle: title,
+      pageTitle: targetCategory.name,
       breadcrumbs: breadcrumbData,
       filteredProducts: productsForCategory
     };
-  }, [isLoaded, products, slugPath]);
+  }, [isLoaded, areCategoriesLoading, products, storeCategories, slugPath]);
 
   // Handle not found case after data is loaded and memo is calculated
-  if (isLoaded && categoryPathString === null) {
+  if (isLoaded && !areCategoriesLoading && pageTitle === null) {
     notFound();
   }
 
@@ -122,7 +152,7 @@ export default function CategoryPage() {
       <h1 className="mb-8 text-3xl font-bold capitalize">{pageTitle}</h1>
 
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-        {!isLoaded ? (
+        {!isLoaded || areCategoriesLoading ? (
           Array.from({ length: 12 }).map((_, index) => (
             <Card key={index}>
               <Skeleton className="h-64 w-full" />

@@ -18,7 +18,7 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Slider } from "@/components/ui/slider"
 import { formatCurrency } from '@/lib/utils';
-import { PackageSearch, ChevronDown, ChevronRight } from 'lucide-react';
+import { PackageSearch, ChevronDown } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { useCollection } from '@/firebase/firestore/use-collection';
 import { collection } from 'firebase/firestore';
@@ -93,18 +93,27 @@ function ProductsPageContent() {
 
 
   const maxPrice = useMemo(() => {
-    if (!isLoaded) return 1000;
+    if (!isLoaded || products.length === 0) return 1000;
     const safePrices = products.map(p => Number(p.price) || 0);
     return Math.ceil(Math.max(...safePrices, 1000));
   }, [products, isLoaded]);
 
   useEffect(() => {
     if (isLoaded) {
-      const safePrices = products.map(p => Number(p.price) || 0);
-      const maxProductPrice = Math.ceil(Math.max(...safePrices, 1000));
-      setPriceRange([0, maxProductPrice]);
+      setPriceRange([0, maxPrice]);
     }
-  }, [isLoaded, products]);
+  }, [isLoaded, maxPrice]);
+  
+  const findCategoryById = (id: string, categories: StoreCategory[]): StoreCategory | null => {
+      for (const cat of categories) {
+          if (cat.id === id) return cat;
+          if (cat.children) {
+              const found = findCategoryById(id, cat.children);
+              if (found) return found;
+          }
+      }
+      return null;
+  };
   
   const getSubCategoryIds = (categoryId: string): string[] => {
     const ids: string[] = [categoryId];
@@ -119,17 +128,6 @@ function ProductsPageContent() {
     };
     findChildren(categoryId);
     return ids;
-  };
-  
-  const findCategoryById = (id: string, categories: StoreCategory[]): StoreCategory | null => {
-      for (const cat of categories) {
-          if (cat.id === id) return cat;
-          if (cat.children) {
-              const found = findCategoryById(id, cat.children);
-              if (found) return found;
-          }
-      }
-      return null;
   };
 
   const filteredAndSortedProducts = useMemo(() => {

@@ -2,7 +2,7 @@
 'use client';
 
 import { createContext, useContext, useMemo } from 'react';
-import { createSlug, normalizeCategory } from './utils';
+import { createSlug } from './utils';
 import { useCollection } from '@/firebase/firestore/use-collection';
 import { collection, writeBatch, doc, updateDoc } from 'firebase/firestore';
 import { useFirestore, useMemoFirebase, FirestorePermissionError, errorEmitter } from '@/firebase';
@@ -33,7 +33,7 @@ interface ProductsContextType {
   products: Product[];
   adminProducts: Product[];
   addProducts: (
-    newProducts: (Partial<Omit<Product, 'slug' | 'imageId'>> & { id: string; supplierId: string; images: string[]; mainImage?: string | null; name: string; price: number; category: string; description: string; stock: number })[]
+    newProducts: (Partial<Omit<Product, 'slug' | 'imageId'>> & { id: string; supplierId: string; images: string[]; mainImage?: string | null; name: string; price: number; category: string; description: string; stock: number; categoryId: string | null; })[]
   ) => void;
   updateProduct: (product: Product) => void;
   deleteProducts: (productIds: string[]) => void;
@@ -66,7 +66,7 @@ export const ProductsProvider = ({ children }: { children: React.ReactNode }) =>
   };
 
   const addProducts = async (
-    newProducts: (Omit<Product, 'slug' | 'imageId'> & { mainImage?: string | null, images: string[], category: string })[],
+    newProducts: (Omit<Product, 'slug' | 'imageId'> & { mainImage?: string | null, images: string[], category: string, categoryId: string | null })[],
   ) => {
     if (!firestore) return;
 
@@ -98,6 +98,7 @@ export const ProductsProvider = ({ children }: { children: React.ReactNode }) =>
           images: sortedImages,
           price: p.price,
           category: p.category, // Use the new mapped category
+          categoryId: p.categoryId,
           description: p.description,
           stock: Number(p.stock) || 0,
         };
