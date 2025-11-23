@@ -136,9 +136,10 @@ export async function b2bportalParser(url: string): Promise<XmlProduct[]> {
 
     let stock = 0;
     // Prioritize explicit stock numbers if they exist
-    if (p.stock) stock = Number(getText(p.stock)) || 0;
-    else if (p.qty) stock = Number(getText(p.qty)) || 0;
-    else if (p.availability_qty) stock = Number(getText(p.availability_qty)) || 0;
+    const stockQty = getText(p.stock) || getText(p.qty) || getText(p.availability_qty);
+    if (stockQty) {
+      stock = Number(stockQty) || 0;
+    }
     // If no numeric stock, use the availability text to set a default stock
     else if (isAvailable) {
         stock = 1; // Set to 1 to indicate it is in stock
