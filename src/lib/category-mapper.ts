@@ -15,17 +15,20 @@ function normalize(s: string): string {
 function extractCategory(raw: any): string {
   if (!raw) return "";
 
+  // If category is simple string
   if (typeof raw === "string" || typeof raw === "number") {
     return String(raw);
   }
 
+  // If category is array (common in XML)
   if (Array.isArray(raw)) {
     return raw
       .map(v => extractCategory(v))
       .filter(Boolean)
       .join(" > ");
   }
-  
+
+  // If category is object with known fields
   if (typeof raw === "object") {
     const values = Object.values(raw)
       .map(v => extractCategory(v))
@@ -156,22 +159,26 @@ export async function mapCategory(rawCategory: any, productName: string): Promis
     // --- Conditional Rules ---
     if (normalizedRaw.includes('καρέκλες & πολυθρόνες > σαλόνι')) {
       if (normalizedProductName.includes('καρέκλα')) {
-        return { category: 'ΣΑΛΟΝΙ > Καρέκλες τραπεζαρίας', categoryId: createSlug('ΣΑΛΟΝΙ > Καρέκλες τραπεζαρίας') };
+        const cat = 'ΣΑΛΟΝΙ > Καρέκλες τραπεζαρίας';
+        return { category: cat, categoryId: `cat-${createSlug(cat)}` };
       }
     }
 
     if (normalizedRaw.includes('σαλονι > τραπεζάκια σαλονιού')) {
       if (normalizedProductName.includes('τραπεζάκι βοηθητικό')) {
-        return { category: 'ΣΑΛΟΝΙ > Τραπεζάκια Βοηθητικά', categoryId: createSlug('ΣΑΛΟΝΙ > Τραπεζάκια Βοηθητικά') };
+        const cat = 'ΣΑΛΟΝΙ > Τραπεζάκια Βοηθητικά';
+        return { category: cat, categoryId: `cat-${createSlug(cat)}` };
       }
     }
     
     if (normalizedRaw.includes('κρεμάστρες & καλόγεροι > οργάνωση σπιτιού')) {
         if (normalizedProductName.includes('καλόγερος') || normalizedProductName.includes('καλογερος')) {
-            return { category: 'Αξεσουάρ > Καλόγεροι', categoryId: createSlug('Αξεσουάρ > Καλόγεροι') };
+            const cat = 'Αξεσουάρ > Καλόγεροι';
+            return { category: cat, categoryId: `cat-${createSlug(cat)}` };
         }
         if (normalizedProductName.includes('κρεμάστρ')) {
-            return { category: 'Αξεσουάρ > Κρεμάστρες Δαπέδου', categoryId: createSlug('Αξεσουάρ > Κρεμάστρες Δαπέδου') };
+            const cat = 'Αξεσουάρ > Κρεμάστρες Δαπέδου';
+            return { category: cat, categoryId: `cat-${createSlug(cat)}` };
         }
     }
 
@@ -188,5 +195,8 @@ export async function mapCategory(rawCategory: any, productName: string): Promis
       }
     }
 
-    return { category: extracted, categoryId: null };
+    // Fallback
+    return { category: extracted || "Uncategorized", categoryId: null };
 }
+
+    

@@ -162,3 +162,5 @@ export async function b2bportalParser(url: string): Promise<XmlProduct[]> {
 
   return products;
 }
+
+    

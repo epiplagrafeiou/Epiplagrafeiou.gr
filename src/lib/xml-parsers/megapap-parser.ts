@@ -126,3 +126,5 @@ export async function megapapParser(url: string): Promise<XmlProduct[]> {
 
     return products;
 }
+
+    
