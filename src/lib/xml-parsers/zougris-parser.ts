@@ -80,6 +80,8 @@ export async function zougrisParser(url: string): Promise<XmlProduct[]> {
     const retailPriceNum = parseFloat((getText(p.RetailPrice) || '0').replace(',', '.'));
     const wholesalePriceNum = parseFloat((getText(p.WholesalePrice) || '0').replace(',', '.'));
     const finalPriceNum = retailPriceNum > 0 ? retailPriceNum : wholesalePriceNum;
+    
+    const mappedCategory = await mapCategory(rawCategory, productName);
 
     return {
         id: getText(p.Code) || `zougris-${Math.random()}`,
@@ -87,7 +89,7 @@ export async function zougrisParser(url: string): Promise<XmlProduct[]> {
         retailPrice: retailPriceNum.toString(),
         webOfferPrice: finalPriceNum.toString(),
         description: getText(p.Description) || '',
-        category: await mapCategory(rawCategory, productName), // Use the mapper
+        category: mappedCategory,
         mainImage,
         images: allImages,
         stock,

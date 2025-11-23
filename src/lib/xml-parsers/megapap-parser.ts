@@ -106,6 +106,8 @@ export async function megapapParser(url: string): Promise<XmlProduct[]> {
       if (productNameLower.includes('καναπ') || productNameLower.includes('sofa')) {
         finalWebOfferPrice += 75;
       }
+      
+      const mappedCategory = await mapCategory(rawCategory, productName);
 
       return {
         id: sku,
@@ -117,7 +119,7 @@ export async function megapapParser(url: string): Promise<XmlProduct[]> {
         retailPrice: p.retail_price_with_vat || '0',
         webOfferPrice: finalWebOfferPrice.toString(),
         description: p.description || '',
-        category: await mapCategory(rawCategory, productName),
+        category: mappedCategory,
         mainImage,
         images: allImages,
         stock,
