@@ -10,6 +10,33 @@ function normalize(s: string): string {
     .trim();
 }
 
+/**
+ * Intelligently converts any type of raw category data (string, array, object)
+ * into a single, clean string path (e.g., "Main > Sub").
+ * @param raw The raw category data from the parser.
+ * @returns A clean string representation of the category path.
+ */
+function extractCategory(raw: any): string {
+  if (!raw) return "";
+
+  // If category is simple string
+  if (typeof raw === "string") return raw;
+
+  // If category is array (common in XML)
+  if (Array.isArray(raw)) return raw.join(" > ");
+
+  // If category is object with known fields
+  if (typeof raw === "object") {
+    const values = Object.values(raw)
+      .filter(v => typeof v === "string")
+      .join(" > ");
+    return values || "";
+  }
+
+  return String(raw);
+}
+
+
 // This structure defines the desired final state.
 // The 'raw' is the original string from the supplier.
 // The 'mapped' is the clean, hierarchical path we want.
@@ -31,7 +58,7 @@ const categoryMapping = [
     { raw: 'άλλα είδη > είδη σπιτιού > σκάλες', mapped: 'Αξεσουάρ > Σκάλες' },
     { raw: 'φωτιστικά οροφής > φωτισμός', mapped: 'ΦΩΤΙΣΜΟΣ > Φωτιστικά οροφής' },
     { raw: 'φωτιστικά επιδαπέδια & επιτραπέζια > φωτισμός', mapped: 'ΦΩΤΙΣΜΟΣ > Φωτιστικά Δαπέδου' },
-    { raw: 'ταινίες led > φωτισμός', mapped: 'ΦΩΤΙΣΜΟΣ > Ταινίες Led' },
+    { raw: 'ταινίες led > φωτισμός', mapped: 'ΦΩΤΙΣΜΟΣ > Ταινίες LED' },
     { raw: 'λάμπες διακοσμητικές & τύπου edison > επιπλα & φωτισμός', mapped: 'ΦΩΤΙΣΜΟΣ > Λάμπες διακοσμητικές & τύπου Edison' },
     { raw: 'γιρλάντες απο σχοινί > επιπλα & φωτισμός', mapped: 'ΦΩΤΙΣΜΟΣ > Γιρλάντες απο Σχοινί' },
     { raw: 'party lights > επιπλα & φωτισμός', mapped: 'ΦΩΤΙΣΜΟΣ > Φώτα Πάρτη' },
@@ -126,27 +153,28 @@ export async function getCategoryMapping() {
 }
 
 // Fallback function that uses the mapping.
-export async function mapCategory(rawCategory: string, productName: string): Promise<string> {
-    const normalizedRaw = normalize(rawCategory);
+export async function mapCategory(rawCategory: any, productName: string): Promise<string> {
+    const extracted = extractCategory(rawCategory);
+    const normalizedRaw = normalize(extracted);
     const normalizedProductName = productName.toLowerCase();
 
     // --- Conditional Rules ---
     // Rule for B2B Portal chairs vs armchairs
-    if (normalizedRaw === 'καρέκλες & πολυθρόνες > σαλόνι') {
+    if (normalizedRaw.includes('καρέκλες & πολυθρόνες > σαλόνι')) {
       if (normalizedProductName.includes('καρέκλα')) {
         return 'ΣΑΛΟΝΙ > Καρέκλες τραπεζαρίας';
       }
     }
 
     // Rule for B2B Portal side tables
-    if (normalizedRaw === 'σαλονι > τραπεζάκια σαλονιού') {
+    if (normalizedRaw.includes('σαλονι > τραπεζάκια σαλονιού')) {
       if (normalizedProductName.includes('τραπεζάκι βοηθητικό')) {
         return 'ΣΑΛΟΝΙ > Τραπεζάκια Βοηθητικά';
       }
     }
     
     // Rule for B2B portal coat stands vs floor hangers
-    if (normalizedRaw === 'κρεμάστρες & καλόγεροι > οργάνωση σπιτιού') {
+    if (normalizedRaw.includes('κρεμάστρες & καλόγεροι > οργάνωση σπιτιού')) {
         if (normalizedProductName.includes('καλόγερος') || normalizedProductName.includes('καλογερος')) {
             return 'Αξεσουάρ > Καλόγεροι';
         }
@@ -156,18 +184,20 @@ export async function mapCategory(rawCategory: string, productName: string): Pro
     }
 
     // Rule for Wall Decor exclusion
-    if (normalizedRaw === 'επένδυση & διακόσμηση τοίχου > διακόσμηση & ατμόσφαιρα') {
+    if (normalizedRaw.includes('επένδυση & διακόσμηση τοίχου > διακόσμηση & ατμόσφαιρα')) {
         if (normalizedProductName.includes('αυτοκόλλητα πλακάκια μωσαϊκό')) {
-            return rawCategory; // Return original if it matches the exclusion
+            return extracted; // Return original if it matches the exclusion
         }
     }
 
     // --- Static Mapping ---
     for (const mapping of categoryMapping) {
-      if (normalize(mapping.raw) === normalizedRaw) {
+      if (normalizedRaw.includes(normalize(mapping.raw))) {
         return mapping.mapped;
       }
     }
 
-    return rawCategory; // Return the raw category if no match is found
+    return extracted; // Return the extracted string if no match is found
 }
+
+    
