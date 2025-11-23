@@ -97,7 +97,7 @@ export const ProductsProvider = ({ children }: { children: React.ReactNode }) =>
           imageId: imageId,
           images: sortedImages,
           price: p.price,
-          category: p.category, // Use the new mapped category
+          category: p.category, 
           categoryId: p.categoryId,
           description: p.description,
           stock: Number(p.stock) || 0,

@@ -1,6 +1,8 @@
 
 'use server';
 
+import { createSlug } from './utils';
+
 function normalize(s: string): string {
   if (!s) return '';
   return s
@@ -10,25 +12,24 @@ function normalize(s: string): string {
     .trim();
 }
 
-/**
- * Intelligently converts any type of raw category data (string, array, object)
- * into a single, clean string path (e.g., "Main > Sub").
- * @param raw The raw category data from the parser.
- * @returns A clean string representation of the category path.
- */
 function extractCategory(raw: any): string {
   if (!raw) return "";
 
-  // If category is simple string
-  if (typeof raw === "string") return raw;
+  if (typeof raw === "string" || typeof raw === "number") {
+    return String(raw);
+  }
 
-  // If category is array (common in XML)
-  if (Array.isArray(raw)) return raw.join(" > ");
-
-  // If category is object with known fields
+  if (Array.isArray(raw)) {
+    return raw
+      .map(v => extractCategory(v))
+      .filter(Boolean)
+      .join(" > ");
+  }
+  
   if (typeof raw === "object") {
     const values = Object.values(raw)
-      .filter(v => typeof v === "string")
+      .map(v => extractCategory(v))
+      .filter(Boolean)
       .join(" > ");
     return values || "";
   }
@@ -36,11 +37,6 @@ function extractCategory(raw: any): string {
   return String(raw);
 }
 
-
-// This structure defines the desired final state.
-// The 'raw' is the original string from the supplier.
-// The 'mapped' is the clean, hierarchical path we want.
-// Order matters: more specific rules should come before general ones.
 const categoryMapping = [
     // --- Specific B2B Portal overrides ---
     { raw: 'βιβλιοθήκες > σαλόνι', mapped: 'ΓΡΑΦΕΙΟ > Βιβλιοθήκες' },
@@ -152,52 +148,45 @@ export async function getCategoryMapping() {
   return categoryMapping;
 }
 
-// Fallback function that uses the mapping.
-export async function mapCategory(rawCategory: any, productName: string): Promise<string> {
+export async function mapCategory(rawCategory: any, productName: string): Promise<{ category: string, categoryId: string | null }> {
     const extracted = extractCategory(rawCategory);
     const normalizedRaw = normalize(extracted);
     const normalizedProductName = productName.toLowerCase();
 
     // --- Conditional Rules ---
-    // Rule for B2B Portal chairs vs armchairs
     if (normalizedRaw.includes('καρέκλες & πολυθρόνες > σαλόνι')) {
       if (normalizedProductName.includes('καρέκλα')) {
-        return 'ΣΑΛΟΝΙ > Καρέκλες τραπεζαρίας';
+        return { category: 'ΣΑΛΟΝΙ > Καρέκλες τραπεζαρίας', categoryId: createSlug('ΣΑΛΟΝΙ > Καρέκλες τραπεζαρίας') };
       }
     }
 
-    // Rule for B2B Portal side tables
     if (normalizedRaw.includes('σαλονι > τραπεζάκια σαλονιού')) {
       if (normalizedProductName.includes('τραπεζάκι βοηθητικό')) {
-        return 'ΣΑΛΟΝΙ > Τραπεζάκια Βοηθητικά';
+        return { category: 'ΣΑΛΟΝΙ > Τραπεζάκια Βοηθητικά', categoryId: createSlug('ΣΑΛΟΝΙ > Τραπεζάκια Βοηθητικά') };
       }
     }
     
-    // Rule for B2B portal coat stands vs floor hangers
     if (normalizedRaw.includes('κρεμάστρες & καλόγεροι > οργάνωση σπιτιού')) {
         if (normalizedProductName.includes('καλόγερος') || normalizedProductName.includes('καλογερος')) {
-            return 'Αξεσουάρ > Καλόγεροι';
+            return { category: 'Αξεσουάρ > Καλόγεροι', categoryId: createSlug('Αξεσουάρ > Καλόγεροι') };
         }
         if (normalizedProductName.includes('κρεμάστρ')) {
-            return 'Αξεσουάρ > Κρεμάστρες Δαπέδου';
+            return { category: 'Αξεσουάρ > Κρεμάστρες Δαπέδου', categoryId: createSlug('Αξεσουάρ > Κρεμάστρες Δαπέδου') };
         }
     }
 
-    // Rule for Wall Decor exclusion
     if (normalizedRaw.includes('επένδυση & διακόσμηση τοίχου > διακόσμηση & ατμόσφαιρα')) {
         if (normalizedProductName.includes('αυτοκόλλητα πλακάκια μωσαϊκό')) {
-            return extracted; // Return original if it matches the exclusion
+            return { category: extracted, categoryId: null }; 
         }
     }
 
     // --- Static Mapping ---
     for (const mapping of categoryMapping) {
       if (normalizedRaw.includes(normalize(mapping.raw))) {
-        return mapping.mapped;
+        return { category: mapping.mapped, categoryId: `cat-${createSlug(mapping.mapped)}` };
       }
     }
 
-    return extracted; // Return the extracted string if no match is found
+    return { category: extracted, categoryId: null };
 }
-
-    

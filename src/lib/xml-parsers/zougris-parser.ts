@@ -57,18 +57,15 @@ export async function zougrisParser(url: string): Promise<XmlProduct[]> {
     return [];
   }
 
-  // DEFENSIVE FIX: Ensure productArray is always an array
   if (!Array.isArray(productArray)) {
     productArray = [productArray];
   }
 
   const products: XmlProduct[] = await Promise.all(productArray.map(async (p: any) => {
-    // Collect images: B2BImage, B2BImage2, B2BImage3...
     const imageKeys = Object.keys(p).filter(k => k.toLowerCase().startsWith('b2bimage'));
     const allImages = imageKeys.map(k => getText(p[k])).filter(Boolean);
     const mainImage = allImages[0] || null;
 
-    // Category path: Category1 > Category2 > Category3 > Epilogi
     const categoryParts = [
       getText(p.Category1),
       getText(p.Category2),
@@ -77,12 +74,10 @@ export async function zougrisParser(url: string): Promise<XmlProduct[]> {
     ].filter(Boolean);
     const rawCategory = categoryParts.join(' > ');
     const productName = getText(p.Title) || 'No Name';
-    const mappedCategory = await mapCategory(rawCategory, productName);
+    const { category, categoryId } = await mapCategory(rawCategory, productName);
 
-    // Stock: real quantity
     const stock = Number(getText(p.Quantity)) || 0;
 
-    // Prices
     const retailPriceNum = parseFloat((getText(p.RetailPrice) || '0').replace(',', '.'));
     const wholesalePriceNum = parseFloat((getText(p.WholesalePrice) || '0').replace(',', '.'));
     const finalPriceNum = retailPriceNum > 0 ? retailPriceNum : wholesalePriceNum;
@@ -93,7 +88,8 @@ export async function zougrisParser(url: string): Promise<XmlProduct[]> {
         retailPrice: retailPriceNum.toString(),
         webOfferPrice: finalPriceNum.toString(),
         description: getText(p.Description) || '',
-        category: mappedCategory,
+        category: category,
+        categoryId: categoryId,
         mainImage,
         images: allImages,
         stock,

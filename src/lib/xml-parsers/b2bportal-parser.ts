@@ -5,9 +5,6 @@ import { XMLParser } from 'fast-xml-parser';
 import type { XmlProduct } from '../types/product';
 import { mapCategory } from '../category-mapper';
 
-// ----------------------------------------------
-// FIX #1 — Extract category safely from any format
-// ----------------------------------------------
 function extractCategoryValue(value: any): string {
   if (!value) return '';
 
@@ -27,7 +24,6 @@ function extractCategoryValue(value: any): string {
     if (value._text) return String(value._text).trim();
     if (value['#text']) return String(value['#text']).trim();
 
-    // Object with unknown keys — extract all string values
     return Object.values(value)
       .map(v => extractCategoryValue(v))
       .filter(Boolean)
@@ -37,7 +33,6 @@ function extractCategoryValue(value: any): string {
   return '';
 }
 
-// Safe text extractor
 const getText = (node: any): string => {
   if (node == null) return '';
   if (typeof node === 'string' || typeof node === 'number') return String(node).trim();
@@ -120,7 +115,7 @@ export async function b2bportalParser(url: string): Promise<XmlProduct[]> {
       const productName =
         getText(p.title) || getText(p.name) || 'No Name';
 
-      const mappedCategory = await mapCategory(combinedCategory, productName);
+      const { category, categoryId } = await mapCategory(combinedCategory, productName);
 
       const availabilityText = getText(p.availability).toLowerCase();
       const isAvailable =
@@ -155,7 +150,8 @@ export async function b2bportalParser(url: string): Promise<XmlProduct[]> {
         retailPrice: retailPriceNum.toString(),
         webOfferPrice: finalPriceNum.toString(),
         description: getText(p.descr) || '',
-        category: mappedCategory,
+        category: category,
+        categoryId: categoryId,
         mainImage,
         images: allImages,
         stock,

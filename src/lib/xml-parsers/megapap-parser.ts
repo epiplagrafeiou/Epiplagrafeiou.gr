@@ -5,13 +5,11 @@ import { XMLParser } from 'fast-xml-parser';
 import type { XmlProduct } from '../types/product';
 import { mapCategory } from '../category-mapper';
 
-// Gets the variant group key from SKU (e.g., GP037-0029,1 -> GP037-0029)
 function getVariantGroupKey(sku: string): string {
   if (!sku) return '';
   return sku.includes(',') ? sku.split(',')[0] : sku;
 }
 
-// Extracts the color from the filters string, now safely handling non-string inputs.
 function getColorFromFilters(filters: any): string | undefined {
     if (typeof filters !== 'string' || !filters) {
         return undefined;
@@ -98,7 +96,7 @@ export async function megapapParser(url: string): Promise<XmlProduct[]> {
       
       const rawCategory = [p.category, p.subcategory].filter(Boolean).map(c => typeof c === 'object' ? c._text || '' : c).join(' > ');
       const productName = p.name || 'No Name';
-      const mappedCategory = await mapCategory(rawCategory, productName);
+      const { category, categoryId } = await mapCategory(rawCategory, productName);
       
       const sku = p.id?.toString() || `temp-id-${Math.random()}`;
       
@@ -118,7 +116,8 @@ export async function megapapParser(url: string): Promise<XmlProduct[]> {
         retailPrice: p.retail_price_with_vat || '0',
         webOfferPrice: finalWebOfferPrice.toString(),
         description: p.description || '',
-        category: mappedCategory,
+        category: category,
+        categoryId: categoryId,
         mainImage,
         images: allImages,
         stock,

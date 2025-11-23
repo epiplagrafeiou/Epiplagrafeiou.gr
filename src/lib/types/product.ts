@@ -5,11 +5,12 @@ export interface XmlProduct {
   retailPrice: string;
   webOfferPrice: string;
   description: string;
-  category: string; // This will now hold the MAPPED category
+  category: string;
+  categoryId: string | null;
   mainImage: string | null;
   images: string[];
   stock: number;
-  isAvailable?: boolean; // Optional, for feeds that provide it
+  isAvailable?: boolean;
   sku?: string;
   model?: string;
   variantGroupKey?: string;
