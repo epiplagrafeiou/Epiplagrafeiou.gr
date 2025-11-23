@@ -39,6 +39,8 @@ const categoryMapping = [
     { raw: 'διακοσμηση > χαλιά', mapped: 'ΔΙΑΚΟΣΜΗΣΗ > Χαλιά' },
     { raw: 'λευκά είδη > σαλόνι > μαξιλάρια διακοσμητικά . εξωτερικού & εσωτερικού χώρου', mapped: 'ΔΙΑΚΟΣΜΗΣΗ > Διακοσμητικά Μαξιλάρια' },
     { raw: 'κεριά διακοσμητικά > διακόσμηση & ατμόσφαιρα', mapped: 'ΔΙΑΚΟΣΜΗΣΗ > Κεριά' },
+    { raw: 'κουβέρτες & ριχτάρια > σαλόνι', mapped: 'ΔΙΑΚΟΣΜΗΣΗ > Κουβέρτες & Ριχτάρια' },
+    { raw: 'επένδυση & διακόσμηση τοίχου > διακόσμηση & ατμόσφαιρα', mapped: 'ΔΙΑΚΟΣΜΗΣΗ > Επένδυση & Διακόσμηση Τοίχου' },
     { raw: 'σαλονι > καναπέδες', mapped: 'ΣΑΛΟΝΙ > Καναπέδες' },
     { raw: 'παπλωματοθήκες & κλινοσκεπάσματα > δωμάτιο', mapped: 'ΚΡΕΒΑΤΟΚΑΜΑΡΑ > Λευκά Είδη > Σετ Παπλωματοθήκες' },
     { raw: 'διακόσμηση & οργάνωση μπαλκονιού > κήπος - βεράντα', mapped: 'ΕΞΩΤΕΡΙΚΟΣ ΧΩΡΟΣ > Διακόσμηση & Οργάνωση Μπαλκονιού' },
@@ -102,16 +104,7 @@ const categoryMapping = [
 
     { raw: 'διακόσμηση > πίνακες', mapped: 'ΔΙΑΚΟΣΜΗΣΗ > Πίνακες' },
     { raw: 'έπιπλα εσωτερικού χώρου > καθρέπτες', mapped: 'ΔΙΑΚΟΣΜΗΣΗ > Καθρέπτες' },
-    { raw: 'διακόσμηση > διακόσμηση τοίχου', mapped: 'ΔΙΑΚΟΣΜΗΣΗ > Διακόσμηση τοίχου' },
-    { raw: 'λευκά είδη > σαλόνι > μαξιλάρια διακοσμητικά', mapped: 'ΔΙΑΚΟΣΜΗΣΗ > Διακοσμητικά Μαξιλάρια' },
-    { raw: 'διακοσμηση > χαλιά', mapped: 'ΔΙΑΚΟΣΜΗΣΗ > Χαλιά' },
-    { raw: 'κουβέρτες & ριχτάρια > σαλόνι', mapped: 'ΔΙΑΚΟΣΜΗΣΗ > Κουβέρτες & Ριχτάρια' },
-    { raw: 'επένδυση & διακόσμηση τοίχου > διακόσμηση & ατμόσφαιρα', mapped: 'ΔΙΑΚΟΣΜΗΣΗ > Επένδυση & Διακόσμηση Τοίχου' },
-    { raw: 'διαχύτες αρωμάτων - αρωματικά χώρου > διακόσμηση & ατμόσφαιρα', mapped: 'ΔΙΑΚΟΣΜΗΣΗ > Διαχύτες Αρωμάτων' },
-    { raw: 'κορνίζες > διακόσμηση & ατμόσφαιρα', mapped: 'ΔΙΑΚΟΣΜΗΣΗ > Κορνίζες' },
-    { raw: 'διακοσμηση > ρολόγια', mapped: 'ΔΙΑΚΟΣΜΗΣΗ > Ρολόγια' },
-    { raw: 'ψάθινα & υφασμάτινα καλάθια > διακόσμηση & ατμόσφαιρα', mapped: 'ΔΙΑΚΟΣΜΗΣΗ > Ψάθινα & Υφασμάτινα Καλάθια' },
-    { raw: 'διακόσμηση & ατμόσφαιρα > extreme interior design', mapped: 'ΔΙΑΚΟΣΜΗΣΗ > Luxury Decor' },
+    { raw: 'διακόσμηση > διακόσμηση τοίχου', mapped: 'ΔΙΑΚΟΣΜΗΣΗ > Επένδυση & Διακόσμηση Τοίχου' },
 
     { raw: 'mε χριστουγεννιάτικη διάθεση! > χριστουγεννιάτικα δέντρα !', mapped: 'Χριστουγεννιάτικα > Χριστουγεννιάτικα Δέντρα' },
     { raw: 'βάσεις χριστουγεννιάτικων δέντρων > δέντρο ή δάσος φέτος τα χριστούγεννα ? μεγάλο το δίλημμα', mapped: 'Χριστουγεννιάτικα > Βάσεις Χριστουγεννιάτιων Δέντρων' },
@@ -134,21 +127,22 @@ export async function mapCategory(rawCategory: string, productName: string): Pro
     const normalizedRaw = normalize(rawCategory);
     const normalizedProductName = productName.toLowerCase();
 
-    // Conditional rule for B2B Portal chairs vs armchairs
+    // --- Conditional Rules ---
+    // Rule for B2B Portal chairs vs armchairs
     if (normalizedRaw === 'καρέκλες & πολυθρόνες > σαλόνι') {
       if (normalizedProductName.includes('καρέκλα')) {
         return 'ΣΑΛΟΝΙ > Καρέκλες τραπεζαρίας';
       }
     }
 
-    // Conditional rule for B2B Portal side tables
+    // Rule for B2B Portal side tables
     if (normalizedRaw === 'σαλονι > τραπεζάκια σαλονιού') {
       if (normalizedProductName.includes('τραπεζάκι βοηθητικό')) {
         return 'ΣΑΛΟΝΙ > Τραπεζάκια Βοηθητικά';
       }
     }
     
-    // Conditional rule for B2B portal coat stands vs floor hangers
+    // Rule for B2B portal coat stands vs floor hangers
     if (normalizedRaw === 'κρεμάστρες & καλόγεροι > οργάνωση σπιτιού') {
         if (normalizedProductName.includes('καλόγερος') || normalizedProductName.includes('καλογερος')) {
             return 'Αξεσουάρ > Καλόγεροι';
@@ -158,7 +152,14 @@ export async function mapCategory(rawCategory: string, productName: string): Pro
         }
     }
 
+    // Rule for Wall Decor exclusion
+    if (normalizedRaw === 'επένδυση & διακόσμηση τοίχου > διακόσμηση & ατμόσφαιρα') {
+        if (normalizedProductName.includes('αυτοκόλλητα πλακάκια μωσαϊκό')) {
+            return rawCategory; // Return original if it matches the exclusion
+        }
+    }
 
+    // --- Static Mapping ---
     for (const mapping of categoryMapping) {
       if (normalize(mapping.raw) === normalizedRaw) {
         return mapping.mapped;
