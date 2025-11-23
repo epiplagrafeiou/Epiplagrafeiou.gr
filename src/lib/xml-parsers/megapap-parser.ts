@@ -101,7 +101,11 @@ export async function megapapParser(url: string): Promise<XmlProduct[]> {
       
       const sku = p.id?.toString() || `temp-id-${Math.random()}`;
       
-      const finalWebOfferPrice = parseFloat(p.weboffer_price_with_vat || p.retail_price_with_vat || '0');
+      let finalWebOfferPrice = parseFloat(p.weboffer_price_with_vat || p.retail_price_with_vat || '0');
+      const productNameLower = productName.toLowerCase();
+      if (productNameLower.includes('καναπ') || productNameLower.includes('sofa')) {
+        finalWebOfferPrice += 75;
+      }
 
       return {
         id: sku,
