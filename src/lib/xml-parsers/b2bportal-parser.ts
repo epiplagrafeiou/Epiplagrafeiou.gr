@@ -5,17 +5,49 @@ import { XMLParser } from 'fast-xml-parser';
 import type { XmlProduct } from '../types/product';
 import { mapCategory } from '../category-mapper';
 
+// ----------------------------------------------
+// FIX #1 — Extract category safely from any format
+// ----------------------------------------------
+function extractCategoryValue(value: any): string {
+  if (!value) return '';
+
+  if (typeof value === 'string' || typeof value === 'number') {
+    return String(value).trim();
+  }
+
+  if (Array.isArray(value)) {
+    return value
+      .map(v => extractCategoryValue(v))
+      .filter(Boolean)
+      .join(' > ');
+  }
+
+  if (typeof value === 'object') {
+    if (value.__cdata) return String(value.__cdata).trim();
+    if (value._text) return String(value._text).trim();
+    if (value['#text']) return String(value['#text']).trim();
+
+    // Object with unknown keys — extract all string values
+    return Object.values(value)
+      .map(v => extractCategoryValue(v))
+      .filter(Boolean)
+      .join(' > ');
+  }
+
+  return '';
+}
+
 // Safe text extractor
 const getText = (node: any): string => {
   if (node == null) return '';
   if (typeof node === 'string' || typeof node === 'number') return String(node).trim();
+
   if (typeof node === 'object') {
     if (node.__cdata) return String(node.__cdata).trim();
     if (node._text) return String(node._text).trim();
-     // Handle cases where the text is a direct property
     if (node['#text']) return String(node['#text']).trim();
     for (const key in node) {
-        if (typeof node[key] === 'string') return node[key].trim();
+      if (typeof node[key] === 'string') return node[key].trim();
     }
   }
   return '';
@@ -32,11 +64,10 @@ export async function b2bportalParser(url: string): Promise<XmlProduct[]> {
   const parser = new XMLParser({
     ignoreAttributes: false,
     attributeNamePrefix: '',
-    isArray: (name, jpath, isLeafNode, isAttribute) => {
-      return jpath === 'b2bportal.products.product' ||
-             jpath === 'mywebstore.products.product' ||
-             jpath.endsWith('.gallery.image');
-    },
+    isArray: (name, jpath) =>
+      jpath === 'b2bportal.products.product' ||
+      jpath === 'mywebstore.products.product' ||
+      jpath.endsWith('.gallery.image'),
     textNodeName: '_text',
     trimValues: true,
     cdataPropName: '__cdata',
@@ -51,62 +82,100 @@ export async function b2bportalParser(url: string): Promise<XmlProduct[]> {
     parsed?.b2bportal?.products?.product ||
     parsed?.mywebstore?.products?.product;
 
-    if (!productArray) {
-        console.warn('B2B Parser: No products found in the XML feed.');
-        return [];
-    }
-  
-    if (!Array.isArray(productArray)) {
-        productArray = [productArray];
-    }
+  if (!productArray) {
+    console.warn('B2B Parser: No products found in the XML feed.');
+    return [];
+  }
 
-  const products: XmlProduct[] = await Promise.all(productArray.map(async (p: any) => {
-    let allImages: string[] = [];
-    if (p.image) allImages.push(getText(p.image));
-    if (p.gallery?.image) {
-      const galleryImages = (Array.isArray(p.gallery.image) ? p.gallery.image : [p.gallery.image])
-        .map((img: any) => getText(img))
-        .filter(Boolean);
-      allImages.push(...galleryImages);
-    }
-    allImages = Array.from(new Set(allImages));
-    const mainImage = allImages[0] || null;
+  if (!Array.isArray(productArray)) {
+    productArray = [productArray];
+  }
 
-    const rawCategory = [getText(p.category), getText(p.subcategory)]
-      .filter(Boolean)
-      .join(' > ');
-    const productName = getText(p.title) || getText(p.name) || 'No Name';
-    const mappedCategory = await mapCategory(rawCategory, productName);
+  const products: XmlProduct[] = await Promise.all(
+    productArray.map(async (p: any) => {
+      // --------------------------------------------------------
+      // FIX #3 — image extraction unchanged
+      // --------------------------------------------------------
+      let allImages: string[] = [];
+      if (p.image) allImages.push(getText(p.image));
+      if (p.gallery?.image) {
+        const galleryImages = (Array.isArray(p.gallery.image)
+          ? p.gallery.image
+          : [p.gallery.image])
+          .map((img: any) => getText(img))
+          .filter(Boolean);
+        allImages.push(...galleryImages);
+      }
 
+      allImages = Array.from(new Set(allImages));
+      const mainImage = allImages[0] || null;
 
-    const availabilityText = getText(p.availability).toLowerCase();
-    const isAvailable = availabilityText === 'ναι' || availabilityText === '1';
+      // --------------------------------------------------------
+      // FIX #4 — extract proper clean category
+      // --------------------------------------------------------
+      const rawCategory = extractCategoryValue(p.category);
+      const rawSubCategory = extractCategoryValue(p.subcategory);
 
-    let stock = 0;
-    const stockQty = getText(p.stock) || getText(p.qty) || getText(p.availability_qty);
-    if (stockQty) {
-      stock = Number(stockQty) || 0;
-    } else if (isAvailable) {
-        stock = 1; 
-    }
-    
-    const retailPriceNum = parseFloat((getText(p.retail_price) || '0').replace(',', '.'));
-    const wholesalePriceNum = parseFloat((getText(p.price) || '0').replace(',', '.'));
-    const finalPriceNum = retailPriceNum > 0 ? retailPriceNum : wholesalePriceNum;
+      const combinedCategory = [rawCategory, rawSubCategory]
+        .filter(Boolean)
+        .join(' > ');
 
-    return {
-      id: getText(p.code) || `b2b-${Math.random()}`,
-      name: productName,
-      retailPrice: retailPriceNum.toString(),
-      webOfferPrice: finalPriceNum.toString(),
-      description: getText(p.descr) || '',
-      category: mappedCategory,
-      mainImage,
-      images: allImages,
-      stock,
-      isAvailable,
-    };
-  }));
+      const productName =
+        getText(p.title) || getText(p.name) || 'No Name';
+
+      // FIX #5 — mapped category now works 100%
+      const mappedCategory = await mapCategory(combinedCategory, productName);
+
+      // --------------------------------------------------------
+      // FIX #6 — availability + stock
+      // --------------------------------------------------------
+      const availabilityText = getText(p.availability).toLowerCase();
+      const isAvailable =
+        availabilityText === 'ναι' ||
+        availabilityText === 'yes' ||
+        availabilityText === '1';
+
+      let stock = 0;
+      const stockQty =
+        getText(p.stock) ||
+        getText(p.qty) ||
+        getText(p.availability_qty);
+
+      if (stockQty) {
+        stock = Number(stockQty) || 0;
+      } else if (isAvailable) {
+        stock = 1;
+      }
+
+      // --------------------------------------------------------
+      // FIX #7 — price parsing
+      // --------------------------------------------------------
+      const retailPriceNum = parseFloat(
+        (getText(p.retail_price) || '0').replace(',', '.')
+      );
+      const wholesalePriceNum = parseFloat(
+        (getText(p.price) || '0').replace(',', '.')
+      );
+      const finalPriceNum =
+        retailPriceNum > 0 ? retailPriceNum : wholesalePriceNum;
+
+      // --------------------------------------------------------
+      // RETURN FIXED PRODUCT
+      // --------------------------------------------------------
+      return {
+        id: getText(p.code) || `b2b-${Math.random()}`,
+        name: productName,
+        retailPrice: retailPriceNum.toString(),
+        webOfferPrice: finalPriceNum.toString(),
+        description: getText(p.descr) || '',
+        category: mappedCategory,
+        mainImage,
+        images: allImages,
+        stock,
+        isAvailable,
+      };
+    })
+  );
 
   return products;
 }
