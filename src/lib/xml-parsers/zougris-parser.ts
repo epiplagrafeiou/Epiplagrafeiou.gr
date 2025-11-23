@@ -15,8 +15,13 @@ const getText = (node: any): string => {
   if (node == null) return '';
   if (typeof node === 'string' || typeof node === 'number') return String(node).trim();
   if (typeof node === 'object') {
-    if ('__cdata' in node) return String(node.__cdata).trim();
-    if ('_text' in node) return String(node._text).trim();
+    if (node.__cdata) return String(node.__cdata).trim();
+    if (node._text) return String(node._text).trim();
+     // Handle cases where the text is a direct property
+    if (node['#text']) return String(node['#text']).trim();
+    for (const key in node) {
+        if (typeof node[key] === 'string') return node[key].trim();
+    }
   }
   return '';
 };

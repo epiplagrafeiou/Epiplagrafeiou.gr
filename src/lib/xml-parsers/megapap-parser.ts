@@ -48,6 +48,7 @@ export async function megapapParser(url: string): Promise<XmlProduct[]> {
       if (typeof obj !== 'object' || obj === null) return obj;
       if (Array.isArray(obj)) return obj.map(deCdata);
       if ('__cdata' in obj) return obj.__cdata;
+      if ('_text' in obj) return obj._text;
       const newObj: Record<string, any> = {};
       for (const key in obj) newObj[key] = deCdata(obj[key]);
       return newObj;
@@ -95,8 +96,7 @@ export async function megapapParser(url: string): Promise<XmlProduct[]> {
         0;
       const stock = Number(rawStock) || 0;
       
-      // Corrected, explicit category path construction
-      const rawCategory = [p.category, p.subcategory].filter(Boolean).join(' > ');
+      const rawCategory = [p.category, p.subcategory].filter(Boolean).map(c => typeof c === 'object' ? c._text || '' : c).join(' > ');
       const productName = p.name || 'No Name';
       
       const sku = p.id?.toString() || `temp-id-${Math.random()}`;

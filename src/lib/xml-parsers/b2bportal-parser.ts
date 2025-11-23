@@ -9,9 +9,15 @@ import { mapCategory } from '../category-mapper';
 const getText = (node: any): string => {
   if (node == null) return '';
   if (typeof node === 'string' || typeof node === 'number') return String(node).trim();
+  // Handle complex objects by trying to find a text value
   if (typeof node === 'object') {
-    if ('__cdata' in node) return String((node as any).__cdata).trim();
-    if ('_text' in node) return String((node as any)._text).trim();
+    if (node['#text']) return String(node['#text']).trim();
+    if (node.__cdata) return String(node.__cdata).trim();
+    if (node._text) return String(node._text).trim();
+    // Fallback for deeply nested text
+    for (const key in node) {
+        if (typeof node[key] === 'string') return node[key].trim();
+    }
   }
   return '';
 };
@@ -67,7 +73,9 @@ export async function b2bportalParser(url: string): Promise<XmlProduct[]> {
     allImages = Array.from(new Set(allImages));
     const mainImage = allImages[0] || null;
 
-    const rawCategory = [p.category, p.subcategory].filter(Boolean).join(' > ');
+    const rawCategory = [getText(p.category), getText(p.subcategory)]
+      .filter(Boolean)
+      .join(' > ');
     const productName = getText(p.title) || getText(p.name) || 'No Name';
 
     const availabilityText = getText(p.availability).toLowerCase();
