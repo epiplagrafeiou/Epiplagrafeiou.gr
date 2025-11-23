@@ -133,8 +133,6 @@ export async function mapCategory(rawCategory: string, productName: string): Pro
       if (normalizedProductName.includes('καρέκλ')) {
         return 'ΣΑΛΟΝΙ > Καρέκλες τραπεζαρίας';
       }
-      // Implicitly, if it doesn't contain 'καρέκλ', it's likely a 'πολυθρόνα' (armchair)
-      // and will be handled by a more general rule or a new specific one.
     }
 
     // Conditional rule for B2B Portal side tables
