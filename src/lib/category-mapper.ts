@@ -40,6 +40,7 @@ const categoryMapping = [
     { raw: 'λύσεις σκίασης για το μπαλκόνι και τον κήπο > κήπος - βεράντα', mapped: 'ΕΞΩΤΕΡΙΚΟΣ ΧΩΡΟΣ > Λυσεις σκίασης για μπαλκόνι' },
     { raw: 'φαναράκια > κήπος - βεράντα', mapped: 'ΕΞΩΤΕΡΙΚΟΣ ΧΩΡΟΣ > Φαναράκια' },
     { raw: 'κουτιά & μπαούλα κήπου > κήπος - βεράντα', mapped: 'ΕΞΩΤΕΡΙΚΟΣ ΧΩΡΟΣ > Κουτιά Αποθήκευσης Κήπου' },
+    { raw: 'κρεμάστρες δαπέδου > οργάνωση σπιτιού', mapped: 'Αξεσουάρ > Κρεμάστρες Δαπέδου' },
     
     // --- General Megapap Mappings (and fallbacks) ---
     { raw: 'έπιπλα γραφείου > γραφεία', mapped: 'ΓΡΑΦΕΙΟ > Γραφεία' },
@@ -142,9 +143,14 @@ export async function mapCategory(rawCategory: string, productName: string): Pro
       }
     }
     
-    // Conditional rule for B2B portal coat stands
-    if (normalizedRaw === 'κρεμάστρες & καλόγεροι > οργάνωση σπιτιού' && (normalizedProductName.includes('καλόγερος') || normalizedProductName.includes('καλογερος'))) {
-        return 'Αξεσουάρ > Καλόγεροι';
+    // Conditional rule for B2B portal coat stands vs floor hangers
+    if (normalizedRaw === 'κρεμάστρες & καλόγεροι > οργάνωση σπιτιού') {
+        if (normalizedProductName.includes('καλόγερος') || normalizedProductName.includes('καλογερος')) {
+            return 'Αξεσουάρ > Καλόγεροι';
+        }
+        if (normalizedProductName.includes('κρεμάστρ')) {
+            return 'Αξεσουάρ > Κρεμάστρες Δαπέδου';
+        }
     }
 
 
