@@ -134,9 +134,15 @@ const categoryTree = [
     id: 'cat-xmas',
     name: 'Χριστουγεννιάτικα',
     children: [
-        { id: 'sub-8-1', name: 'Χριστουγεννιάτικα Δέντρα', href: '/category/xristougenniatika/dentra', image: 'https://picsum.photos/seed/xmas-dentra/200/200' },
-        { id: 'sub-8-2', name: 'Χριστουγεννιάτικα Στολίδια', href: '/category/xristougenniatika/stolidia', image: 'https://picsum.photos/seed/xmas-stolidia/200/200' },
-        { id: 'sub-8-3', name: 'Χριστουγεννιάτικα Λαμπάκια', href: '/category/xristougenniatika/lampakia', image: 'https://picsum.photos/seed/xmas-lampakia/200/200' },
+        { id: 'sub-8-1', name: 'Χριστουγεννιάτικα Δέντρα', href: '/category/xristougenniatika/christougenniatika-dentra', image: 'https://picsum.photos/seed/xmas-dentra/200/200' },
+        { id: 'sub-8-2', name: 'Βάσεις Χριστουγεννιάτικων Δέντρων', href: '/category/xristougenniatika/vaseis-christougenniatikon-dentron', image: 'https://picsum.photos/seed/xmas-vaseis/200/200' },
+        { id: 'sub-8-3', name: 'Χριστουγεννιάτικα λαμπάκια LED', href: '/category/xristougenniatika/christougenniatika-lampakia-led', image: 'https://picsum.photos/seed/xmas-lampakia/200/200' },
+        { id: 'sub-8-4', name: 'Ξύλινα στολίδια δέντρου', href: '/category/xristougenniatika/xylina-stolidia-dentrou', image: 'https://picsum.photos/seed/xmas-stolidia/200/200' },
+        { id: 'sub-8-5', name: 'Φάτνη Χριστουγέννων', href: '/category/xristougenniatika/fatni-christougennon', image: 'https://picsum.photos/seed/xmas-fatni/200/200' },
+        { id: 'sub-8-6', name: 'Χριστουγεννιάτικα Φωτεινά Στοιχεία', href: '/category/xristougenniatika/christougenniatika-foteina-stoixeia', image: 'https://picsum.photos/seed/xmas-foteina/200/200' },
+        { id: 'sub-8-7', name: 'Χριστουγεννιάτικη Διακόσμηση', href: '/category/xristougenniatika/christougenniatiki-diakosmisi', image: 'https://picsum.photos/seed/xmas-diakosmisi/200/200' },
+        { id: 'sub-8-8', name: 'Κηροπήγια & Κηροσβέστες', href: '/category/xristougenniatika/kiropigia-kai-kirosvestes', image: 'https://picsum.photos/seed/xmas-kiropigia/200/200' },
+        { id: 'sub-8-9', name: 'Χριστουγεννιάτικες Φιγούρες', href: '/category/xristougenniatika/christougenniatikes-figoures', image: 'https://picsum.photos/seed/xmas-figoures/200/200' },
     ],
     promoImage: 'https://picsum.photos/seed/promo-xmas/400/600'
   }
