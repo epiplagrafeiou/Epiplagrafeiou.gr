@@ -86,6 +86,8 @@ export async function b2bportalParser(url: string): Promise<XmlProduct[]> {
     const retailPriceNum = parseFloat((getText(p.retail_price) || '0').replace(',', '.'));
     const wholesalePriceNum = parseFloat((getText(p.price) || '0').replace(',', '.'));
     const finalPriceNum = retailPriceNum > 0 ? retailPriceNum : wholesalePriceNum;
+    
+    const mappedCategory = await mapCategory(rawCategory, productName);
 
     return {
       id: getText(p.code) || `b2b-${Math.random()}`,
@@ -93,7 +95,7 @@ export async function b2bportalParser(url: string): Promise<XmlProduct[]> {
       retailPrice: retailPriceNum.toString(),
       webOfferPrice: finalPriceNum.toString(),
       description: getText(p.descr) || '',
-      category: await mapCategory(rawCategory, productName),
+      category: mappedCategory,
       mainImage,
       images: allImages,
       stock,
