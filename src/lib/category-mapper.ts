@@ -132,7 +132,7 @@ export async function mapCategory(rawCategory: string, productName: string): Pro
     
     // Conditional rule for B2B Portal chairs vs armchairs
     if (normalizedRaw === 'καρέκλες & πολυθρόνες > σαλόνι') {
-      if (normalizedProductName.includes('καρέκλ')) {
+      if (normalizedProductName.includes('καρέκλα')) {
         return 'ΣΑΛΟΝΙ > Καρέκλες τραπεζαρίας';
       }
     }
