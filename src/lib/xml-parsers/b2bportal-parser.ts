@@ -16,62 +16,6 @@ const getText = (node: any): string => {
   return '';
 };
 
-// Build a full category path by scanning product keys
-const extractCategoryPath = (p: Record<string, any>): string => {
-  const parts: { key: string; level: number; value: string }[] = [];
-
-  for (const key of Object.keys(p)) {
-    const lower = key.toLowerCase();
-
-    // Match keys like "category", "category_name"
-    if (lower === 'category' || lower === 'category_name') {
-      const v = getText(p[key]);
-      if (v) parts.push({ key, level: 0, value: v });
-      continue;
-    }
-
-    // Match "subcategory", "subcategory_name"
-    if (lower === 'subcategory' || lower === 'subcategory_name') {
-      const v = getText(p[key]);
-      if (v) parts.push({ key, level: 1, value: v });
-      continue;
-    }
-
-    // Match "subcategory2", "subcategory_level2", etc.
-    const subNumMatch = lower.match(/^subcategory(\d+)$/);
-    if (subNumMatch) {
-      const lvl = Number(subNumMatch[1]);
-      const v = getText(p[key]);
-      if (v) parts.push({ key, level: lvl, value: v });
-      continue;
-    }
-
-    const subLevelMatch = lower.match(/^subcategory[_-]?level(\d+)$/);
-    if (subLevelMatch) {
-      const lvl = Number(subLevelMatch[1]);
-      const v = getText(p[key]);
-      if (v) parts.push({ key, level: lvl, value: v });
-      continue;
-    }
-  }
-
-  // Sort: category (level 0) first, then subcategory, then subcategory2/3...
-  parts.sort((a, b) => a.level - b.level);
-
-  // Deduplicate while preserving order
-  const seen = new Set<string>();
-  const orderedValues = parts
-    .map(p => p.value)
-    .filter(v => {
-      const key = v.toLowerCase();
-      if (seen.has(key)) return false;
-      seen.add(key);
-      return true;
-    });
-
-  return orderedValues.join(' > ');
-};
-
 export async function b2bportalParser(url: string): Promise<XmlProduct[]> {
   const response = await fetch(url, { cache: 'no-store' });
   if (!response.ok) {
@@ -107,14 +51,11 @@ export async function b2bportalParser(url: string): Promise<XmlProduct[]> {
     return [];
   }
   
-  // DEFENSIVE FIX: Ensure productArray is always an array
   if (!Array.isArray(productArray)) {
     productArray = [productArray];
   }
 
-
   const products: XmlProduct[] = await Promise.all(productArray.map(async (p: any) => {
-    // Images: main + gallery
     let allImages: string[] = [];
     if (p.image) allImages.push(getText(p.image));
     if (p.gallery?.image) {
@@ -126,26 +67,21 @@ export async function b2bportalParser(url: string): Promise<XmlProduct[]> {
     allImages = Array.from(new Set(allImages));
     const mainImage = allImages[0] || null;
 
-    // Category path (dynamic)
-    const rawCategory = extractCategoryPath(p);
+    // Corrected, explicit category path construction
+    const rawCategory = [getText(p.Category1), getText(p.Category2), getText(p.Category3)].filter(Boolean).join(' > ');
     const productName = getText(p.name) || 'No Name';
 
-    // Availability and Stock Logic
     const availabilityText = getText(p.availability).toLowerCase();
     const isAvailable = availabilityText === 'ναι' || availabilityText === '1';
 
     let stock = 0;
-    // Prioritize explicit stock numbers if they exist
     const stockQty = getText(p.stock) || getText(p.qty) || getText(p.availability_qty);
     if (stockQty) {
       stock = Number(stockQty) || 0;
-    }
-    // If no numeric stock, use the availability text to set a default stock
-    else if (isAvailable) {
-        stock = 1; // Set to 1 to indicate it is in stock
+    } else if (isAvailable) {
+        stock = 1;
     }
     
-    // Prices
     const retailPriceNum = parseFloat((getText(p.retail_price) || '0').replace(',', '.'));
     const wholesalePriceNum = parseFloat((getText(p.price) || '0').replace(',', '.'));
     const finalPriceNum = retailPriceNum > 0 ? retailPriceNum : wholesalePriceNum;
@@ -156,7 +92,7 @@ export async function b2bportalParser(url: string): Promise<XmlProduct[]> {
       retailPrice: retailPriceNum.toString(),
       webOfferPrice: finalPriceNum.toString(),
       description: getText(p.descr) || '',
-      category: await mapCategory(rawCategory, productName), // Use the mapper
+      category: await mapCategory(rawCategory, productName),
       mainImage,
       images: allImages,
       stock,

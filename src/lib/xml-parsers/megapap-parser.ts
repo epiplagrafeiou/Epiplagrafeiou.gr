@@ -61,7 +61,6 @@ export async function megapapParser(url: string): Promise<XmlProduct[]> {
         return [];
     }
     
-    // DEFENSIVE FIX: Ensure productArray is always an array
     if (!Array.isArray(productArray)) {
         productArray = [productArray];
     }
@@ -96,6 +95,7 @@ export async function megapapParser(url: string): Promise<XmlProduct[]> {
         0;
       const stock = Number(rawStock) || 0;
       
+      // Corrected, explicit category path construction
       const rawCategory = [p.category, p.subcategory].filter(Boolean).join(' > ');
       const productName = p.name || 'No Name';
       
@@ -113,7 +113,7 @@ export async function megapapParser(url: string): Promise<XmlProduct[]> {
         retailPrice: p.retail_price_with_vat || '0',
         webOfferPrice: finalWebOfferPrice.toString(),
         description: p.description || '',
-        category: await mapCategory(rawCategory, productName), // Use the mapper
+        category: await mapCategory(rawCategory, productName),
         mainImage,
         images: allImages,
         stock,
