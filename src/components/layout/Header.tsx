@@ -43,11 +43,13 @@ const categoryTree = [
     name: 'ΓΡΑΦΕΙΟ',
     children: [
       { id: 'sub-1-1', name: 'Γραφεία', href: '/category/grafeio/grafeia', image: 'https://picsum.photos/seed/grafeia/200/200' },
-      { id: 'sub-1-2', name: 'Καρέκλες Γραφείου', href: '/category/grafeio/karekles-grafeiou', image: 'https://picsum.photos/seed/karekles/200/200' },
-      { id: 'sub-1-3', name: 'Βιβλιοθήκες', href: '/category/grafeio/bibliothikes', image: 'https://picsum.photos/seed/bibliothikes/200/200' },
-      { id: 'sub-1-4', name: 'Συρταριέρες', href: '/category/grafeio/syrtarieres', image: 'https://picsum.photos/seed/syrtarieres/200/200' },
-      { id: 'sub-1-5', name: 'Ραφιέρες', href: '/category/grafeio/rafieres', image: 'https://picsum.photos/seed/rafieres/200/200' },
+      { id: 'sub-1-2', name: 'Καρέκλες γραφείου', href: '/category/grafeio/karekles-grafeiou', image: 'https://picsum.photos/seed/karekles-grafeiou/200/200' },
+      { id: 'sub-1-3', name: 'Καρέκλες Επισκέπτη', href: '/category/grafeio/karekles-episkepti', image: 'https://picsum.photos/seed/karekles-episkepti/200/200' },
+      { id: 'sub-1-4', name: 'Συρταριέρες Γραφείου', href: '/category/grafeio/syrtarieres-grafeiou', image: 'https://picsum.photos/seed/syrtarieres-grafeiou/200/200' },
+      { id: 'sub-1-5', name: 'Ραφιέρες / Αποθηκευτικά Κουτιά', href: '/category/grafeio/rafieres-apothikeytika-koutia', image: 'https://picsum.photos/seed/rafieres-koutia/200/200' },
       { id: 'sub-1-6', name: 'Ντουλάπες', href: '/category/grafeio/ntoulapes', image: 'https://picsum.photos/seed/ntoulapes/200/200' },
+      { id: 'sub-1-7', name: 'Ανταλλακτικά', href: '/category/grafeio/antallaktika', image: 'https://picsum.photos/seed/antallaktika/200/200' },
+      { id: 'sub-1-8', name: 'Γραφεία υποδοχής / Reception', href: '/category/grafeio/grafeia-ypodoxis-reception', image: 'https://picsum.photos/seed/reception/200/200' },
     ],
     promoImage: 'https://picsum.photos/seed/promo-grafeio/400/600'
   },
