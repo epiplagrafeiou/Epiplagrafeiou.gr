@@ -144,8 +144,13 @@ const categoryTree = [
     name: 'Αξεσουάρ',
     children: [
        { id: 'sub-7-1', name: 'Καλόγεροι', href: '/category/aksesouar/kalogeroi', image: 'https://picsum.photos/seed/kalogeroi/200/200' },
-       { id: 'sub-7-2', name: 'Κρεμάστρες', href: '/category/aksesouar/kremastres', image: 'https://picsum.photos/seed/kremastres/200/200' },
-       { id: 'sub-7-3', name: 'Παπουτσοθήκες', href: '/category/aksesouar/papoutsothikes', image: 'https://picsum.photos/seed/papoutsothikes/200/200' },
+       { id: 'sub-7-2', name: 'Κρεμάστρες Δαπέδου', href: '/category/aksesouar/kremastres-dapedou', image: 'https://picsum.photos/seed/kremastres-dapedou/200/200' },
+       { id: 'sub-7-3', name: 'Πολύπριζα', href: '/category/aksesouar/polyriza', image: 'https://picsum.photos/seed/polyriza/200/200' },
+       { id: 'sub-7-4', name: 'Κάδοι Απορριμμάτων', href: '/category/aksesouar/kadoi-aporrimmaton', image: 'https://picsum.photos/seed/kadoi-aporrimmaton/200/200' },
+       { id: 'sub-7-5', name: 'Βάσεις Τηλεόρασης', href: '/category/aksesouar/vaseis-tileorasis', image: 'https://picsum.photos/seed/vaseis-tileorasis/200/200' },
+       { id: 'sub-7-6', name: 'Σταχτοδοχεία', href: '/category/aksesouar/stachtodocheia', image: 'https://picsum.photos/seed/stachtodocheia/200/200' },
+       { id: 'sub-7-7', name: 'Στόπ Πόρτας', href: '/category/aksesouar/stop-portas', image: 'https://picsum.photos/seed/stop-portas/200/200' },
+       { id: 'sub-7-8', name: 'Σκάλες', href: '/category/aksesouar/skales', image: 'https://picsum.photos/seed/skales/200/200' },
     ],
     promoImage: 'https://picsum.photos/seed/promo-aksesouar/400/600'
   },
@@ -443,7 +448,3 @@ export default function Header() {
     </header>
   );
 }
-
-    
-
-    
