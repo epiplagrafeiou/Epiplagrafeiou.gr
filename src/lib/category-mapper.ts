@@ -23,7 +23,6 @@ const categoryMapping = [
     { raw: 'σαλονι > σκαμπό & πουφ', mapped: 'ΣΑΛΟΝΙ > Πουφ & Σκαμπό' },
     { raw: 'κουρτίνες & κουρτινόξυλα > σαλόνι', mapped: 'ΣΑΛΟΝΙ > Κουρτίνες & Κουρτινόξυλα' },
     { raw: 'στρώματα ύπνου φουσκωτά > οργάνωση σπιτιού', mapped: 'ΚΡΕΒΑΤΟΚΑΜΑΡΑ > Φουσκωτά στρώματα' },
-    { raw: 'κρεμάστρες & καλόγεροι > οργάνωση σπιτιού', mapped: 'Αξεσουάρ > Καλόγεροι' },
     { raw: 'κρεμάστρες δαπέδου > οργάνωση σπιτιού', mapped: 'Αξεσουάρ > Κρεμάστρες Δαπέδου' },
     { raw: 'πολύμπριζα > εικόνα - ήχος', mapped: 'Αξεσουάρ > Πολύπριζα' },
     { raw: 'βάσεις τηλεόρασης > εικόνα - ήχος', mapped: 'Αξεσουάρ > Βάσεις Τηλεόρασης' },
@@ -36,7 +35,7 @@ const categoryMapping = [
     { raw: 'διακοσμηση > φυτά', mapped: 'ΔΙΑΚΟΣΜΗΣΗ > Τεχνητά φυτά' },
     { raw: 'κεριά διακοσμητικά > διακόσμηση & ατμόσφαιρα', mapped: 'ΔΙΑΚΟΣΜΗΣΗ > Κεριά' },
     { raw: 'σαλονι > καναπέδες', mapped: 'ΣΑΛΟΝΙ > Καναπέδες' },
-    { raw: 'καρέκλες & πολυθρόνες > σαλόνι', mapped: 'ΣΑΛΟΝΙ > Καρέκλες τραπεζαρίας' },
+    { raw: 'κρεμάστρες & καλόγεροι > οργάνωση σπιτιού', mapped: 'Αξεσουάρ > Καλόγεροι' },
     { raw: 'παπλωματοθήκες & κλινοσκεπάσματα > δωμάτιο', mapped: 'ΚΡΕΒΑΤΟΚΑΜΑΡΑ > Λευκά Είδη > Σετ Παπλωματοθήκες' },
     { raw: 'κουτιά & μπαούλα κήπου > κήπος - βεράντα', mapped: 'ΕΞΩΤΕΡΙΚΟΣ ΧΩΡΟΣ > Κουτιά Αποθήκευσης Κήπου' },
     { raw: 'διακόσμηση & οργάνωση μπαλκονιού > κήπος - βεράντα', mapped: 'ΕΞΩΤΕΡΙΚΟΣ ΧΩΡΟΣ > Διακόσμηση & Οργάνωση Μπαλκονιού' },
@@ -131,14 +130,6 @@ export async function mapCategory(rawCategory: string, productName: string): Pro
     const normalizedRaw = normalize(rawCategory);
     const normalizedProductName = productName.toLowerCase();
 
-    // Conditional rule for B2B Portal: "Καλόγεροι"
-    if (normalizedRaw === 'κρεμάστρες & καλόγεροι > οργάνωση σπιτιού') {
-        if (normalizedProductName.includes('καλ')) { // Matches "Καλόγερος", "καλόγερος", etc.
-            return 'Αξεσουάρ > Καλόγεροι';
-        }
-        // If it doesn't contain "Καλ", it will fall through to the default return.
-    }
-    
     // Conditional rule for B2B Portal chairs vs armchairs
     if (normalizedRaw === 'καρέκλες & πολυθρόνες > σαλόνι') {
       if (normalizedProductName.includes('καρέκλα')) {
@@ -161,3 +152,5 @@ export async function mapCategory(rawCategory: string, productName: string): Pro
 
     return rawCategory; // Return the raw category if no match is found
 }
+
+    
