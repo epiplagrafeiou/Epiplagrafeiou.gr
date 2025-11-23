@@ -68,7 +68,8 @@ export async function b2bportalParser(url: string): Promise<XmlProduct[]> {
     const mainImage = allImages[0] || null;
 
     const rawCategory = [p.category, p.subcategory].filter(Boolean).join(' > ');
-    const productName = getText(p.name) || 'No Name';
+    // FIX: Prioritize the 'title' field which contains the clean name.
+    const productName = getText(p.title) || getText(p.name) || 'No Name';
 
     // Robust Stock Logic
     const availabilityText = getText(p.availability).toLowerCase();
