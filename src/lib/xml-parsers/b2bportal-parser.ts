@@ -80,7 +80,9 @@ export async function b2bportalParser(url: string): Promise<XmlProduct[]> {
 
   let productArray =
     parsed?.b2bportal?.products?.product ||
-    parsed?.mywebstore?.products?.product;
+    parsed?.mywebstore?.products?.product ||
+    parsed?.products?.product;
+
 
   if (!productArray) {
     console.warn('B2B Parser: No products found in the XML feed.');
