@@ -136,7 +136,9 @@ export default function AdminProductsPage() {
 
     adminProducts.forEach((p) => {
         const key = p.supplierId || 'manual';
-        if (!map[key]) map[key] = [];
+        if (!map[key]) { // Defensive check: if supplierId doesn't exist, create it.
+            map[key] = [];
+        }
         map[key].push(p);
     });
 
