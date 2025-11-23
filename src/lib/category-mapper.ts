@@ -18,7 +18,6 @@ const categoryMapping = [
     // --- Specific B2B Portal overrides ---
     { raw: 'βιβλιοθήκες > σαλόνι', mapped: 'ΓΡΑΦΕΙΟ > Βιβλιοθήκες' }, // B2B places this under 'saloni'
     { raw: 'ραφιέρες & αποθηκευτικά κουτιά > σαλόνι', mapped: 'ΓΡΑΦΕΙΟ > Ραφιέρες / Αποθηκευτικά Κουτιά' }, // B2B
-    // This is now handled by the conditional logic below { raw: 'καρέκλες & πολυθρόνες > σαλόνι', mapped: 'ΣΑΛΟΝΙ > Καρέκλες τραπεζαρίας' }, // B2B
     { raw: 'επιπλα τηλεόρασης > σαλόνι', mapped: 'ΣΑΛΟΝΙ > Έπιπλα τηλεόρασης' }, // B2B
     { raw: 'παπουτσοθήκες > σαλόνι', mapped: 'ΣΑΛΟΝΙ > Παπουτσοθήκες' }, // B2B
     { raw: 'σαλονι > σκαμπό & πουφ', mapped: 'ΣΑΛΟΝΙ > Πουφ & Σκαμπό' }, // B2B
