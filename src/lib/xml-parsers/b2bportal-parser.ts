@@ -67,6 +67,7 @@ export async function b2bportalParser(url: string): Promise<XmlProduct[]> {
     isArray: (name, jpath) =>
       jpath === 'b2bportal.products.product' ||
       jpath === 'mywebstore.products.product' ||
+      jpath === 'products.product' ||
       jpath.endsWith('.gallery.image'),
     textNodeName: '_text',
     trimValues: true,
@@ -95,9 +96,6 @@ export async function b2bportalParser(url: string): Promise<XmlProduct[]> {
 
   const products: XmlProduct[] = await Promise.all(
     productArray.map(async (p: any) => {
-      // --------------------------------------------------------
-      // FIX #3 — image extraction unchanged
-      // --------------------------------------------------------
       let allImages: string[] = [];
       if (p.image) allImages.push(getText(p.image));
       if (p.gallery?.image) {
@@ -112,9 +110,6 @@ export async function b2bportalParser(url: string): Promise<XmlProduct[]> {
       allImages = Array.from(new Set(allImages));
       const mainImage = allImages[0] || null;
 
-      // --------------------------------------------------------
-      // FIX #4 — extract proper clean category
-      // --------------------------------------------------------
       const rawCategory = extractCategoryValue(p.category);
       const rawSubCategory = extractCategoryValue(p.subcategory);
 
@@ -125,12 +120,8 @@ export async function b2bportalParser(url: string): Promise<XmlProduct[]> {
       const productName =
         getText(p.title) || getText(p.name) || 'No Name';
 
-      // FIX #5 — mapped category now works 100%
       const mappedCategory = await mapCategory(combinedCategory, productName);
 
-      // --------------------------------------------------------
-      // FIX #6 — availability + stock
-      // --------------------------------------------------------
       const availabilityText = getText(p.availability).toLowerCase();
       const isAvailable =
         availabilityText === 'ναι' ||
@@ -149,9 +140,6 @@ export async function b2bportalParser(url: string): Promise<XmlProduct[]> {
         stock = 1;
       }
 
-      // --------------------------------------------------------
-      // FIX #7 — price parsing
-      // --------------------------------------------------------
       const retailPriceNum = parseFloat(
         (getText(p.retail_price) || '0').replace(',', '.')
       );
@@ -161,9 +149,6 @@ export async function b2bportalParser(url: string): Promise<XmlProduct[]> {
       const finalPriceNum =
         retailPriceNum > 0 ? retailPriceNum : wholesalePriceNum;
 
-      // --------------------------------------------------------
-      // RETURN FIXED PRODUCT
-      // --------------------------------------------------------
       return {
         id: getText(p.code) || `b2b-${Math.random()}`,
         name: productName,
