@@ -68,10 +68,8 @@ export async function b2bportalParser(url: string): Promise<XmlProduct[]> {
     const mainImage = allImages[0] || null;
 
     const rawCategory = [p.category, p.subcategory].filter(Boolean).join(' > ');
-    // FIX: Prioritize the 'title' field which contains the clean name.
     const productName = getText(p.title) || getText(p.name) || 'No Name';
 
-    // Robust Stock Logic
     const availabilityText = getText(p.availability).toLowerCase();
     const isAvailable = availabilityText === 'ναι' || availabilityText === '1';
 
@@ -80,7 +78,7 @@ export async function b2bportalParser(url: string): Promise<XmlProduct[]> {
     if (stockQty) {
       stock = Number(stockQty) || 0;
     } else if (isAvailable) {
-        stock = 1; // Fallback to 1 if available but no quantity is specified
+        stock = 1; 
     }
     
     const retailPriceNum = parseFloat((getText(p.retail_price) || '0').replace(',', '.'));
