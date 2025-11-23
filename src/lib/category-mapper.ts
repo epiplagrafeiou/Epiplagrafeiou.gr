@@ -37,11 +37,11 @@ const categoryMapping = [
     { raw: 'σαλονι > καναπέδες', mapped: 'ΣΑΛΟΝΙ > Καναπέδες' },
     { raw: 'κρεμάστρες & καλόγεροι > οργάνωση σπιτιού', mapped: 'Αξεσουάρ > Καλόγεροι' },
     { raw: 'παπλωματοθήκες & κλινοσκεπάσματα > δωμάτιο', mapped: 'ΚΡΕΒΑΤΟΚΑΜΑΡΑ > Λευκά Είδη > Σετ Παπλωματοθήκες' },
-    { raw: 'κουτιά & μπαούλα κήπου > κήπος - βεράντα', mapped: 'ΕΞΩΤΕΡΙΚΟΣ ΧΩΡΟΣ > Κουτιά Αποθήκευσης Κήπου' },
     { raw: 'διακόσμηση & οργάνωση μπαλκονιού > κήπος - βεράντα', mapped: 'ΕΞΩΤΕΡΙΚΟΣ ΧΩΡΟΣ > Διακόσμηση & Οργάνωση Μπαλκονιού' },
     { raw: 'εξωτερικος χωρος > αιώρες', mapped: 'ΕΞΩΤΕΡΙΚΟΣ ΧΩΡΟΣ > Αιώρες Κήπου & Βεράντας' },
     { raw: 'λύσεις σκίασης για το μπαλκόνι και τον κήπο > κήπος - βεράντα', mapped: 'ΕΞΩΤΕΡΙΚΟΣ ΧΩΡΟΣ > Λυσεις σκίασης για μπαλκόνι' },
     { raw: 'φαναράκια > κήπος - βεράντα', mapped: 'ΕΞΩΤΕΡΙΚΟΣ ΧΩΡΟΣ > Φαναράκια' },
+    { raw: 'κουτιά & μπαούλα κήπου > κήπος - βεράντα', mapped: 'ΕΞΩΤΕΡΙΚΟΣ ΧΩΡΟΣ > Κουτιά Αποθήκευσης Κήπου' },
     
     // --- General Megapap Mappings (and fallbacks) ---
     { raw: 'έπιπλα γραφείου > γραφεία', mapped: 'ΓΡΑΦΕΙΟ > Γραφεία' },
@@ -143,6 +143,12 @@ export async function mapCategory(rawCategory: string, productName: string): Pro
         return 'ΣΑΛΟΝΙ > Τραπεζάκια Βοηθητικά';
       }
     }
+    
+    // Conditional rule for B2B portal coat stands
+    if (normalizedRaw === 'κρεμάστρες & καλόγεροι > οργάνωση σπιτιού' && normalizedProductName.includes('καλ')) {
+        return 'Αξεσουάρ > Καλόγεροι';
+    }
+
 
     for (const mapping of categoryMapping) {
       if (normalize(mapping.raw) === normalizedRaw) {
@@ -152,5 +158,3 @@ export async function mapCategory(rawCategory: string, productName: string): Pro
 
     return rawCategory; // Return the raw category if no match is found
 }
-
-    
