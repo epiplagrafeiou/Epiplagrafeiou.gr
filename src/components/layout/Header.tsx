@@ -84,7 +84,9 @@ const categoryTree = [
        { id: 'sub-3-3', name: 'Συρταριέρες', href: '/category/krevatokamara/syrtarieres', image: 'https://picsum.photos/seed/syrtarieres-krev/200/200' },
        { id: 'sub-3-4', name: 'Ντουλάπες', href: '/category/krevatokamara/ntoulapes', image: 'https://picsum.photos/seed/ntoulapes-krev/200/200' },
        { id: 'sub-3-5', name: 'Φουσκωτά στρώματα', href: '/category/krevatokamara/fouskota-stromata', image: 'https://picsum.photos/seed/fouskota-stromata/200/200' },
-       { id: 'sub-3-6', name: 'Λευκά Είδη', href: '/category/krevatokamara/lefka-eidi', image: 'https://picsum.photos/seed/lefka-eidi/200/200' },
+       { id: 'sub-3-6', name: 'Μαξιλαροθήκες', href: '/category/krevatokamara/lefka-eidi/maxilarothikes', image: 'https://picsum.photos/seed/maxilarothikes/200/200' },
+       { id: 'sub-3-7', name: 'Σεντόνια', href: '/category/krevatokamara/lefka-eidi/sentonia', image: 'https://picsum.photos/seed/sentonia/200/200' },
+       { id: 'sub-3-8', name: 'Σετ Παπλωματοθήκες', href: '/category/krevatokamara/lefka-eidi/set-paplomatothikes', image: 'https://picsum.photos/seed/paplomatothikes/200/200' },
     ],
     promoImage: 'https://picsum.photos/seed/promo-krevatokamara/400/600'
   },
