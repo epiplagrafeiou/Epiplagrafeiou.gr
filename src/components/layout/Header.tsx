@@ -92,11 +92,18 @@ const categoryTree = [
     id: 'cat-exoterikos',
     name: 'ΕΞΩΤΕΡΙΚΟΣ ΧΩΡΟΣ',
     children: [
-        { id: 'sub-4-1', name: 'Σετ Τραπεζαρίες Κήπου', href: '/category/exoterikos-xoros/set-trapezaries-kipou', image: 'https://picsum.photos/seed/set-kipou/200/200' },
-        { id: 'sub-4-2', name: 'Καρέκλες Κήπου', href: '/category/exoterikos-xoros/karekles-kipou', image: 'https://picsum.photos/seed/karekles-kipou/200/200' },
-        { id: 'sub-4-3', name: 'Τραπέζια Κήπου', href: '/category/exoterikos-xoros/trapezia-kipou', image: 'https://picsum.photos/seed/trapezia-kipou/200/200' },
-        { id: 'sub-4-4', name: 'Ομπρέλες & Σκίαση', href: '/category/exoterikos-xoros/ombreles-skiasi', image: 'https://picsum.photos/seed/ombreles/200/200' },
-        { id: 'sub-4-5', name: 'Αιώρες', href: '/category/exoterikos-xoros/aiores', image: 'https://picsum.photos/seed/aiores/200/200' },
+      { id: 'sub-4-1', name: 'Καρέκλες κήπου', href: '/category/exoterikos-xoros/karekles-kipou', image: 'https://picsum.photos/seed/karekles-kipou/200/200' },
+      { id: 'sub-4-2', name: 'Τραπέζια εξωτερικού χώρου', href: '/category/exoterikos-xoros/trapezia-exoterikou-xorou', image: 'https://picsum.photos/seed/trapezia-exoterikou/200/200' },
+      { id: 'sub-4-3', name: 'Σετ τραπεζαρίες κήπου', href: '/category/exoterikos-xoros/set-trapezaries-kipou', image: 'https://picsum.photos/seed/set-kipou/200/200' },
+      { id: 'sub-4-4', name: 'Βάσεις ομπρελών', href: '/category/exoterikos-xoros/vaseis-ombrelon', image: 'https://picsum.photos/seed/vaseis-ombrelon/200/200' },
+      { id: 'sub-4-5', name: 'Ομπρέλες κήπου / παραλίας', href: '/category/exoterikos-xoros/ombreles-kipou-paralias', image: 'https://picsum.photos/seed/ombreles/200/200' },
+      { id: 'sub-4-6', name: 'Κουτιά Αποθήκευσης Κήπου', href: '/category/exoterikos-xoros/koutia-apothikeysis-kipou', image: 'https://picsum.photos/seed/koutia-kipou/200/200' },
+      { id: 'sub-4-7', name: 'Καρέκλες Catering', href: '/category/exoterikos-xoros/karekles-catering', image: 'https://picsum.photos/seed/karekles-catering/200/200' },
+      { id: 'sub-4-8', name: 'Τραπέζια Catering', href: '/category/exoterikos-xoros/trapezia-catering', image: 'https://picsum.photos/seed/trapezia-catering/200/200' },
+      { id: 'sub-4-9', name: 'Διακόσμηση & Οργάνωση Μπαλκονιού', href: '/category/exoterikos-xoros/diakosmisi-kai-organosi-mpalkoniou', image: 'https://picsum.photos/seed/organosi-mpalkoniou/200/200' },
+      { id: 'sub-4-10', name: 'Αιώρες Κήπου & Βεράντας', href: '/category/exoterikos-xoros/aiores-kipou-kai-verantas', image: 'https://picsum.photos/seed/aiores/200/200' },
+      { id: 'sub-4-11', name: 'Λυσεις σκίασης για μπαλκόνι', href: '/category/exoterikos-xoros/lyseis-skiasis-gia-mpalkoni', image: 'https://picsum.photos/seed/skiasi/200/200' },
+      { id: 'sub-4-12', name: 'Φαναράκια', href: '/category/exoterikos-xoros/fanarakia', image: 'https://picsum.photos/seed/fanarakia/200/200' },
     ],
     promoImage: 'https://picsum.photos/seed/promo-exoterikos/400/600'
   },
@@ -120,15 +127,15 @@ const categoryTree = [
       { id: 'sub-6-1', name: 'Πίνακες', href: '/category/diakosmisi/pinakes', image: 'https://picsum.photos/seed/pinakes/200/200' },
       { id: 'sub-6-2', name: 'Καθρέπτες', href: '/category/diakosmisi/kathreptes', image: 'https://picsum.photos/seed/kathreptes/200/200' },
       { id: 'sub-6-3', name: 'Τεχνητά φυτά', href: '/category/diakosmisi/texnita-fyta', image: 'https://picsum.photos/seed/fyta/200/200' },
-      { id: 'sub-6-5', name: 'Διακοσμητικά Μαξιλάρια', href: '/category/diakosmisi/diakosmitika-maxilaria', image: 'https://picsum.photos/seed/maxilaria/200/200' },
-      { id: 'sub-6-6', name: 'Χαλιά', href: '/category/diakosmisi/xalia', image: 'https://picsum.photos/seed/xalia/200/200' },
-      { id: 'sub-6-7', name: 'Κεριά', href: '/category/diakosmisi/keria', image: 'https://picsum.photos/seed/keria/200/200' },
-      { id: 'sub-6-8', name: 'Κουβέρτες & Ριχτάρια', href: '/category/diakosmisi/koybertes-kai-rixtaria', image: 'https://picsum.photos/seed/koybertes-rixtaria/200/200' },
-      { id: 'sub-6-9', name: 'Επένδυση & Διακόσμηση Τοίχου', href: '/category/diakosmisi/ependysi-kai-diakosmisi-toixou', image: 'https://picsum.photos/seed/ependysi-toixou/200/200' },
-      { id: 'sub-6-11', name: 'Διαχύτες Αρωμάτων', href: '/category/diakosmisi/diaxytes-aromaton', image: 'https://picsum.photos/seed/diaxytes/200/200' },
-      { id: 'sub-6-12', name: 'Κορνίζες', href: '/category/diakosmisi/kornizes', image: 'https://picsum.photos/seed/kornizes/200/200' },
-      { id: 'sub-6-13', name: 'Ρολόγια', href: '/category/diakosmisi/rologia', image: 'https://picsum.photos/seed/rologia/200/200' },
-      { id: 'sub-6-14', name: 'Luxury Decor', href: '/category/diakosmisi/luxury-decor', image: 'https://picsum.photos/seed/luxury-decor/200/200' },
+      { id: 'sub-6-4', name: 'Διακοσμητικά Μαξιλάρια', href: '/category/diakosmisi/diakosmitika-maxilaria', image: 'https://picsum.photos/seed/maxilaria/200/200' },
+      { id: 'sub-6-5', name: 'Χαλιά', href: '/category/diakosmisi/xalia', image: 'https://picsum.photos/seed/xalia/200/200' },
+      { id: 'sub-6-6', name: 'Κεριά', href: '/category/diakosmisi/keria', image: 'https://picsum.photos/seed/keria/200/200' },
+      { id: 'sub-6-7', name: 'Κουβέρτες & Ριχτάρια', href: '/category/diakosmisi/koybertes-kai-rixtaria', image: 'https://picsum.photos/seed/koybertes-rixtaria/200/200' },
+      { id: 'sub-6-8', name: 'Επένδυση & Διακόσμηση Τοίχου', href: '/category/diakosmisi/ependysi-kai-diakosmisi-toixou', image: 'https://picsum.photos/seed/ependysi-toixou/200/200' },
+      { id: 'sub-6-9', name: 'Διαχύτες Αρωμάτων', href: '/category/diakosmisi/diaxytes-aromaton', image: 'https://picsum.photos/seed/diaxytes/200/200' },
+      { id: 'sub-6-10', name: 'Κορνίζες', href: '/category/diakosmisi/kornizes', image: 'https://picsum.photos/seed/kornizes/200/200' },
+      { id: 'sub-6-11', name: 'Ρολόγια', href: '/category/diakosmisi/rologia', image: 'https://picsum.photos/seed/rologia/200/200' },
+      { id: 'sub-6-12', name: 'Luxury Decor', href: '/category/diakosmisi/luxury-decor', image: 'https://picsum.photos/seed/luxury-decor/200/200' },
     ],
     promoImage: 'https://picsum.photos/seed/promo-diakosmisi/400/600'
   },
@@ -436,5 +443,7 @@ export default function Header() {
     </header>
   );
 }
+
+    
 
     
