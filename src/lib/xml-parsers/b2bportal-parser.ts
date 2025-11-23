@@ -130,15 +130,19 @@ export async function b2bportalParser(url: string): Promise<XmlProduct[]> {
     const rawCategory = extractCategoryPath(p);
     const productName = getText(p.name) || 'No Name';
 
-    // Availability (keep as a boolean; don't fake stock)
+    // Availability and Stock Logic
     const availabilityText = getText(p.availability).toLowerCase();
     const isAvailable = availabilityText === 'ναι' || availabilityText === '1';
 
-    // Stock: use numeric fields only if present
     let stock = 0;
+    // Prioritize explicit stock numbers if they exist
     if (p.stock) stock = Number(getText(p.stock)) || 0;
     else if (p.qty) stock = Number(getText(p.qty)) || 0;
     else if (p.availability_qty) stock = Number(getText(p.availability_qty)) || 0;
+    // If no numeric stock, use the availability text to set a default stock
+    else if (isAvailable) {
+        stock = 1; // Set to 1 to indicate it is in stock
+    }
     
     // Prices
     const retailPriceNum = parseFloat((getText(p.retail_price) || '0').replace(',', '.'));
