@@ -18,7 +18,7 @@ const categoryMapping = [
     // --- Specific B2B Portal overrides ---
     { raw: 'βιβλιοθήκες > σαλόνι', mapped: 'ΓΡΑΦΕΙΟ > Βιβλιοθήκες' }, // B2B places this under 'saloni'
     { raw: 'ραφιέρες & αποθηκευτικά κουτιά > σαλόνι', mapped: 'ΓΡΑΦΕΙΟ > Ραφιέρες / Αποθηκευτικά Κουτιά' }, // B2B
-    { raw: 'καρέκλες & πολυθρόνες > σαλόνι', mapped: 'ΣΑΛΟΝΙ > Καρέκλες τραπεζαρίας' }, // B2B
+    // This is now handled by the conditional logic below { raw: 'καρέκλες & πολυθρόνες > σαλόνι', mapped: 'ΣΑΛΟΝΙ > Καρέκλες τραπεζαρίας' }, // B2B
     { raw: 'επιπλα τηλεόρασης > σαλόνι', mapped: 'ΣΑΛΟΝΙ > Έπιπλα τηλεόρασης' }, // B2B
     { raw: 'παπουτσοθήκες > σαλόνι', mapped: 'ΣΑΛΟΝΙ > Παπουτσοθήκες' }, // B2B
     { raw: 'σαλονι > σκαμπό & πουφ', mapped: 'ΣΑΛΟΝΙ > Πουφ & Σκαμπό' }, // B2B
@@ -128,7 +128,15 @@ export async function getCategoryMapping() {
 // Fallback function that uses the mapping.
 export async function mapCategory(rawCategory: string, productName: string): Promise<string> {
     const normalizedRaw = normalize(rawCategory);
+    const normalizedProductName = productName.toLowerCase();
     
+    // Conditional rule for B2B Portal chairs
+    if (normalizedRaw === 'καρέκλες & πολυθρόνες > σαλόνι') {
+      if (normalizedProductName.includes('καρέκλ')) {
+        return 'ΣΑΛΟΝΙ > Καρέκλες τραπεζαρίας';
+      }
+    }
+
     for (const mapping of categoryMapping) {
       if (normalize(mapping.raw) === normalizedRaw) {
         return mapping.mapped;
@@ -137,5 +145,3 @@ export async function mapCategory(rawCategory: string, productName: string): Pro
 
     return rawCategory; // Return the raw category if no match is found
 }
-
-    
