@@ -37,6 +37,7 @@ const categoryMapping = [
     { raw: 'διακοσμηση > φυτά', mapped: 'ΔΙΑΚΟΣΜΗΣΗ > Τεχνητά φυτά' },
     { raw: 'κεριά διακοσμητικά > διακόσμηση & ατμόσφαιρα', mapped: 'ΔΙΑΚΟΣΜΗΣΗ > Κεριά' },
     { raw: 'σαλονι > καναπέδες', mapped: 'ΣΑΛΟΝΙ > Καναπέδες' },
+    { raw: 'καρέκλες & πολυθρόνες > σαλόνι', mapped: 'ΣΑΛΟΝΙ > Καρέκλες τραπεζαρίας' },
     
     // --- General Megapap Mappings (and fallbacks) ---
     { raw: 'έπιπλα γραφείου > γραφεία', mapped: 'ΓΡΑΦΕΙΟ > Γραφεία' },
@@ -65,7 +66,6 @@ const categoryMapping = [
     { raw: 'έπιπλα εσωτερικού χώρου > κονσόλες', mapped: 'ΣΑΛΟΝΙ > Κονσόλες' },
     { raw: 'έπιπλα εσωτερικού χώρου > σκαμπώ μπαρ', mapped: 'ΣΑΛΟΝΙ > Σκαμπώ μπαρ' },
     { raw: 'έπιπλα εσωτερικού χώρου > σκαμπώ', mapped: 'ΣΑΛΟΝΙ > Πουφ & Σκαμπό' },
-    { raw: 'σαλονι > σκαμπό & πουφ', mapped: 'ΣΑΛΟΝΙ > Πουφ & Σκαμπό' },
 
     { raw: 'έπιπλα εσωτερικού χώρου > κρεβάτια', mapped: 'ΚΡΕΒΑΤΟΚΑΜΑΡΑ > Κρεβάτια' },
     { raw: 'κρεβατοκαμαρα > κομοδίνα', mapped: 'ΚΡΕΒΑΤΟΚΑΜΑΡΑ > Κομοδίνα' },
@@ -152,7 +152,5 @@ export async function mapCategory(rawCategory: string, productName: string): Pro
 
     return rawCategory; // Return the raw category if no match is found
 }
-
-    
 
     
