@@ -6,11 +6,13 @@ import type { XmlProduct } from '../types/product';
 import { mapCategory } from '../mappers/categoryMapper';
 
 const xmlParser = new XMLParser({
+  // IMPORTANT: The 'id' is an attribute on the <product> tag.
+  // We must not ignore attributes. The empty prefix makes them easy to access.
   ignoreAttributes: false,
   attributeNamePrefix: '',
+  // This tells the parser which tags to always treat as arrays, even if there's only one.
   isArray: (name, jpath) =>
-    jpath.endsWith('.products.product') ||
-    jpath.endsWith('.gallery.image'),
+    jpath === 'b2bportal.products.product' || jpath.endsWith('.gallery.image'),
   textNodeName: '_text',
   trimValues: true,
   cdataPropName: '__cdata',
@@ -21,6 +23,7 @@ const xmlParser = new XMLParser({
 
 /**
  * A bulletproof, defensive function to extract text content from a parsed XML node.
+ * It handles CDATA, regular text, and null/undefined values safely.
  */
 function getText(node: any): string {
   if (node == null) return '';
@@ -28,8 +31,10 @@ function getText(node: any): string {
     return String(node).trim();
   }
   if (typeof node === 'object') {
+    // Check for CDATA first, as it's common for descriptions/names
     if ('__cdata' in node && node.__cdata != null) return String(node.__cdata).trim();
     if ('_text' in node && node._text != null) return String(node._text).trim();
+    // Fallback for other text-like properties if parser is configured differently
     if ('#text' in node && node['#text'] != null) return String(node['#text']).trim();
   }
   return '';
@@ -37,6 +42,7 @@ function getText(node: any): string {
 
 /**
  * Finds the product array within the parsed XML object, no matter what the root element is.
+ * This is the robust way to handle variations like <b2bportal> or <mywebstore>.
  */
 function findProductArray(parsed: any): any[] | null {
   if (!parsed || typeof parsed !== 'object') return null;
@@ -44,20 +50,14 @@ function findProductArray(parsed: any): any[] | null {
   const rootKeys = Object.keys(parsed);
   if (rootKeys.length === 0) return null;
 
-  for (const key of rootKeys) {
-    const rootElement = parsed[key];
-    if (rootElement?.products?.product) {
-      return Array.isArray(rootElement.products.product)
-        ? rootElement.products.product
-        : [rootElement.products.product];
-    }
-  }
-
-  // Fallback for a direct <products> root
-  if (parsed?.products?.product) {
-     return Array.isArray(parsed.products.product)
-      ? parsed.products.product
-      : [parsed.products.product];
+  // The root key is usually the first one, e.g., 'b2bportal' or 'mywebstore'
+  const rootElement = parsed[rootKeys[0]];
+  
+  if (rootElement?.products?.product) {
+    // If it's already an array, return it. If it's a single object, wrap it in an array.
+    return Array.isArray(rootElement.products.product)
+      ? rootElement.products.product
+      : [rootElement.products.product];
   }
   
   return null;
@@ -65,10 +65,12 @@ function findProductArray(parsed: any): any[] | null {
 
 export async function b2bportalParser(xmlText: string): Promise<XmlProduct[]> {
   const parsed = xmlParser.parse(xmlText);
+
+  // Use the robust finder function to locate the products.
   const productArray = findProductArray(parsed);
 
   if (!productArray) {
-    console.error('B2B Portal XML root keys:', Object.keys(parsed || {}));
+    console.error('B2B Portal Parser Debug: Parsed XML object keys:', Object.keys(parsed || {}));
     throw new Error(
       'B2B Portal XML parsing failed: Could not locate the product array within the XML structure.'
     );
@@ -76,6 +78,9 @@ export async function b2bportalParser(xmlText: string): Promise<XmlProduct[]> {
   
   const products: XmlProduct[] = await Promise.all(
     productArray.map(async (p: any): Promise<XmlProduct> => {
+      // The product ID is an attribute of the <product> tag
+      const id = p.id != null ? String(p.id) : `b2b-${Math.random()}`;
+      
       const rawCategoryOriginal = [getText(p.category), getText(p.subcategory)]
         .filter(Boolean)
         .join(' > ');
@@ -100,7 +105,10 @@ export async function b2bportalParser(xmlText: string): Promise<XmlProduct[]> {
       const finalPrice = retailPriceNum > 0 ? retailPriceNum : wholesalePriceNum;
 
       return {
-        id: getText(p.code) || `b2b-${Math.random()}`,
+        id,
+        sku: getText(p.sku) || getText(p.code),
+        model: getText(p.model) || undefined,
+        ean: getText(p.barcode) || undefined,
         name: getText(p.name) || 'No Name',
         description: getText(p.descr) || '',
         retailPrice: retailPriceNum.toString(),
@@ -112,6 +120,8 @@ export async function b2bportalParser(xmlText: string): Promise<XmlProduct[]> {
         images,
         stock,
         isAvailable,
+        manufacturer: getText(p.manufacturer) || undefined,
+        url: getText(p.url) || undefined,
       };
     })
   );

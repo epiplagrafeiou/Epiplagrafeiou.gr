@@ -9,8 +9,7 @@ const xmlParser = new XMLParser({
   ignoreAttributes: false,
   attributeNamePrefix: '',
   isArray: (name, jpath) =>
-    jpath === 'megapap.products.product' ||
-    jpath.endsWith('.images.image'),
+    jpath.endsWith('.products.product') || jpath.endsWith('.images.image'),
   textNodeName: '_text',
   trimValues: true,
   cdataPropName: '__cdata',
@@ -42,14 +41,12 @@ function findProductArray(parsed: any): any[] | null {
   if (!parsed || typeof parsed !== 'object') return null;
   const rootKeys = Object.keys(parsed);
   if (rootKeys.length === 0) return null;
-  // Common case: a single root element like <megapap> or <mywebstore>
   const rootElement = parsed[rootKeys[0]];
   if (rootElement?.products?.product) {
     return Array.isArray(rootElement.products.product)
       ? rootElement.products.product
       : [rootElement.products.product];
   }
-  // Fallback for a direct <products> root
   if (parsed?.products?.product) {
      return Array.isArray(parsed.products.product)
       ? parsed.products.product
@@ -58,14 +55,15 @@ function findProductArray(parsed: any): any[] | null {
   return null;
 }
 
-
 export async function megapapParser(xmlText: string): Promise<XmlProduct[]> {
   const parsed = xmlParser.parse(xmlText);
 
   const productArray = findProductArray(parsed);
   if (!productArray) {
-    console.error('Megapap XML root keys:', Object.keys(parsed || {}));
-    throw new Error('Megapap XML parsing failed: Could not locate the product array within the XML structure.');
+    console.error('Megapap Parser Debug: Parsed XML object keys:', Object.keys(parsed || {}));
+    throw new Error(
+      'Megapap XML parsing failed: Could not locate the product array within the XML structure.'
+    );
   }
 
   const products: XmlProduct[] = [];
@@ -74,8 +72,7 @@ export async function megapapParser(xmlText: string): Promise<XmlProduct[]> {
     const name = getText(p.name) || 'No Name';
 
     const rawCat = getText(p.category);
-    const mapped = await mapCategory(rawCat);
-    const { category, categoryId, rawCategory } = mapped;
+    const { category, categoryId, rawCategory } = await mapCategory(rawCat);
 
     const images: string[] = [];
     const mainImage = getText(p.main_image) || null;
@@ -95,13 +92,19 @@ export async function megapapParser(xmlText: string): Promise<XmlProduct[]> {
     const retail = parseFloat(getText(p.retail_price_with_vat).replace(',', '.') || '0');
     const webOffer = parseFloat(getText(p.weboffer_price_with_vat).replace(',', '.') || '0');
     const basePrice = webOffer || retail || 0;
-    
+
+    let finalWebOfferPrice = basePrice;
+    const lowerName = name.toLowerCase();
+    if (lowerName.includes('καναπ') || lowerName.includes('sofa')) {
+      finalWebOfferPrice += 75;
+    }
+
     products.push({
-      id: (p.id != null ? String(p.id) : getText(p.sku)) || `megapap-${Math.random()}`,
+      id: (p.id != null ? String(p.id) : getText(p.sku)) || `megapap-${products.length}`,
       name,
       description: getText(p.description),
       retailPrice: retail.toString(),
-      webOfferPrice: basePrice.toString(),
+      webOfferPrice: finalWebOfferPrice.toString(),
       category,
       categoryId,
       rawCategory,
@@ -109,6 +112,10 @@ export async function megapapParser(xmlText: string): Promise<XmlProduct[]> {
       images,
       stock,
       isAvailable: stock > 0,
+      sku: getText(p.sku) || undefined,
+      model: getText(p.model) || undefined,
+      ean: getText(p.ean) || undefined,
+      manufacturer: getText(p.manufacturer) || undefined,
     });
   }
 
