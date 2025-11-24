@@ -1,10 +1,17 @@
-
 // lib/xml-parsers/megapap-parser.ts
 'use server';
 
 import { XMLParser } from 'fast-xml-parser';
 import { mapCategory } from '@/lib/mappers/categoryMapper';
 import type { XmlProduct } from '../types/product';
+
+const extract = (val: any): string => {
+  if (typeof val === "string") return val.trim();
+  if (typeof val === "number") return String(val).trim();
+  if (val && typeof val === "object" && val._text) return String(val._text).trim();
+  if (val && typeof val === "object" && val.__cdata) return String(val.__cdata).trim();
+  return "";
+};
 
 export async function megapapParser(url: string): Promise<XmlProduct[]> {
   const response = await fetch(url, { cache: 'no-store' });
@@ -54,8 +61,11 @@ export async function megapapParser(url: string): Promise<XmlProduct[]> {
     if (mainImage && !allImages.includes(mainImage)) allImages.unshift(mainImage);
     allImages = Array.from(new Set(allImages));
 
-    const rawCat = p.category ?? '';
-    const { category, categoryId } = await mapCategory(rawCat);
+    const rawCategoryString = [extract(p.category), extract(p.subcategory)]
+      .filter(Boolean)
+      .join(" > ");
+    
+    const { category, categoryId } = await mapCategory(rawCategoryString, p.name ?? '');
 
     const rawStock =
       p.qty?.quantity ??
@@ -81,7 +91,7 @@ export async function megapapParser(url: string): Promise<XmlProduct[]> {
       webOfferPrice: finalWebOfferPrice.toString(),
       description: p.description ?? '',
       category,
-      rawCategory: rawCat,
+      rawCategory: rawCategoryString,
       categoryId,
       mainImage,
       images: allImages,

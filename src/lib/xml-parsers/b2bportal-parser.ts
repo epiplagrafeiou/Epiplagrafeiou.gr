@@ -1,4 +1,3 @@
-
 // lib/xml-parsers/b2bportal-parser.ts
 'use server';
 
@@ -7,16 +6,18 @@ import { mapCategory } from '@/lib/mappers/categoryMapper';
 import type { XmlProduct } from '../types/product';
 
 const getText = (node: any): string => {
-  if (node == null) return '';
-  if (typeof node === 'string' || typeof node === 'number') return String(node).trim();
-  if (typeof node === 'object') {
-    if ('__cdata' in node) return String(node.__cdata).trim();
-    if ('_text' in node) return String(node._text).trim();
-    if ('#text' in node) return String(node['#text']).trim();
-    // pick first string field
-    for (const k in node) if (typeof node[k] === 'string') return node[k].trim();
+  try {
+    if (node == null) return "";
+    if (typeof node === "string" || typeof node === "number") return String(node).trim();
+    if (typeof node === "object") {
+      if ("__cdata" in node) return String(node.__cdata ?? "").trim();
+      if ("_text" in node) return String(node._text ?? "").trim();
+      return "";
+    }
+    return "";
+  } catch {
+    return "";
   }
-  return '';
 };
 
 export async function b2bportalParser({ url }: { url: string }): Promise<XmlProduct[]> {
