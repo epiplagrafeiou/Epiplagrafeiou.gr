@@ -3,24 +3,11 @@
 'use server';
 
 import { XMLParser } from 'fast-xml-parser';
-import type { XmlProduct } from '../types/product';
-import { mapCategory } from '../mappers/categoryMapper';
+import type { XmlProduct } from '@/lib/types/product';
+import { mapCategory } from '@/lib/mappers/categoryMapper';
 
-const xmlParser = new XMLParser({
-  ignoreAttributes: false,
-  attributeNamePrefix: '',
-  isArray: (name, jpath) =>
-    jpath === 'megapap.products.product' ||
-    jpath.endsWith('.images.image'),
-  textNodeName: '_text',
-  trimValues: true,
-  cdataPropName: '__cdata',
-  parseAttributeValue: true,
-  parseNodeValue: true,
-  parseTrueNumberOnly: true,
-});
-
-const getText = (node: any): string => {
+// Safe text extractor for any node shape
+function getText(node: any): string {
   if (node == null) return '';
   if (typeof node === 'string' || typeof node === 'number') {
     return String(node).trim();
@@ -28,82 +15,137 @@ const getText = (node: any): string => {
   if (typeof node === 'object') {
     if ('__cdata' in node) return String((node as any).__cdata).trim();
     if ('_text' in node) return String((node as any)._text).trim();
+    if ('#text' in node) return String((node as any)['#text']).trim();
   }
   return '';
-};
+}
 
-export async function megapapParser(xmlText: string): Promise<XmlProduct[]> {
-  const parsed = xmlParser.parse(xmlText);
+export async function megapapParser(url: string): Promise<XmlProduct[]> {
+  const response = await fetch(url, { cache: 'no-store' });
+  if (!response.ok) {
+    throw new Error(`Failed to fetch Megapap XML: ${response.status} ${response.statusText}`);
+  }
+
+  const xmlText = await response.text();
+
+  const parser = new XMLParser({
+    ignoreAttributes: false,
+    attributeNamePrefix: '',
+    trimValues: true,
+    parseAttributeValue: true,
+    parseTagValue: true,
+    textNodeName: '#text',
+    cdataPropName: '__cdata',
+    isArray: (name, jpath) =>
+    jpath === 'megapap.products.product' ||
+    jpath.endsWith('.images.image') ||
+    jpath.endsWith('.attributes.attribute'),
+  });
+
+  const parsed = parser.parse(xmlText);
 
   const productArray = parsed?.megapap?.products?.product;
-  if (!Array.isArray(productArray)) {
-    console.error('Megapap XML root:', Object.keys(parsed || {}));
+  if (!productArray) {
     throw new Error('Megapap XML does not contain products at megapap.products.product');
   }
 
-  const products: XmlProduct[] = [];
+  const productsRaw = Array.isArray(productArray) ? productArray : [productArray];
 
-  for (const p of productArray) {
-    const name = getText(p.name) || 'No Name';
+  const products: XmlProduct[] = await Promise.all(
+    productsRaw.map(async (p: any): Promise<XmlProduct> => {
+      // ID (attribute on <product id="..."> or fallback)
+      const idAttr = p.id; // because attributeNamePrefix: '' -> id is a normal prop
+      const id = idAttr != null ? String(idAttr) : `megapap-${Math.random().toString(36).slice(2)}`;
 
-    // raw supplier category
-    const rawCat = getText(p.category);
+      const name = getText(p.name) || 'No Name';
+      const description = getText(p.description);
 
-    // map to your Firestore categories
-    const mapped = await mapCategory(rawCat);
-    const { category, categoryId, rawCategory } = mapped;
+      const sku = getText(p.sku);
+      const model = getText(p.model);
+      const ean = getText(p.ean);
+      const manufacturer = getText(p.manufacturer);
 
-    // images
-    const images: string[] = [];
-    const mainImage = getText(p.main_image) || null;
-    if (mainImage) images.push(mainImage);
+      // Prices
+      const retailPriceNum = parseFloat(getText(p.retail_price_with_vat).replace(',', '.') || '0') || 0;
+      const offerPriceNum =
+        parseFloat(getText(p.weboffer_price_with_vat).replace(',', '.') || '0') ||
+        retailPriceNum ||
+        0;
 
-    if (p.images?.image) {
-      const arr = Array.isArray(p.images.image) ? p.images.image : [p.images.image];
-      for (const img of arr) {
-        const url = getText(img);
-        if (url && !images.includes(url)) images.push(url);
+      const retailPrice = retailPriceNum > 0 ? retailPriceNum.toString() : '0';
+      const webOfferPrice = offerPriceNum > 0 ? offerPriceNum.toString() : '0';
+
+      // Category
+      const rawCategoryOriginal = getText(p.category); // e.g. "Έπιπλα κήπου > Πανιά καρέκλας σκηνοθέτη"
+      const { rawCategory, category, categoryId } = await mapCategory(rawCategoryOriginal);
+
+      // Stock
+      const quantityNode = p.quantity ?? p.qty ?? p.stock ?? 0;
+      const stock = Number(getText(quantityNode)) || 0;
+
+      const availabilityText = getText(p.availability).toLowerCase();
+      const isAvailable =
+        availabilityText.includes('άμεση') ||
+        availabilityText.includes('διαθεσιμ') ||
+        availabilityText === '1';
+
+      // Images
+      const mainImage = getText(p.main_image) || null;
+
+      let images: string[] = [];
+      if (p.images?.image) {
+        const imagesNode = Array.isArray(p.images.image)
+          ? p.images.image
+          : [p.images.image];
+        images = imagesNode
+          .map((img: any) => getText(img))
+          .filter(Boolean);
       }
-    }
 
-    // stock
-    const qtyText =
-      getText(p.quantity) ||
-      getText(p.qty) ||
-      getText(p.stock) ||
-      '0';
-    const stock = Number(qtyText) || 0;
+      // Ensure mainImage is first
+      if (mainImage && !images.includes(mainImage)) {
+        images.unshift(mainImage);
+      }
+      
+      images = Array.from(new Set(images));
 
-    // prices
-    const retail = parseFloat(getText(p.retail_price_with_vat).replace(',', '.') || '0');
-    const webOffer = parseFloat(getText(p.weboffer_price_with_vat).replace(',', '.') || '0');
-    const basePrice = webOffer || retail || 0;
+      // Attributes (flatten <attributes><attribute id="x">value</attribute></attributes>)
+      const attributes: Record<string, string> = {};
+      if (p.attributes?.attribute) {
+        const attrs = Array.isArray(p.attributes.attribute)
+          ? p.attributes.attribute
+          : [p.attributes.attribute];
+        attrs.forEach((a: any) => {
+          const key = a?.id != null ? String(a.id) : undefined;
+          const value = getText(a);
+          if (key && value) {
+            attributes[key] = value;
+          }
+        });
+      }
 
-    let finalWebOfferPrice = basePrice;
-
-    // extra logic for sofas, etc.
-    const lowerName = name.toLowerCase();
-    if (lowerName.includes('καναπ') || lowerName.includes('sofa')) {
-      finalWebOfferPrice += 75;
-    }
-
-    products.push({
-      id: (p.id != null ? String(p.id) : getText(p.sku)) || `megapap-${products.length}`,
-      name,
-      description: getText(p.description),
-      retailPrice: retail.toString(),
-      webOfferPrice: finalWebOfferPrice.toString(),
-      category,
-      categoryId,
-      rawCategory,
-      mainImage,
-      images,
-      stock,
-      isAvailable: stock > 0,
-      sku: getText(p.sku) || undefined,
-      model: getText(p.model) || undefined,
-    });
-  }
+      return {
+        id,
+        sku: sku || undefined,
+        model: model || undefined,
+        ean: ean || undefined,
+        name,
+        description,
+        retailPrice,
+        webOfferPrice,
+        rawCategory,
+        category,
+        categoryId,
+        stock,
+        isAvailable,
+        mainImage: images[0] || null,
+        images,
+        manufacturer: manufacturer || undefined,
+        url: undefined,
+        attributes: Object.keys(attributes).length ? attributes : undefined,
+      };
+    })
+  );
 
   return products;
 }

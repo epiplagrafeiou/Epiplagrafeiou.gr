@@ -9,7 +9,7 @@ import type { XmlProduct } from '@/lib/types/product';
 export const runtime = 'nodejs'; // Use Node.js runtime for long-running tasks
 export const maxDuration = 300; // Set max duration to 5 minutes for Firebase App Hosting
 
-type ParserFn = (xml: string) => Promise<XmlProduct[]>;
+type ParserFn = (url: string) => Promise<XmlProduct[]>;
 
 const parserMap: Record<string, ParserFn> = {
   'megapap': megapapParser,
@@ -55,19 +55,9 @@ export async function POST(req: NextRequest) {
     const normalizedName = supplierName.toLowerCase().trim();
     const parserFn = parserMap[normalizedName] || fallbackParser;
 
-    // Use a generous timeout, but less than the function's maxDuration
-    const response = await fetchWithTimeout(url, 240000); // 4 minutes
-    if (!response.ok) {
-      return NextResponse.json(
-        {
-          error: `Failed to fetch XML: ${response.status} ${response.statusText}`,
-        },
-        { status: 502 }
-      );
-    }
-
-    const xmlText = await response.text();
-    const products = await parserFn(xmlText);
+    // Fetch and parse the XML using the designated parser function
+    // The parser itself now handles the fetching logic.
+    const products = await parserFn(url);
 
     return NextResponse.json({ products });
   } catch (err: any) {
