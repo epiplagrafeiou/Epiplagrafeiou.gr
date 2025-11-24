@@ -1,3 +1,4 @@
+
 // /lib/mappers/categoryMapper.ts
 'use server';
 
@@ -94,8 +95,13 @@ function getCategoryPath(all: StoreCategory[], id: string): string {
     const node = findById(root, targetId);
     if (!node) return [];
     if (!node.parentId) return [node.name];
-    const parentPath = recPath(node.parentId, root);
-    return [...parentPath, node.name];
+    const parent = findById(root, node.parentId);
+    //This is a simplified version of finding parent path, assumes parent is always in the root for now for simplicity
+    if(parent){
+       const parentPath = recPath(node.parentId, root);
+       return [...parentPath, node.name];
+    }
+    return [node.name];
   };
 
   return recPath(id, all).join(' > ');

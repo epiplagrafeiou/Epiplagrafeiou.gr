@@ -1,6 +1,7 @@
+
 'use client';
 
-import { useState, useMemo, useEffect, useCallback, useTransition } from 'react';
+import { useState, useMemo, useEffect, useTransition } from 'react';
 import {
   Card,
   CardContent,
@@ -31,7 +32,7 @@ export default function XmlImporterPage() {
   
   const [isSyncing, startSyncTransition] = useTransition();
   const [isQuickSyncing, startQuickSyncTransition] = useTransition();
-
+  
   const [loadingSupplier, setLoadingSupplier] = useState<string | null>(null);
   const [quickSyncingSupplier, setQuickSyncingSupplier] = useState<string | null>(null);
 
@@ -58,14 +59,12 @@ export default function XmlImporterPage() {
   }, [suppliers]);
 
   const handleSync = (supplierId: string, url: string, name: string) => {
-    // Set loading state immediately, outside the transition
     setLoadingSupplier(supplierId);
     setActiveSupplierId(supplierId);
     setError(null);
     setSyncedProducts([]);
     setSelectedCategories(new Set());
     
-    // Start the transition for the server action and subsequent state updates
     startSyncTransition(async () => {
       try {
         const products = await syncProductsFromXml(url, name);
@@ -74,7 +73,6 @@ export default function XmlImporterPage() {
       } catch (e: any) {
         setError(e.message);
       } finally {
-        // Reset loading state after the transition is complete
         setLoadingSupplier(null);
       }
     });
@@ -174,8 +172,7 @@ export default function XmlImporterPage() {
         try {
             const allProducts = await syncProductsFromXml(supplier.url, supplier.name);
             const productsToSync = allProducts.filter(p => {
-                const rawCat = typeof p.rawCategory === "string" ? p.rawCategory : "";
-                const categoryPath = rawCat.split('>').map(c => c.trim()).filter(Boolean).join(' > ');
+                const categoryPath = p.rawCategory || '';
                 return savedCategories.includes(categoryPath) || savedCategories.includes('all');
             });
 
@@ -197,8 +194,7 @@ export default function XmlImporterPage() {
   const allCategories = useMemo(() => {
     const categories = new Set<string>();
     syncedProducts.forEach(p => {
-        const rawCat = typeof p.rawCategory === "string" ? p.rawCategory : "";
-        const categoryPath = rawCat.split('>').map(c => c.trim()).filter(Boolean).join(' > ');
+        const categoryPath = p.rawCategory || '';
         if (categoryPath) categories.add(categoryPath);
     });
     return Array.from(categories).sort();
@@ -234,8 +230,7 @@ export default function XmlImporterPage() {
       return syncedProducts;
     }
     return syncedProducts.filter(p => {
-        const rawCat = typeof p.rawCategory === "string" ? p.rawCategory : "";
-        const categoryPath = rawCat.split('>').map(c => c.trim()).filter(Boolean).join(' > ');
+        const categoryPath = p.rawCategory || '';
         return categoryPath && selectedCategories.has(categoryPath);
     });
   }, [syncedProducts, selectedCategories, allCategories]);
@@ -342,9 +337,9 @@ export default function XmlImporterPage() {
                     <TableHeader>
                         <TableRow>
                         <TableHead>Name</TableHead>
-                        <TableHead>Category</TableHead>
+                        <TableHead>Raw Category</TableHead>
+                        <TableHead>Mapped Category</TableHead>
                         <TableHead>Stock</TableHead>
-                        <TableHead className="text-right">Supplier Price</TableHead>
                         <TableHead className="text-right">Your Price</TableHead>
                         </TableRow>
                     </TableHeader>
@@ -352,16 +347,17 @@ export default function XmlImporterPage() {
                         {filteredProducts.map((product) => {
                           const supplierPrice = parseFloat(product.webOfferPrice) || 0;
                           const finalPrice = activeSupplier ? applyMarkup(product, activeSupplier.markupRules) : supplierPrice;
-                          const categoryDisplay = typeof product.rawCategory === "string" ? product.rawCategory : 'N/A';
-
+                          
                           return (
                             <TableRow key={product.id}>
                                 <TableCell className="font-medium">{product.name}</TableCell>
                                 <TableCell>
-                                <Badge variant="outline">{categoryDisplay}</Badge>
+                                <Badge variant="outline">{product.rawCategory || 'N/A'}</Badge>
+                                </TableCell>
+                                <TableCell>
+                                <Badge variant="secondary">{product.category || 'N/A'}</Badge>
                                 </TableCell>
                                 <TableCell>{product.stock}</TableCell>
-                                <TableCell className="text-right">{formatCurrency(supplierPrice)}</TableCell>
                                 <TableCell className="text-right font-semibold">{formatCurrency(finalPrice)}</TableCell>
                             </TableRow>
                           );

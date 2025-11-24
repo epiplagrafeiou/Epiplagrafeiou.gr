@@ -1,39 +1,89 @@
 
+// lib/xml-parsers/b2bportal-parser.ts
 'use server';
-import { mapCategory } from "@/lib/mappers/categoryMapper";
-import type { XmlProduct } from "../types/product";
 
-export async function b2bportalParser(xmlJson: any): Promise<XmlProduct[]> {
-  const items = xmlJson?.rss?.channel?.[0]?.item ?? [];
+import { XMLParser } from 'fast-xml-parser';
+import { mapCategory } from '@/lib/mappers/categoryMapper';
+import type { XmlProduct } from '../types/product';
+
+const getText = (node: any): string => {
+  if (node == null) return '';
+  if (typeof node === 'string' || typeof node === 'number') return String(node).trim();
+  if (typeof node === 'object') {
+    if ('__cdata' in node) return String(node.__cdata).trim();
+    if ('_text' in node) return String(node._text).trim();
+    if ('#text' in node) return String(node['#text']).trim();
+    // pick first string field
+    for (const k in node) if (typeof node[k] === 'string') return node[k].trim();
+  }
+  return '';
+};
+
+export async function b2bportalParser({ url }: { url: string }): Promise<XmlProduct[]> {
+  const response = await fetch(url, { cache: 'no-store' });
+  if (!response.ok) throw new Error(`Failed to fetch XML for B2B Portal: ${response.statusText}`);
+  const xmlText = await response.text();
+
+  const parser = new XMLParser({
+    ignoreAttributes: false,
+    attributeNamePrefix: '',
+    isArray: (name, jpath) => jpath === 'b2bportal.products.product' || jpath === 'mywebstore.products.product' || jpath.endsWith('.gallery.image'),
+    textNodeName: '_text',
+    trimValues: true,
+    cdataPropName: '__cdata',
+    parseNodeValue: true,
+    parseAttributeValue: true,
+    parseTrueNumberOnly: true,
+  });
+
+  const parsed = parser.parse(xmlText);
+  const productArray = parsed?.b2bportal?.products?.product || parsed?.mywebstore?.products?.product;
+
+  if (!productArray || !Array.isArray(productArray)) {
+    console.error('b2bportal parsed invalid', productArray);
+    throw new Error('B2B XML structure unexpected');
+  }
+
   const products: XmlProduct[] = [];
 
-  for (const i of items) {
-    const rawCat =
-      (typeof i.category?.[0] === "string" ? i.category[0] : "") || "";
+  for (const p of productArray) {
+    let allImages: string[] = [];
+    if (p.image) allImages.push(getText(p.image));
+    if (p.gallery?.image) {
+      const gallery = Array.isArray(p.gallery.image) ? p.gallery.image : [p.gallery.image];
+      allImages.push(...gallery.map((img: any) => getText(img)).filter(Boolean));
+    }
+    allImages = Array.from(new Set(allImages));
+    const mainImage = allImages[0] ?? null;
 
-    const { category, categoryId, rawCategory } = await mapCategory(rawCat);
+    const rawCat = [getText(p.category), getText(p.subcategory)].filter(Boolean).join(' > ');
+    const { category, categoryId } = await mapCategory(rawCat);
 
-    const images = i["g:image_link"] ?? [];
-    const mainImage = images.length ? images[0] : null;
+    const availability = getText(p.availability).toLowerCase();
+    const isAvailable = availability === 'ναι' || availability === 'yes' || availability === '1';
+    let stock = 0;
+    const stockQty = getText(p.stock) || getText(p.qty) || getText(p.availability_qty);
+    if (stockQty) stock = Number(stockQty) || 0;
+    else if (isAvailable) stock = 1;
+
+    const retail = parseFloat((getText(p.retail_price) || '0').replace(',', '.')) || 0;
+    const wholesale = parseFloat((getText(p.price) || '0').replace(',', '.')) || 0;
+    const finalPrice = retail > 0 ? retail : wholesale;
 
     products.push({
-      id: i["g:id"]?.[0],
-      sku: i["g:id"]?.[0],
-      model: i["g:brand"]?.[0] || "",
-      variantGroupKey: null,
-      color: i["g:color"]?.[0] || null,
-      name: i.title?.[0] || "",
-      description: i["g:description"]?.[0] || "",
-      rawCategory,
+      id: getText(p.code) || `b2b-${Math.random()}`,
+      name: getText(p.title) || getText(p.name) || 'No Name',
+      retailPrice: retail.toString(),
+      webOfferPrice: finalPrice.toString(),
+      description: getText(p.descr) || '',
       category,
+      rawCategory: rawCat,
       categoryId,
-      retailPrice: i["g:price"]?.[0]?.replace(" EUR", "") || "0",
-      webOfferPrice: i["g:price"]?.[0]?.replace(" EUR", "") || "0",
-      stock: parseInt(i["g:quantity"]?.[0] || '0', 10),
-      images,
       mainImage,
-      supplierName: "B2B Portal",
-    } as XmlProduct);
+      images: allImages,
+      stock,
+      isAvailable,
+    });
   }
 
   return products;
