@@ -1,4 +1,4 @@
-// src/lib/category-mapper.ts
+
 'use server';
 
 function normalize(s: string | null | undefined) {
@@ -72,8 +72,8 @@ const STATIC_MAP: Record<string, string> = {
   'party lights > επιπλα & φωτισμός': 'ΦΩΤΙΣΜΟΣ > Φώτα Πάρτη',
 
   // decoration / ΔΙΑΚΟΣΜΗΣΗ
-  'διακόσμηση > φυτά': 'ΔΙΑΚΟΣΜΗΣΗ > Τεχνητά φυτά',
-  'διακόσμηση > χαλιά': 'ΔΙΑΚΟΣΜΗΣΗ > Χαλιά',
+  'διακοσμηση > φυτά': 'ΔΙΑΚΟΣΜΗΣΗ > Τεχνητά φυτά',
+  'διακοσμηση > χαλιά': 'ΔΙΑΚΟΣΜΗΣΗ > Χαλιά',
   'κεριά διακοσμητικά > διακόσμηση & ατμόσφαιρα': 'ΔΙΑΚΟΣΜΗΣΗ > Κεριά',
   'κουβέρτες & ριχτάρια > σαλόνι': 'ΔΙΑΚΟΣΜΗΣΗ > Κουβέρτες & Ριχτάρια',
   'επένδυση & διακόσμηση τοίχου > διακόσμηση & ατμόσφαιρα': 'ΔΙΑΚΟΣΜΗΣΗ > Επένδυση & Διακόσμηση Τοίχου',
@@ -92,7 +92,7 @@ const STATIC_MAP: Record<string, string> = {
  *
  * IMPORTANT: This function does NOT mutate the raw. Parsers should keep rawCategory separately.
  */
-export function mapCategory(rawCategory: any, productName?: string): string {
+export async function mapCategory(rawCategory: any, productName?: string): Promise<string> {
   const extracted = Array.isArray(rawCategory) ? rawCategory.join(' > ') : String(rawCategory ?? '').trim();
   const key = normalize(extracted);
 
@@ -128,6 +128,6 @@ export function mapCategory(rawCategory: any, productName?: string): string {
   return fallback || String(rawCategory ?? '');
 }
 
-export function getMappingTable() {
+export async function getMappingTable() {
   return STATIC_MAP;
 }
