@@ -2,7 +2,7 @@
 'use server';
 import { collection, getDocs } from "firebase/firestore";
 import type { StoreCategory } from "@/components/admin/CategoryManager";
-import { db } from "@/firebase/client"; // Use client-side db for server components
+import { firestore } from "@/firebase/client"; // Use client-side db for server components
 
 /**
  * Maps raw supplier category → your store category.
@@ -18,7 +18,7 @@ export async function mapCategory(rawCategory: string) {
   }
 
   // 1) Load categories from Firestore
-  const snap = await getDocs(collection(db, "categories"));
+  const snap = await getDocs(collection(firestore, "categories"));
   const all: StoreCategory[] = snap.docs.map((d) => ({
     id: d.id,
     ...d.data(),
