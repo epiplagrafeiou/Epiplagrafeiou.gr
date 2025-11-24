@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import {
   Card,
   CardContent,
@@ -16,24 +16,59 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { formatCurrency } from '@/lib/utils';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Terminal, Filter, Zap } from 'lucide-react';
+import { Terminal, Filter, Zap, Loader2 } from 'lucide-react';
 import { useProducts } from '@/lib/products-context';
 import { useToast } from '@/hooks/use-toast';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import type { XmlProduct } from '@/lib/xml-parsers/megapap-parser';
+import type { XmlProduct } from '@/lib/types/product';
+import { useCollection } from '@/firebase/firestore/use-collection';
+import { collection } from 'firebase/firestore';
+import { useFirestore, useMemoFirebase } from '@/firebase';
+import type { StoreCategory } from '@/components/admin/CategoryManager';
 
 export default function XmlImporterPage() {
   const { suppliers } = useSuppliers();
   const { addProducts } = useProducts();
   const { toast } = useToast();
+  const firestore = useFirestore();
+
   const [loadingSupplier, setLoadingSupplier] = useState<string | null>(null);
   const [quickSyncingSupplier, setQuickSyncingSupplier] = useState<string | null>(null);
   const [activeSupplierId, setActiveSupplierId] = useState<string | null>(null);
   const [syncedProducts, setSyncedProducts] = useState<XmlProduct[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [lastSyncCategories, setLastSyncCategories] = useState<Record<string, string[]>>({});
+  const [selectedCategories, setSelectedCategories] = useState<Set<string>>(new Set());
+  const [isAdding, setIsAdding] = useState(false);
+
+
+  const categoriesQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return collection(firestore, 'categories');
+  }, [firestore]);
+  const { data: storeCategories } = useCollection<StoreCategory>(categoriesQuery);
+
+  const categoryMap = useMemo(() => {
+    if (!storeCategories) return new Map();
+    const map = new Map<string, string>(); // rawCategory -> storeCategoryId
+    
+    const traverse = (categories: StoreCategory[]) => {
+      for (const cat of categories) {
+        cat.rawCategories?.forEach(rawCat => {
+            if(!map.has(rawCat)){ // Prioritize parent categories in case of duplicates
+               map.set(rawCat, cat.id);
+            }
+        });
+        if (cat.children?.length) {
+            traverse(cat.children);
+        }
+      }
+    }
+    traverse(storeCategories);
+    return map;
+  }, [storeCategories]);
 
   useEffect(() => {
     const loadedCategories: Record<string, string[]> = {};
@@ -46,19 +81,16 @@ export default function XmlImporterPage() {
     setLastSyncCategories(loadedCategories);
   }, [suppliers]);
 
-
-  const [selectedCategories, setSelectedCategories] = useState<Set<string>>(new Set());
-
   const handleSync = async (supplierId: string, url: string, name: string) => {
     setLoadingSupplier(supplierId);
     setActiveSupplierId(supplierId);
     setError(null);
-    setSyncedProducts([]);
+    setSyncedProducts([]); // Clear previous products immediately
+    setSelectedCategories(new Set()); // Clear selected categories
     try {
       const products = await syncProductsFromXml(url, name);
       setSyncedProducts(products);
-      // Reset categories based on new sync
-      setSelectedCategories(new Set(['all']));
+      setSelectedCategories(new Set(['all'])); // Select all by default for the new sync
     } catch (e: any) {
       setError(e.message);
     } finally {
@@ -66,45 +98,76 @@ export default function XmlImporterPage() {
     }
   };
   
-  const applyMarkup = (price: number, rules: MarkupRule[] = []): number => {
+  const applyMarkup = (product: XmlProduct, rules: MarkupRule[] = []): number => {
+    const price = parseFloat(product.webOfferPrice) || 0;
     const sortedRules = [...rules].sort((a, b) => a.from - b.from);
+    let markedUpPrice = price;
+    let ruleApplied = false;
+
+    // 1. Apply Percentage-based Markup
     for (const rule of sortedRules) {
         if (price >= rule.from && price <= rule.to) {
-            return price * (1 + rule.markup / 100);
+            markedUpPrice = price * (1 + rule.markup / 100);
+            ruleApplied = true;
+            break;
         }
     }
-    const defaultRule = sortedRules.find(r => r.from === 0) || { markup: 0 };
-    return price * (1 + defaultRule.markup / 100);
+    // Apply default rule if no specific range matched
+    if (!ruleApplied) {
+        const defaultRule = sortedRules.find(r => r.to === 99999) || { markup: 30 };
+        markedUpPrice = price * (1 + defaultRule.markup / 100);
+    }
+    
+    // 2. Apply Fixed Additions for Low-Cost Items (based on original price)
+    if (price > 0 && price <= 2) {
+      markedUpPrice += 0.65;
+    } else if (price > 2 && price <= 5) {
+      markedUpPrice += 1.30;
+    } else if (price > 5 && price <= 14) {
+      markedUpPrice += 1.70;
+    }
+    
+    // 3. Apply category-specific surcharges
+    const productNameLower = product.name.toLowerCase();
+    if (productNameLower.includes('μπουφέδες')) {
+      markedUpPrice += 6;
+    } else if (productNameLower.includes('ντουλάπες')) {
+      markedUpPrice += 14;
+    } else if (productNameLower.includes('σετ τραπεζαρίες κήπου')) {
+      markedUpPrice += 16;
+    }
+
+
+    return markedUpPrice;
   };
   
-  const processAndAddProducts = (productsToProcess: XmlProduct[], supplier: (typeof suppliers)[0]) => {
+  const processAndAddProducts = async (productsToProcess: XmlProduct[], supplier: (typeof suppliers)[0]) => {
      const productsToAdd = productsToProcess.map(p => {
-        const retailPrice = parseFloat(p.webOfferPrice) || 0;
-        const finalPrice = applyMarkup(retailPrice, supplier.markupRules);
-        const categoryPath = p.category.split('>').map(c => c.trim()).join(' > ');
+        const finalPrice = applyMarkup(p, supplier.markupRules);
 
         return {
             id: p.id,
+            sku: p.sku,
+            model: p.model,
+            variantGroupKey: p.variantGroupKey,
+            color: p.color,
             supplierId: supplier.id,
             name: p.name,
             price: finalPrice,
             description: p.description,
-            category: categoryPath,
+            categoryId: p.categoryId,
+            rawCategory: p.rawCategory, // Keep the raw category for reference
+            category: p.category,
             images: p.images,
             mainImage: p.mainImage,
             stock: p.stock,
         }
     });
     
-    addProducts(productsToAdd);
-    
-    toast({
-        title: "Products Added/Updated!",
-        description: `${productsToAdd.length} products have been synced to your store.`
-    });
+    await addProducts(productsToAdd);
   }
 
-  const handleAddToStore = () => {
+  const handleAddToStore = async () => {
     const activeSupplier = suppliers.find(s => s.id === activeSupplierId);
     if (!activeSupplier) {
         toast({
@@ -115,17 +178,31 @@ export default function XmlImporterPage() {
         return;
     }
     
-    // Save categories for quick sync
+    setIsAdding(true);
+
     const categoriesToSave = Array.from(selectedCategories);
     localStorage.setItem(`lastSyncCategories_${activeSupplier.id}`, JSON.stringify(categoriesToSave));
     setLastSyncCategories(prev => ({...prev, [activeSupplier.id]: categoriesToSave}));
 
-
-    processAndAddProducts(filteredProducts, activeSupplier);
-
-    setSyncedProducts([]);
-    setSelectedCategories(new Set());
-    setActiveSupplierId(null);
+    try {
+        await processAndAddProducts(filteredProducts, activeSupplier);
+        toast({
+            title: "Products Added/Updated!",
+            description: `${filteredProducts.length} products have been synced to your store.`
+        });
+        setSyncedProducts([]);
+        setSelectedCategories(new Set());
+        setActiveSupplierId(null);
+    } catch(e: any) {
+        console.error("Failed to add products:", e);
+        toast({
+            variant: "destructive",
+            title: "Import Failed",
+            description: "Could not save products to the database. Check the console for details."
+        });
+    } finally {
+        setIsAdding(false);
+    }
   }
 
   const handleQuickSync = async (supplier: (typeof suppliers)[0]) => {
@@ -141,16 +218,26 @@ export default function XmlImporterPage() {
       try {
           const allProducts = await syncProductsFromXml(supplier.url, supplier.name);
           const productsToSync = allProducts.filter(p => {
-              const categoryPath = p.category.split('>').map(c => c.trim()).join(' > ');
+              const rawCat = typeof p.category === "string" ? p.category : "";
+              const categoryPath = rawCat
+                .split('>')
+                .map(c => c.trim())
+                .filter(Boolean)
+                .join(' > ');
               return savedCategories.includes(categoryPath) || savedCategories.includes('all');
           });
 
           if (productsToSync.length === 0) {
               toast({ title: 'Quick Sync Complete', description: 'No products found matching your last selected categories.'});
+              setQuickSyncingSupplier(null);
               return;
           }
           
-          processAndAddProducts(productsToSync, supplier);
+          await processAndAddProducts(productsToSync, supplier);
+          toast({
+            title: "Quick Sync Complete!",
+            description: `${productsToSync.length} products have been synced.`
+          });
 
       } catch(e: any) {
           setError(e.message);
@@ -164,7 +251,8 @@ export default function XmlImporterPage() {
   const allCategories = useMemo(() => {
     const categories = new Set<string>();
     syncedProducts.forEach(p => {
-        const categoryPath = p.category.split('>').map(c => c.trim()).join(' > ');
+        const rawCat = typeof p.category === "string" ? p.category : "";
+        const categoryPath = rawCat.split('>').map(c => c.trim()).join(' > ');
         if(categoryPath) categories.add(categoryPath);
     });
     return Array.from(categories).sort();
@@ -183,7 +271,7 @@ export default function XmlImporterPage() {
       } else {
         if (newSet.has(category)) {
           newSet.delete(category);
-          newSet.delete('all'); // Uncheck "all" if a specific item is unchecked
+          newSet.delete('all');
         } else {
           newSet.add(category);
           if (newSet.size === allCategories.length) {
@@ -200,7 +288,8 @@ export default function XmlImporterPage() {
       return syncedProducts;
     }
     return syncedProducts.filter(p => {
-        const categoryPath = p.category.split('>').map(c => c.trim()).join(' > ');
+        const rawCat = typeof p.category === "string" ? p.category : "";
+        const categoryPath = rawCat.split('>').map(c => c.trim()).filter(Boolean).join(' > ');
         return categoryPath && selectedCategories.has(categoryPath);
     });
   }, [syncedProducts, selectedCategories, allCategories]);
@@ -314,13 +403,14 @@ export default function XmlImporterPage() {
                     <TableBody>
                         {filteredProducts.map((product) => {
                           const supplierPrice = parseFloat(product.webOfferPrice) || 0;
-                          const finalPrice = activeSupplier ? applyMarkup(supplierPrice, activeSupplier.markupRules) : supplierPrice;
+                          const finalPrice = activeSupplier ? applyMarkup(product, activeSupplier.markupRules) : supplierPrice;
+                          const categoryDisplay = typeof product.category === "string" ? product.category : 'N/A';
 
                           return (
                             <TableRow key={product.id}>
                                 <TableCell className="font-medium">{product.name}</TableCell>
                                 <TableCell>
-                                <Badge variant="outline">{product.category}</Badge>
+                                <Badge variant="outline">{categoryDisplay}</Badge>
                                 </TableCell>
                                 <TableCell>{product.stock}</TableCell>
                                 <TableCell className="text-right">{formatCurrency(supplierPrice)}</TableCell>
@@ -331,7 +421,10 @@ export default function XmlImporterPage() {
                     </TableBody>
                     </Table>
                     <div className="flex justify-end mt-4">
-                        <Button onClick={handleAddToStore} disabled={filteredProducts.length === 0}>Add/Update {filteredProducts.length} Products</Button>
+                        <Button onClick={handleAddToStore} disabled={filteredProducts.length === 0 || isAdding}>
+                           {isAdding && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                           {isAdding ? "Adding..." : `Add/Update ${filteredProducts.length} Products`}
+                        </Button>
                     </div>
                 </CardContent>
                 </Card>
@@ -341,3 +434,6 @@ export default function XmlImporterPage() {
     </div>
   );
 }
+    
+
+    

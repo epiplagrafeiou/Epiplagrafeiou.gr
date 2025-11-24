@@ -89,6 +89,7 @@ export async function zougrisParser(url: string): Promise<XmlProduct[]> {
         description: getText(p.Description) || '',
         category,
         categoryId,
+        rawCategory,
         mainImage,
         images: allImages,
         stock,
@@ -98,3 +99,5 @@ export async function zougrisParser(url: string): Promise<XmlProduct[]> {
 
   return products;
 }
+
+    
