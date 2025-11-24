@@ -218,7 +218,12 @@ export default function XmlImporterPage() {
       try {
           const allProducts = await syncProductsFromXml(supplier.url, supplier.name);
           const productsToSync = allProducts.filter(p => {
-              const categoryPath = String(p.category || '').split('>').map(c => c.trim()).join(' > ');
+              const rawCat = typeof p.category === "string" ? p.category : "";
+              const categoryPath = rawCat
+                .split('>')
+                .map(c => c.trim())
+                .filter(Boolean)
+                .join(' > ');
               return savedCategories.includes(categoryPath) || savedCategories.includes('all');
           });
 
@@ -246,8 +251,13 @@ export default function XmlImporterPage() {
   const allCategories = useMemo(() => {
     const categories = new Set<string>();
     syncedProducts.forEach(p => {
-        const categoryPath = String(p.category || '').split('>').map(c => c.trim()).join(' > ');
-        if(categoryPath) categories.add(categoryPath);
+        const rawCat = typeof p.category === "string" ? p.category : "";
+        const categoryPath = rawCat
+          .split('>')
+          .map(c => c.trim())
+          .filter(Boolean)
+          .join(' > ');
+        if (categoryPath) categories.add(categoryPath);
     });
     return Array.from(categories).sort();
   }, [syncedProducts]);
@@ -283,7 +293,12 @@ export default function XmlImporterPage() {
       return syncedProducts;
     }
     return syncedProducts.filter(p => {
-        const categoryPath = String(p.category || '').split('>').map(c => c.trim()).join(' > ');
+        const rawCat = typeof p.category === "string" ? p.category : "";
+        const categoryPath = rawCat
+            .split('>')
+            .map(c => c.trim())
+            .filter(Boolean)
+            .join(' > ');
         return categoryPath && selectedCategories.has(categoryPath);
     });
   }, [syncedProducts, selectedCategories, allCategories]);
@@ -403,7 +418,7 @@ export default function XmlImporterPage() {
                             <TableRow key={product.id}>
                                 <TableCell className="font-medium">{product.name}</TableCell>
                                 <TableCell>
-                                <Badge variant="outline">{product.category}</Badge>
+                                <Badge variant="outline">{typeof product.category === 'string' ? product.category : 'N/A'}</Badge>
                                 </TableCell>
                                 <TableCell>{product.stock}</TableCell>
                                 <TableCell className="text-right">{formatCurrency(supplierPrice)}</TableCell>
@@ -427,5 +442,6 @@ export default function XmlImporterPage() {
     </div>
   );
 }
+    
 
     
