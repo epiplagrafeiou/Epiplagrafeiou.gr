@@ -7,6 +7,7 @@ export interface XmlProduct {
   description: string;
   category: string;
   categoryId: string | null;
+  rawCategory?: string; // Keep this optional for now
   mainImage: string | null;
   images: string[];
   stock: number;
@@ -15,4 +16,5 @@ export interface XmlProduct {
   model?: string;
   variantGroupKey?: string;
   color?: string;
+  supplierName?: string;
 }

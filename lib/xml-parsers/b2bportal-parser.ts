@@ -17,7 +17,7 @@ const getText = (node: any): string => {
   return "";
 };
 
-export async function b2bportalParser(url: string): Promise<XmlProduct[]> {
+export async function b2bportalParser({ url }: { url: string; }): Promise<XmlProduct[]> {
   const response = await fetch(url, { cache: 'no-store' });
   if (!response.ok) {
     throw new Error(`Failed to fetch XML: ${response.statusText}`);
