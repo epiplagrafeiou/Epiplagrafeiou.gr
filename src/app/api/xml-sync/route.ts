@@ -6,9 +6,9 @@ import { zougrisParser } from '@/lib/xml-parsers/zougris-parser';
 import type { XmlProduct } from '@/lib/types/product';
 
 export const runtime = 'nodejs'; // Use Node.js runtime for long-running tasks
-export const maxDuration = 300; // Set max duration to 5 minutes for Firebase App Hosting
+export const maxDuration = 300;  // Set max duration to 5 minutes for Firebase App Hosting
 
-type ParserFn = (xmlText: string) => Promise<XmlProduct[]>;
+type ParserFn = (xml: string) => Promise<XmlProduct[]>;
 
 const parserMap: Record<string, ParserFn> = {
   'megapap': megapapParser,
@@ -20,9 +20,10 @@ const parserMap: Record<string, ParserFn> = {
   'zougris': zougrisParser,
 };
 
-const fallbackParser: ParserFn = megapapParser;
+const fallbackParser = megapapParser;
 
-async function fetchWithTimeout(url: string, timeoutMs: number = 45000): Promise<Response> {
+// Increased timeout to 60 seconds to be more patient with slow supplier servers
+async function fetchWithTimeout(url: string, timeoutMs = 60000): Promise<Response> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
 
@@ -58,13 +59,18 @@ export async function POST(req: NextRequest) {
     if (!response.ok) {
       return NextResponse.json(
         {
-          error: `Failed to fetch XML from supplier: ${response.status} ${response.statusText}`,
+          error: `Failed to fetch XML: ${response.status} ${response.statusText}`,
         },
         { status: 502 } // Bad Gateway
       );
     }
 
     const xmlText = await response.text();
+    
+    if (!xmlText) {
+        return NextResponse.json({ error: 'Fetched XML content is empty.'}, { status: 500 });
+    }
+
     const products = await parserFn(xmlText);
 
     return NextResponse.json({ products });
@@ -73,7 +79,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         {
           error:
-            'XML request to supplier timed out (45s limit). The supplier server is too slow or the file is too large.',
+            'XML request to supplier timed out (60s limit). The supplier server is too slow or the file is too large.',
         },
         { status: 504 } // Gateway Timeout
       );

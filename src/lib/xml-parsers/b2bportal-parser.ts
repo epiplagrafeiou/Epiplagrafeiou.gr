@@ -1,4 +1,3 @@
-
 // src/lib/xml-parsers/b2bportal-parser.ts
 'use server';
 
@@ -6,148 +5,125 @@ import { XMLParser } from 'fast-xml-parser';
 import type { XmlProduct } from '../types/product';
 import { mapCategory } from '../mappers/categoryMapper';
 
-// Safe text extractor for any node shape
+const xmlParser = new XMLParser({
+  ignoreAttributes: false,
+  attributeNamePrefix: '',
+  textNodeName: '#text',
+  cdataPropName: '__cdata',
+  trimValues: true,
+  parseAttributeValue: true,
+  parseNodeValue: true,
+  parseTrueNumberOnly: true,
+  isArray: (name, jpath, isLeafNode, isAttribute) => {
+    // This configuration helps ensure product and image nodes are always arrays
+    return jpath.endsWith('.products.product') || jpath.endsWith('.gallery.image');
+  },
+});
+
+/**
+ * A bulletproof, defensive function to extract text content from a parsed XML node,
+ * regardless of its structure (string, number, CDATA, or text node).
+ */
 function getText(node: any): string {
   if (node == null) return '';
   if (typeof node === 'string' || typeof node === 'number') {
     return String(node).trim();
   }
   if (typeof node === 'object') {
-    if ('__cdata' in node) return String((node as any).__cdata).trim();
-    if ('_text' in node) return String((node as any)._text).trim();
-    if ('#text' in node) return String((node as any)['#text']).trim();
+    if ('__cdata' in node && node.__cdata != null) return String(node.__cdata).trim();
+    if ('#text' in node && node['#text'] != null) return String(node['#text']).trim();
+    if ('_text' in node && node._text != null) return String(node._text).trim();
   }
   return '';
 }
 
-export async function b2bportalParser(xmlText: string): Promise<XmlProduct[]> {
-  const parser = new XMLParser({
-    ignoreAttributes: false,
-    attributeNamePrefix: '',
-    trimValues: true,
-    parseAttributeValue: true,
-    parseTagValue: true,
-    textNodeName: '#text',
-    cdataPropName: '__cdata',
-    // Let the parser determine array types automatically for simplicity
-    isArray: (name, jpath, isLeafNode, isAttribute) => {
-        if (jpath === "b2bportal.products.product") return true;
-        if (jpath.endsWith(".gallery.image")) return true;
-        return false;
+/**
+ * Finds the product array within the parsed XML object, no matter what the root element is called.
+ * @param parsed The parsed XML object.
+ * @returns An array of product objects, or null if not found.
+ */
+function findProductArray(parsed: any): any[] | null {
+  if (!parsed || typeof parsed !== 'object') return null;
+
+  // Case 1: Standard paths we've seen before
+  if (parsed?.b2bportal?.products?.product) return parsed.b2bportal.products.product;
+  if (parsed?.mywebstore?.products?.product) return parsed.mywebstore.products.product;
+  
+  // Case 2: Dynamically search for a 'products' object at the root
+  const rootKeys = Object.keys(parsed);
+  if (rootKeys.length === 1) {
+    const rootElement = parsed[rootKeys[0]];
+    if (rootElement?.products?.product) {
+      return rootElement.products.product;
     }
-  });
-
-  const parsed = parser.parse(xmlText);
-
-  // **THE DEFINITIVE FIX: Robustly find the product array**
-  const productData = parsed?.b2bportal?.products?.product;
-
-  if (!productData) {
-    console.error('B2B Parser Error: Could not find product array. Parsed object keys:', Object.keys(parsed || {}));
-    if (parsed?.b2bportal?.products) {
-      console.error('Found "products" object, but no "product" key inside. Keys of products object:', Object.keys(parsed.b2bportal.products));
-    }
-    throw new Error(
-      'B2B Portal XML does not contain products at the expected path: b2bportal.products.product'
-    );
   }
 
-  // Ensure we are always working with an array, even if there's only one product
-  const productsArray = Array.isArray(productData) ? productData : [productData];
+  // Case 3: A direct <products> root
+  if (parsed?.products?.product) {
+    return parsed.products.product;
+  }
+  
+  console.error('[b2bportal-parser] Could not find a "products.product" structure. Top-level keys are:', rootKeys.join(', '));
+  return null;
+}
+
+export async function b2bportalParser(xmlText: string): Promise<XmlProduct[]> {
+  const parsed = xmlParser.parse(xmlText);
+  const productArray = findProductArray(parsed);
+
+  if (!productArray) {
+    throw new Error(
+      'B2B Portal XML parsing failed: Could not locate the product array within the XML structure.'
+    );
+  }
+  
+  // Ensure we are always working with an array.
+  const productsRaw = Array.isArray(productArray) ? productArray : [productArray];
 
   const products: XmlProduct[] = await Promise.all(
-    productsArray.map(async (p: any): Promise<XmlProduct> => {
-      const idAttr = p.id;
-      const id = idAttr != null ? String(idAttr) : `b2b-${Math.random().toString(36).slice(2)}`;
+    productsRaw.map(async (p: any): Promise<XmlProduct> => {
+      const id = (p.id != null ? String(p.id) : getText(p.code)) || `b2b-${Math.random()}`;
 
-      const code = getText(p.code);
-      const sku = getText(p.sku) || code || undefined;
-      const model = getText(p.model);
-      const name = getText(p.name) || 'No Name';
-      const description = getText(p.descr);
-      const manufacturer = getText(p.manufacturer);
+      const retailPriceNum = parseFloat(getText(p.retail_price).replace(',', '.') || '0');
+      const wholesalePriceNum = parseFloat(getText(p.price).replace(',', '.') || '0');
+      const finalPrice = retailPriceNum > 0 ? retailPriceNum : wholesalePriceNum;
 
-      const retailPriceNum = parseFloat(getText(p.retail_price)?.replace(',', '.') || '0');
-      const wholesalePriceNum = parseFloat(getText(p.price)?.replace(',', '.') || '0');
-
-      const basePrice = wholesalePriceNum || retailPriceNum || 0;
-
-      const retailPrice = retailPriceNum > 0 ? retailPriceNum.toString() : '0';
-      const webOfferPrice = basePrice > 0 ? basePrice.toString() : '0';
-
-      // Category: combine category + subcategory for raw
       const rawCategoryOriginal = [getText(p.category), getText(p.subcategory)]
         .filter(Boolean)
         .join(' > ');
-
       const { rawCategory, category, categoryId } = await mapCategory(rawCategoryOriginal);
 
-      // Availability & stock
       const availabilityText = getText(p.availability).toLowerCase();
-      const isAvailable =
-        availabilityText === '1' ||
-        availabilityText.includes('διαθεσιμ') ||
-        availabilityText.includes('άμεση') ||
-        availabilityText.includes('παράδοση');
+      const isAvailable = availabilityText === '1' || availabilityText.includes('διαθέσιμο') || availabilityText.includes('ναι');
+      const stock = Number(getText(p.quantity) || getText(p.qty)) || (isAvailable ? 1 : 0);
 
-      const quantityNode = p.quantity ?? p.qty ?? p.stock ?? 0;
-      const stock = Number(getText(quantityNode)) || (isAvailable ? 1 : 0);
-
-      // Images
       const mainImage = getText(p.image) || getText(p.thumb) || null;
-
       let images: string[] = [];
       if (p.gallery?.image) {
-        const galleryImages = Array.isArray(p.gallery.image)
-          ? p.gallery.image
-          : [p.gallery.image];
-        images = galleryImages
-          .map((img: any) => getText(img))
-          .filter(Boolean);
+        const galleryImages = Array.isArray(p.gallery.image) ? p.gallery.image : [p.gallery.image];
+        images = galleryImages.map((img: any) => getText(img)).filter(Boolean);
       }
-
       if (mainImage && !images.includes(mainImage)) {
         images.unshift(mainImage);
       }
 
-      // Attributes: here we mostly have dims/weight/volume already flattened as tags.
-      const attributes: Record<string, string> = {};
-      const attributeKeys = [
-        'dim1',
-        'dim2',
-        'dim3',
-        'weight',
-        'volume',
-        'energy_label',
-      ];
-      for (const key of attributeKeys) {
-        if (p[key] != null) {
-          const value = getText(p[key]);
-          if (value) attributes[key] = value;
-        }
-      }
-
-      const url = getText(p.url) || undefined;
-
       return {
         id,
-        sku,
-        model: model || undefined,
-        ean: getText(p.barcode) || undefined,
-        name,
-        description,
-        retailPrice,
-        webOfferPrice,
-        rawCategory,
+        name: getText(p.name) || 'No Name',
+        description: getText(p.descr) || '',
+        retailPrice: retailPriceNum.toString(),
+        webOfferPrice: finalPrice.toString(),
         category,
         categoryId,
-        stock,
-        isAvailable,
+        rawCategory,
         mainImage,
         images,
-        manufacturer: manufacturer || undefined,
-        url,
-        attributes: Object.keys(attributes).length ? attributes : undefined,
+        stock,
+        isAvailable,
+        sku: getText(p.sku) || getText(p.code) || undefined,
+        model: getText(p.model) || undefined,
+        ean: getText(p.barcode) || undefined,
+        manufacturer: getText(p.manufacturer) || undefined,
       };
     })
   );
