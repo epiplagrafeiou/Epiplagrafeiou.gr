@@ -67,7 +67,7 @@ export const ProductsProvider = ({ children }: { children: React.ReactNode }) =>
 
   const addProducts = async (
     newProducts: (Omit<Product, 'slug' | 'imageId'> & { mainImage?: string | null, images: string[], category: string, categoryId: string | null })[],
-  ) => {
+  ): Promise<void> => {
     if (!firestore) return Promise.reject(new Error("Firestore not available"));
 
     const batch = writeBatch(firestore);
