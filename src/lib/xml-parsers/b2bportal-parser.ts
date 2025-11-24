@@ -1,4 +1,3 @@
-
 // src/lib/xml-parsers/b2bportal-parser.ts
 'use server';
 
@@ -131,4 +130,3 @@ export async function b2bportalParser(xmlText: string): Promise<XmlProduct[]> {
 
   return products;
 }
-
