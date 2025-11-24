@@ -6,13 +6,10 @@ import type { XmlProduct } from '../types/product';
 import { mapCategory } from '../mappers/categoryMapper';
 
 const xmlParser = new XMLParser({
-  // IMPORTANT: The 'id' is an attribute on the <product> tag.
-  // We must not ignore attributes. The empty prefix makes them easy to access.
   ignoreAttributes: false,
   attributeNamePrefix: '',
-  // This tells the parser which tags to always treat as arrays, even if there's only one.
   isArray: (name, jpath) =>
-    jpath === 'b2bportal.products.product' || jpath.endsWith('.gallery.image'),
+    jpath.endsWith('.products.product') || jpath.endsWith('.gallery.image'),
   textNodeName: '_text',
   trimValues: true,
   cdataPropName: '__cdata',
@@ -31,10 +28,8 @@ function getText(node: any): string {
     return String(node).trim();
   }
   if (typeof node === 'object') {
-    // Check for CDATA first, as it's common for descriptions/names
     if ('__cdata' in node && node.__cdata != null) return String(node.__cdata).trim();
     if ('_text' in node && node._text != null) return String(node._text).trim();
-    // Fallback for other text-like properties if parser is configured differently
     if ('#text' in node && node['#text'] != null) return String(node['#text']).trim();
   }
   return '';
@@ -47,17 +42,14 @@ function getText(node: any): string {
 function findProductArray(parsed: any): any[] | null {
   if (!parsed || typeof parsed !== 'object') return null;
 
-  const rootKeys = Object.keys(parsed);
-  if (rootKeys.length === 0) return null;
+  const rootKey = Object.keys(parsed)[0];
+  if (!rootKey) return null;
 
-  // The root key is usually the first one, e.g., 'b2bportal' or 'mywebstore'
-  const rootElement = parsed[rootKeys[0]];
+  const rootElement = parsed[rootKey];
   
   if (rootElement?.products?.product) {
-    // If it's already an array, return it. If it's a single object, wrap it in an array.
-    return Array.isArray(rootElement.products.product)
-      ? rootElement.products.product
-      : [rootElement.products.product];
+    const products = rootElement.products.product;
+    return Array.isArray(products) ? products : [products];
   }
   
   return null;
@@ -66,7 +58,6 @@ function findProductArray(parsed: any): any[] | null {
 export async function b2bportalParser(xmlText: string): Promise<XmlProduct[]> {
   const parsed = xmlParser.parse(xmlText);
 
-  // Use the robust finder function to locate the products.
   const productArray = findProductArray(parsed);
 
   if (!productArray) {

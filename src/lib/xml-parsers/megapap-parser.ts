@@ -38,21 +38,19 @@ function getText(node: any): string {
  * Finds the product array within the parsed XML object, no matter what the root element is.
  */
 function findProductArray(parsed: any): any[] | null {
-  if (!parsed || typeof parsed !== 'object') return null;
-  const rootKeys = Object.keys(parsed);
-  if (rootKeys.length === 0) return null;
-  const rootElement = parsed[rootKeys[0]];
-  if (rootElement?.products?.product) {
-    return Array.isArray(rootElement.products.product)
-      ? rootElement.products.product
-      : [rootElement.products.product];
-  }
-  if (parsed?.products?.product) {
-     return Array.isArray(parsed.products.product)
-      ? parsed.products.product
-      : [parsed.products.product];
-  }
-  return null;
+    if (!parsed || typeof parsed !== 'object') return null;
+  
+    const rootKey = Object.keys(parsed)[0];
+    if (!rootKey) return null;
+  
+    const rootElement = parsed[rootKey];
+    
+    if (rootElement?.products?.product) {
+        const products = rootElement.products.product;
+        return Array.isArray(products) ? products : [products];
+    }
+    
+    return null;
 }
 
 export async function megapapParser(xmlText: string): Promise<XmlProduct[]> {
@@ -88,7 +86,7 @@ export async function megapapParser(xmlText: string): Promise<XmlProduct[]> {
 
     const qtyText = getText(p.quantity) || getText(p.qty) || getText(p.stock) || '0';
     const stock = Number(qtyText) || 0;
-
+    
     const retail = parseFloat(getText(p.retail_price_with_vat).replace(',', '.') || '0');
     const webOffer = parseFloat(getText(p.weboffer_price_with_vat).replace(',', '.') || '0');
     const basePrice = webOffer || retail || 0;
@@ -114,8 +112,6 @@ export async function megapapParser(xmlText: string): Promise<XmlProduct[]> {
       isAvailable: stock > 0,
       sku: getText(p.sku) || undefined,
       model: getText(p.model) || undefined,
-      ean: getText(p.ean) || undefined,
-      manufacturer: getText(p.manufacturer) || undefined,
     });
   }
 
