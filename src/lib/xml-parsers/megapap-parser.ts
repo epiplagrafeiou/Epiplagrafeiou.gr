@@ -21,6 +21,8 @@ export async function megapapParser(xmlJson: any): Promise<XmlProduct[]> {
     }
     
     const mainImage = item.main_image || images[0] || null;
+    
+    const webOfferPrice = item.weboffer_price_with_vat || item.price || "0";
 
     products.push({
       id: String(item.code || `megapap-${Math.random()}`),
@@ -34,7 +36,7 @@ export async function megapapParser(xmlJson: any): Promise<XmlProduct[]> {
       category,
       categoryId,
       retailPrice: item.retail_price_with_vat || "0",
-      webOfferPrice: item.weboffer_price_with_vat || item.price || "0",
+      webOfferPrice: webOfferPrice,
       stock: parseInt(item.stock ?? '0', 10),
       images: images,
       mainImage: mainImage,

@@ -58,12 +58,15 @@ export default function XmlImporterPage() {
   }, [suppliers]);
 
   const handleSync = (supplierId: string, url: string, name: string) => {
+    // Set loading state immediately, outside the transition
+    setLoadingSupplier(supplierId);
+    setActiveSupplierId(supplierId);
+    setError(null);
+    setSyncedProducts([]);
+    setSelectedCategories(new Set());
+    
+    // Start the transition for the server action and subsequent state updates
     startSyncTransition(async () => {
-      setLoadingSupplier(supplierId);
-      setActiveSupplierId(supplierId);
-      setError(null);
-      setSyncedProducts([]);
-      setSelectedCategories(new Set());
       try {
         const products = await syncProductsFromXml(url, name);
         setSyncedProducts(products);
@@ -71,6 +74,7 @@ export default function XmlImporterPage() {
       } catch (e: any) {
         setError(e.message);
       } finally {
+        // Reset loading state after the transition is complete
         setLoadingSupplier(null);
       }
     });
@@ -156,15 +160,16 @@ export default function XmlImporterPage() {
   }
 
   const handleQuickSync = (supplier: (typeof suppliers)[0]) => {
+      setQuickSyncingSupplier(supplier.id);
+      setError(null);
+      
       startQuickSyncTransition(async () => {
         const savedCategories = lastSyncCategories[supplier.id];
         if (!savedCategories) {
             toast({ variant: 'destructive', title: 'No saved categories', description: 'Perform a manual sync first.'});
+            setQuickSyncingSupplier(null);
             return;
         }
-
-        setQuickSyncingSupplier(supplier.id);
-        setError(null);
         
         try {
             const allProducts = await syncProductsFromXml(supplier.url, supplier.name);
