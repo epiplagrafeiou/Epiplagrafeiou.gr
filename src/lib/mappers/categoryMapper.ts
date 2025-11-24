@@ -1,5 +1,5 @@
 
-// /lib/mappers/categoryMapper.ts
+// /src/lib/mappers/categoryMapper.ts
 'use server';
 
 import { getDb } from '@/lib/firebase-admin';
@@ -16,6 +16,7 @@ async function getCategories(): Promise<StoreCategory[]> {
     return categoryCache;
   }
 
+  console.log('[CategoryMapper] Fetching categories from Firestore...');
   const db = getDb();
   const snap = await db.collection('categories').get();
 
@@ -24,10 +25,29 @@ async function getCategories(): Promise<StoreCategory[]> {
     ...d.data(),
   })) as StoreCategory[];
 
-  categoryCache = all;
-  cacheTimestamp = now;
+  // This function builds the tree structure, which we don't need for mapping,
+  // but it's good practice if you were to use it elsewhere.
+  const categoriesById: Record<string, StoreCategory> = {};
+  const rootCategories: StoreCategory[] = [];
 
-  return all;
+  all.forEach(cat => {
+      categoriesById[cat.id] = { ...cat, children: [] };
+  });
+
+  all.forEach(cat => {
+      if (cat.parentId && categoriesById[cat.parentId]) {
+          categoriesById[cat.parentId].children.push(categoriesById[cat.id]);
+      } else {
+          rootCategories.push(categoriesById[cat.id]);
+      }
+  });
+
+
+  categoryCache = all; // We cache the flat list for easier searching
+  cacheTimestamp = now;
+  console.log(`[CategoryMapper] Cached ${all.length} categories.`);
+
+  return categoryCache;
 }
 
 /**
@@ -43,11 +63,18 @@ export async function mapCategory(rawCategory: string) {
     };
   }
 
-  const all = await getCategories();
-  const match = findCategoryByRaw(all, cleanRaw);
+  const allCategories = await getCategories();
+  let match: StoreCategory | null = null;
+
+  // Find a category where our raw string is listed
+  for (const cat of allCategories) {
+    if (cat.rawCategories?.some((r) => r.toLowerCase() === cleanRaw.toLowerCase())) {
+      match = cat;
+      break;
+    }
+  }
 
   if (!match) {
-    // fallback
     return {
       rawCategory: cleanRaw,
       category: 'Uncategorized',
@@ -55,7 +82,8 @@ export async function mapCategory(rawCategory: string) {
     };
   }
 
-  const path = getCategoryPath(all, match.id);
+  // If we have a match, construct its full path for display
+  const path = getCategoryPath(allCategories, match.id);
 
   return {
     rawCategory: cleanRaw,
@@ -64,45 +92,19 @@ export async function mapCategory(rawCategory: string) {
   };
 }
 
-/** Recursively finds category by checking rawCategories array */
-function findCategoryByRaw(categories: StoreCategory[], raw: string): StoreCategory | null {
-  for (const cat of categories) {
-    if (cat.rawCategories?.some((r) => r.toLowerCase() === raw.toLowerCase())) {
-      return cat;
-    }
-    if (cat.children?.length) {
-      const sub = findCategoryByRaw(cat.children, raw);
-      if (sub) return sub;
-    }
-  }
-  return null;
-}
-
 /** Builds readable category path: "Furniture > Chairs > Office Chairs" */
-function getCategoryPath(all: StoreCategory[], id: string): string {
-  const findById = (items: StoreCategory[], targetId: string): StoreCategory | null => {
-    for (const c of items) {
-      if (c.id === targetId) return c;
-      if (c.children?.length) {
-        const sub = findById(c.children, targetId);
-        if (sub) return sub;
-      }
-    }
-    return null;
-  };
+function getCategoryPath(all: StoreCategory[], leafId: string): string {
+  const path: string[] = [];
+  let currentId: string | null = leafId;
 
-  const recPath = (targetId: string, root: StoreCategory[]): string[] => {
-    const node = findById(root, targetId);
-    if (!node) return [];
-    if (!node.parentId) return [node.name];
-    const parent = findById(root, node.parentId);
-    //This is a simplified version of finding parent path, assumes parent is always in the root for now for simplicity
-    if(parent){
-       const parentPath = recPath(node.parentId, root);
-       return [...parentPath, node.name];
+  while (currentId) {
+    const currentCat = all.find(c => c.id === currentId);
+    if (!currentCat) {
+      break; 
     }
-    return [node.name];
-  };
-
-  return recPath(id, all).join(' > ');
+    path.unshift(currentCat.name);
+    currentId = currentCat.parentId;
+  }
+  
+  return path.join(' > ');
 }

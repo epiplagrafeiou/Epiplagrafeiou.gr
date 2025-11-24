@@ -1,31 +1,42 @@
 
 'use server';
 
-import { XMLParser } from 'fast-xml-parser';
 import { megapapParser } from '@/lib/xml-parsers/megapap-parser';
 import { b2bportalParser } from '@/lib/xml-parsers/b2bportal-parser';
 import { zougrisParser } from '@/lib/xml-parsers/zougris-parser';
 import type { XmlProduct } from '@/lib/types/product';
+import { XMLParser } from 'fast-xml-parser';
 
+// Define a consistent signature for all parsers: they accept parsed JSON
 const parserMap: Record<string, (json: any) => Promise<XmlProduct[]>> = {
   megapap: megapapParser,
   'nordic designs': megapapParser,
   'milano furnishings': megapapParser,
   'office solutions inc.': megapapParser,
-  zougris: zougrisParser,
   'b2b portal': b2bportalParser,
+  // Zougris is special, it expects the URL, not parsed JSON, so we handle it separately.
 };
-
 
 export async function syncProductsFromXml(
   url: string,
   supplierName: string
 ): Promise<XmlProduct[]> {
   const name = supplierName.toLowerCase().trim();
-  const parserFn = parserMap[name] || megapapParser; // Fallback to megapap
+
+  // Special handling for Zougris parser which does its own fetch
+  if (name === 'zougris') {
+      console.log(`[ACTION] 🔍 Running Zougris parser directly for supplier: ${supplierName}`);
+      return await zougrisParser(url);
+  }
+
+  const parserFn = parserMap[name];
+
+  if (!parserFn) {
+    throw new Error(`No parser configured for supplier: ${supplierName}`);
+  }
 
   try {
-    console.log(`[ACTION] 📥 Fetching XML from: ${url}`);
+    console.log(`[ACTION] 📥 Fetching XML from: ${url} for ${supplierName}`);
     const response = await fetch(url, { cache: 'no-store' });
     if (!response.ok) {
       throw new Error(
@@ -37,19 +48,16 @@ export async function syncProductsFromXml(
 
     const xmlParser = new XMLParser({
       ignoreAttributes: false,
-      attributeNamePrefix: '',
+      attributeNamePrefix: '@_',
       textNodeName: '#text',
       parseNodeValue: true,
       parseAttributeValue: true,
       trimValues: true,
       cdataPropName: '__cdata',
-      isArray: (name, jpath, isLeafNode, isAttribute) => {
+      isArray: (name, jpath) => {
         // Define paths that should always be arrays
         return (
-          jpath === 'megapap.products.product' ||
-          jpath === 'b2bportal.products.product' ||
-          jpath === 'mywebstore.products.product' ||
-          jpath === 'Products.Product' ||
+          jpath.endsWith('.product') ||
           jpath.endsWith('.images.image') ||
           jpath.endsWith('.gallery.image')
         );
@@ -57,11 +65,12 @@ export async function syncProductsFromXml(
     });
 
     const parsedJson = xmlParser.parse(xmlText);
-    
-    console.log('===== PARSED JSON STRUCTURE =====');
+
+    // DEBUG: Log the structure to verify the parser's output
+    console.log(`[ACTION] ===== PARSED JSON STRUCTURE for ${supplierName} =====`);
     console.dir(parsedJson, { depth: 10 });
 
-    console.log(`[ACTION] 🔍 Running parser for supplier: ${supplierName}`);
+    console.log(`[ACTION] 🔍 Running parser function for supplier: ${supplierName}`);
     const products = await parserFn(parsedJson);
 
     console.log(`[ACTION] ✅ Parser returned ${products.length} products.`);

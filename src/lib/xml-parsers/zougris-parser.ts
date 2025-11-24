@@ -3,7 +3,7 @@
 
 import { XMLParser } from 'fast-xml-parser';
 import type { XmlProduct } from '../types/product';
-import { mapCategory } from '../mappers/categoryMapper';
+import { mapCategory } from '@/lib/mappers/categoryMapper';
 
 export async function zougrisParser(url: string): Promise<XmlProduct[]> {
   const response = await fetch(url, { cache: 'no-store' });
@@ -43,7 +43,7 @@ export async function zougrisParser(url: string): Promise<XmlProduct[]> {
       p.Epilogi,
     ].filter(Boolean).join(' > ');
     
-    const { category, categoryId } = await mapCategory(rawCat);
+    const { category, categoryId, rawCategory } = await mapCategory(rawCat);
 
     const imageKeys = Object.keys(p).filter(k => k.toLowerCase().startsWith('b2bimage'));
     const allImages = imageKeys.map(k => p[k]).filter(Boolean);
@@ -61,7 +61,7 @@ export async function zougrisParser(url: string): Promise<XmlProduct[]> {
       description: p.Description || '',
       sku: p.Code?.toString(),
       model: p.Model?.toString() || '',
-      rawCategory: rawCat,
+      rawCategory: rawCategory,
       category,
       categoryId,
       retailPrice: retailPriceNum.toString(),
@@ -76,3 +76,4 @@ export async function zougrisParser(url: string): Promise<XmlProduct[]> {
   
   return products;
 }
+
