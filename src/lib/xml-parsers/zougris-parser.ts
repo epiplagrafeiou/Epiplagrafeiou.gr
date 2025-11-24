@@ -17,7 +17,6 @@ const getText = (node: any): string => {
   if (typeof node === 'object') {
     if (node.__cdata) return String(node.__cdata).trim();
     if (node._text) return String(node._text).trim();
-     // Handle cases where the text is a direct property
     if (node['#text']) return String(node['#text']).trim();
     for (const key in node) {
         if (typeof node[key] === 'string') return node[key].trim();
@@ -88,8 +87,8 @@ export async function zougrisParser(url: string): Promise<XmlProduct[]> {
         retailPrice: retailPriceNum.toString(),
         webOfferPrice: finalPriceNum.toString(),
         description: getText(p.Description) || '',
-        category: category,
-        categoryId: categoryId,
+        category,
+        categoryId,
         mainImage,
         images: allImages,
         stock,
@@ -99,5 +98,3 @@ export async function zougrisParser(url: string): Promise<XmlProduct[]> {
 
   return products;
 }
-
-    

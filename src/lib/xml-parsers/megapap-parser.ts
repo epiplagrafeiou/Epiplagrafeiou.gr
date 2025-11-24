@@ -6,7 +6,8 @@ import type { XmlProduct } from '../types/product';
 import { mapCategory } from '../category-mapper';
 
 function getVariantGroupKey(sku: string): string {
-  if (!sku) return '';
+  if (!sku) return sku; // Return empty if SKU is empty
+  // Megapap uses a comma, like '012-000021,2'
   return sku.includes(',') ? sku.split(',')[0] : sku;
 }
 
@@ -98,7 +99,7 @@ export async function megapapParser(url: string): Promise<XmlProduct[]> {
       const productName = p.name || 'No Name';
       const { category, categoryId } = await mapCategory(rawCategory, productName);
       
-      const sku = p.id?.toString() || `temp-id-${Math.random()}`;
+      const sku = p.id?.toString() || `megapap-id-${Math.random()}`;
       
       let finalWebOfferPrice = parseFloat(p.weboffer_price_with_vat || p.retail_price_with_vat || '0');
       const productNameLower = productName.toLowerCase();
@@ -116,8 +117,8 @@ export async function megapapParser(url: string): Promise<XmlProduct[]> {
         retailPrice: p.retail_price_with_vat || '0',
         webOfferPrice: finalWebOfferPrice.toString(),
         description: p.description || '',
-        category: category,
-        categoryId: categoryId,
+        category,
+        categoryId,
         mainImage,
         images: allImages,
         stock,
@@ -126,5 +127,3 @@ export async function megapapParser(url: string): Promise<XmlProduct[]> {
 
     return products;
 }
-
-    

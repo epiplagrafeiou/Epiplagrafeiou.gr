@@ -3,21 +3,13 @@
 
 import { createSlug } from './utils';
 
-function normalize(s: string): string {
-  if (!s) return '';
-  return s
-    .toLowerCase()
-    .replace(/\s+/g, ' ')
-    .replace(/&nbsp;/g, ' ')
-    .trim();
-}
-
+// Helper function to extract a clean string from various category formats
 function extractCategory(raw: any): string {
   if (!raw) return "";
 
-  // If category is simple string
+  // If category is simple string or number
   if (typeof raw === "string" || typeof raw === "number") {
-    return String(raw);
+    return String(raw).trim();
   }
 
   // If category is array (common in XML)
@@ -28,16 +20,32 @@ function extractCategory(raw: any): string {
       .join(" > ");
   }
 
-  // If category is object with known fields
+  // If category is object
   if (typeof raw === "object") {
-    const values = Object.values(raw)
+    // Handle specific structures like CDATA or text nodes
+    if (raw.__cdata) return String(raw.__cdata).trim();
+    if (raw._text) return String(raw._text).trim();
+    if (raw['#text']) return String(raw['#text']).trim();
+
+    // Fallback for generic objects: join all string values
+    return Object.values(raw)
       .map(v => extractCategory(v))
       .filter(Boolean)
       .join(" > ");
-    return values || "";
   }
 
+  // Final fallback
   return String(raw);
+}
+
+
+function normalize(s: string): string {
+  if (!s) return '';
+  return s
+    .toLowerCase()
+    .replace(/\s+/g, ' ')
+    .replace(/&nbsp;/g, ' ')
+    .trim();
 }
 
 const categoryMapping = [
@@ -151,7 +159,7 @@ export async function getCategoryMapping() {
   return categoryMapping;
 }
 
-export async function mapCategory(rawCategory: any, productName: string): Promise<{ category: string, categoryId: string | null }> {
+export async function mapCategory(rawCategory: any, productName: string): Promise<{ category: string, categoryId: string }> {
     const extracted = extractCategory(rawCategory);
     const normalizedRaw = normalize(extracted);
     const normalizedProductName = productName.toLowerCase();
@@ -160,43 +168,44 @@ export async function mapCategory(rawCategory: any, productName: string): Promis
     if (normalizedRaw.includes('καρέκλες & πολυθρόνες > σαλόνι')) {
       if (normalizedProductName.includes('καρέκλα')) {
         const cat = 'ΣΑΛΟΝΙ > Καρέκλες τραπεζαρίας';
-        return { category: cat, categoryId: `cat-${createSlug(cat)}` };
+        return { category: cat, categoryId: createSlug(cat) };
       }
     }
 
     if (normalizedRaw.includes('σαλονι > τραπεζάκια σαλονιού')) {
       if (normalizedProductName.includes('τραπεζάκι βοηθητικό')) {
         const cat = 'ΣΑΛΟΝΙ > Τραπεζάκια Βοηθητικά';
-        return { category: cat, categoryId: `cat-${createSlug(cat)}` };
+        return { category: cat, categoryId: createSlug(cat) };
       }
     }
     
     if (normalizedRaw.includes('κρεμάστρες & καλόγεροι > οργάνωση σπιτιού')) {
         if (normalizedProductName.includes('καλόγερος') || normalizedProductName.includes('καλογερος')) {
             const cat = 'Αξεσουάρ > Καλόγεροι';
-            return { category: cat, categoryId: `cat-${createSlug(cat)}` };
+            return { category: cat, categoryId: createSlug(cat) };
         }
         if (normalizedProductName.includes('κρεμάστρ')) {
             const cat = 'Αξεσουάρ > Κρεμάστρες Δαπέδου';
-            return { category: cat, categoryId: `cat-${createSlug(cat)}` };
+            return { category: cat, categoryId: createSlug(cat) };
         }
     }
 
     if (normalizedRaw.includes('επένδυση & διακόσμηση τοίχου > διακόσμηση & ατμόσφαιρα')) {
         if (normalizedProductName.includes('αυτοκόλλητα πλακάκια μωσαϊκό')) {
-            return { category: extracted, categoryId: null }; 
+            const cat = 'ΔΙΑΚΟΣΜΗΣΗ > Επένδυση & Διακόσμηση Τοίχου > Αυτοκόλλητα Πλακάκια';
+            return { category: cat, categoryId: createSlug(cat) }; 
         }
     }
 
     // --- Static Mapping ---
     for (const mapping of categoryMapping) {
       if (normalizedRaw.includes(normalize(mapping.raw))) {
-        return { category: mapping.mapped, categoryId: `cat-${createSlug(mapping.mapped)}` };
+        const cat = mapping.mapped;
+        return { category: cat, categoryId: createSlug(cat) };
       }
     }
 
     // Fallback
-    return { category: extracted || "Uncategorized", categoryId: null };
+    const fallback = extracted || "Uncategorized";
+    return { category: fallback, categoryId: createSlug(fallback) };
 }
-
-    
