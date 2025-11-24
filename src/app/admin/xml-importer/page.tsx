@@ -156,7 +156,7 @@ export default function XmlImporterPage() {
             price: finalPrice,
             description: p.description,
             categoryId: p.categoryId,
-            rawCategory: p.category, // Keep the raw category for reference
+            rawCategory: p.rawCategory, // Keep the raw category for reference
             category: p.category,
             images: p.images,
             mainImage: p.mainImage,
@@ -218,7 +218,7 @@ export default function XmlImporterPage() {
       try {
           const allProducts = await syncProductsFromXml(supplier.url, supplier.name);
           const productsToSync = allProducts.filter(p => {
-              const categoryPath = p.category.split('>').map(c => c.trim()).join(' > ');
+              const categoryPath = String(p.category || '').split('>').map(c => c.trim()).join(' > ');
               return savedCategories.includes(categoryPath) || savedCategories.includes('all');
           });
 
@@ -246,7 +246,7 @@ export default function XmlImporterPage() {
   const allCategories = useMemo(() => {
     const categories = new Set<string>();
     syncedProducts.forEach(p => {
-        const categoryPath = p.category.split('>').map(c => c.trim()).join(' > ');
+        const categoryPath = String(p.category || '').split('>').map(c => c.trim()).join(' > ');
         if(categoryPath) categories.add(categoryPath);
     });
     return Array.from(categories).sort();
@@ -283,7 +283,7 @@ export default function XmlImporterPage() {
       return syncedProducts;
     }
     return syncedProducts.filter(p => {
-        const categoryPath = p.category.split('>').map(c => c.trim()).join(' > ');
+        const categoryPath = String(p.category || '').split('>').map(c => c.trim()).join(' > ');
         return categoryPath && selectedCategories.has(categoryPath);
     });
   }, [syncedProducts, selectedCategories, allCategories]);
@@ -427,3 +427,5 @@ export default function XmlImporterPage() {
     </div>
   );
 }
+
+    
