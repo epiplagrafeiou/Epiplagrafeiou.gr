@@ -1,3 +1,4 @@
+
 // src/lib/xml-parsers/b2bportal-parser.ts
 'use server';
 
@@ -8,8 +9,14 @@ import { mapCategory } from '../mappers/categoryMapper';
 const xmlParser = new XMLParser({
   ignoreAttributes: false,
   attributeNamePrefix: '',
-  isArray: (name, jpath) =>
-    jpath.endsWith('.products.product') || jpath.endsWith('.gallery.image'),
+  // SAFE isArray function as recommended
+  isArray: (name, jpath) => {
+    if (name === 'product') return true;
+    if (name === 'image') return true;
+    if (name === 'item') return true;
+    if (name === 'gallery') return true;
+    return false;
+  },
   textNodeName: '_text',
   trimValues: true,
   cdataPropName: '__cdata',
@@ -36,28 +43,31 @@ function getText(node: any): string {
 }
 
 /**
- * Finds the product array within the parsed XML object, no matter what the root element is.
- * This is the robust way to handle variations like <b2bportal> or <mywebstore>.
+ * A robust, recursive function to find the product array, regardless of the root element or nesting.
  */
-function findProductArray(parsed: any): any[] | null {
-  if (!parsed || typeof parsed !== 'object') return null;
+function findProductArray(node: any): any[] | null {
+  if (!node || typeof node !== 'object') return null;
 
-  const rootKey = Object.keys(parsed)[0];
-  if (!rootKey) return null;
+  for (const key of Object.keys(node)) {
+    const value = node[key];
+    if (!value) continue;
 
-  const rootElement = parsed[rootKey];
-  
-  if (rootElement?.products?.product) {
-    const products = rootElement.products.product;
-    return Array.isArray(products) ? products : [products];
+    // Direct match: <products><product>...</product></products>
+    if (key === 'products' && value.product) {
+      return Array.isArray(value.product) ? value.product : [value.product];
+    }
+    
+    // Recursive search in case of deeper nesting
+    const deeper = findProductArray(value);
+    if (deeper) return deeper;
   }
-  
+
   return null;
 }
 
+
 export async function b2bportalParser(xmlText: string): Promise<XmlProduct[]> {
   const parsed = xmlParser.parse(xmlText);
-
   const productArray = findProductArray(parsed);
 
   if (!productArray) {
@@ -69,22 +79,24 @@ export async function b2bportalParser(xmlText: string): Promise<XmlProduct[]> {
   
   const products: XmlProduct[] = await Promise.all(
     productArray.map(async (p: any): Promise<XmlProduct> => {
-      // The product ID is an attribute of the <product> tag
-      const id = p.id != null ? String(p.id) : `b2b-${Math.random()}`;
+      // The product ID can be an attribute
+      const id = p.id != null ? String(p.id) : (getText(p.code) || `b2b-${Math.random()}`);
       
       const rawCategoryOriginal = [getText(p.category), getText(p.subcategory)]
         .filter(Boolean)
         .join(' > ');
       const { rawCategory, category, categoryId } = await mapCategory(rawCategoryOriginal);
 
-      const mainImage = getText(p.image) || getText(p.thumb) || null;
       let images: string[] = [];
-      if (p.gallery?.image) {
-        const galleryImages = Array.isArray(p.gallery.image) ? p.gallery.image : [p.gallery.image];
-        images = galleryImages.map((img: any) => getText(img)).filter(Boolean);
-      }
-      if (mainImage && !images.includes(mainImage)) {
-        images.unshift(mainImage);
+      const mainImageCandidate = getText(p.image) || getText(p.thumb) || null;
+      if (mainImageCandidate) images.push(mainImageCandidate);
+
+      if (p.gallery && p.gallery.length > 0 && p.gallery[0].image) {
+          const galleryImages = p.gallery[0].image;
+          const extraImages = (Array.isArray(galleryImages) ? galleryImages : [galleryImages])
+              .map((img: any) => getText(img))
+              .filter(Boolean);
+          images = Array.from(new Set([...images, ...extraImages]));
       }
       
       const availabilityText = getText(p.availability).toLowerCase();
@@ -107,7 +119,7 @@ export async function b2bportalParser(xmlText: string): Promise<XmlProduct[]> {
         category,
         categoryId,
         rawCategory,
-        mainImage,
+        mainImage: images[0] || null,
         images,
         stock,
         isAvailable,
@@ -119,3 +131,4 @@ export async function b2bportalParser(xmlText: string): Promise<XmlProduct[]> {
 
   return products;
 }
+

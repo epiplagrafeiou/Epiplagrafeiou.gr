@@ -1,3 +1,4 @@
+
 // src/lib/xml-parsers/megapap-parser.ts
 'use server';
 
@@ -8,8 +9,14 @@ import { mapCategory } from '../mappers/categoryMapper';
 const xmlParser = new XMLParser({
   ignoreAttributes: false,
   attributeNamePrefix: '',
-  isArray: (name, jpath) =>
-    jpath.endsWith('.products.product') || jpath.endsWith('.images.image'),
+  // SAFE isArray function
+  isArray: (name, jpath) => {
+    if (name === 'product') return true;
+    if (name === 'image') return true;
+    if (name === 'item') return true;
+    if (name === 'gallery') return true;
+    return false;
+  },
   textNodeName: '_text',
   trimValues: true,
   cdataPropName: '__cdata',
@@ -35,22 +42,26 @@ function getText(node: any): string {
 }
 
 /**
- * Finds the product array within the parsed XML object, no matter what the root element is.
+ * A robust, recursive function to find the product array, regardless of the root element or nesting.
  */
-function findProductArray(parsed: any): any[] | null {
-    if (!parsed || typeof parsed !== 'object') return null;
-  
-    const rootKey = Object.keys(parsed)[0];
-    if (!rootKey) return null;
-  
-    const rootElement = parsed[rootKey];
-    
-    if (rootElement?.products?.product) {
-        const products = rootElement.products.product;
-        return Array.isArray(products) ? products : [products];
+function findProductArray(node: any): any[] | null {
+  if (!node || typeof node !== 'object') return null;
+
+  for (const key of Object.keys(node)) {
+    const value = node[key];
+    if (!value) continue;
+
+    // Direct match: <products><product>...</product></products>
+    if (key === 'products' && value.product) {
+      return Array.isArray(value.product) ? value.product : [value.product];
     }
     
-    return null;
+    // Recursive search in case of deeper nesting
+    const deeper = findProductArray(value);
+    if (deeper) return deeper;
+  }
+
+  return null;
 }
 
 export async function megapapParser(xmlText: string): Promise<XmlProduct[]> {
@@ -76,12 +87,13 @@ export async function megapapParser(xmlText: string): Promise<XmlProduct[]> {
     const mainImage = getText(p.main_image) || null;
     if (mainImage) images.push(mainImage);
 
-    if (p.images?.image) {
-      const arr = Array.isArray(p.images.image) ? p.images.image : [p.images.image];
-      for (const img of arr) {
-        const url = getText(img);
-        if (url && !images.includes(url)) images.push(url);
-      }
+    // New safe way to parse images
+    if (p.images && p.images.length > 0 && p.images[0].image) {
+      const galleryImages = p.images[0].image;
+      const extraImages = (Array.isArray(galleryImages) ? galleryImages : [galleryImages])
+          .map((img: any) => getText(img))
+          .filter(Boolean);
+      images.push(...extraImages.filter(img => !images.includes(img)));
     }
 
     const qtyText = getText(p.quantity) || getText(p.qty) || getText(p.stock) || '0';
