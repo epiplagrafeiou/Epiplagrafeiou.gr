@@ -34,7 +34,7 @@ interface ProductsContextType {
   adminProducts: Product[];
   addProducts: (
     newProducts: (Partial<Omit<Product, 'slug' | 'imageId'>> & { id: string; supplierId: string; images: string[]; mainImage?: string | null; name: string; price: number; category: string; description: string; stock: number; categoryId: string | null; })[]
-  ) => void;
+  ) => Promise<void>;
   updateProduct: (product: Product) => void;
   deleteProducts: (productIds: string[]) => void;
   isLoaded: boolean;
@@ -68,7 +68,7 @@ export const ProductsProvider = ({ children }: { children: React.ReactNode }) =>
   const addProducts = async (
     newProducts: (Omit<Product, 'slug' | 'imageId'> & { mainImage?: string | null, images: string[], category: string, categoryId: string | null })[],
   ) => {
-    if (!firestore) return;
+    if (!firestore) return Promise.reject(new Error("Firestore not available"));
 
     const batch = writeBatch(firestore);
     const productBatchData: { path: string; data: any }[] = [];
@@ -109,7 +109,7 @@ export const ProductsProvider = ({ children }: { children: React.ReactNode }) =>
         batch.set(productRef, productData, { merge: true });
     });
 
-    batch.commit().catch(error => {
+    return batch.commit().catch(error => {
        productBatchData.forEach(item => {
          const permissionError = new FirestorePermissionError({
            path: item.path,
@@ -118,6 +118,8 @@ export const ProductsProvider = ({ children }: { children: React.ReactNode }) =>
          });
          errorEmitter.emit('permission-error', permissionError);
        });
+       // Re-throw the error to be caught by the caller
+       throw error;
     });
   };
   

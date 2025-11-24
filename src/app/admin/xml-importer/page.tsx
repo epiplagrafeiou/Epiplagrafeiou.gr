@@ -16,7 +16,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { formatCurrency } from '@/lib/utils';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Terminal, Filter, Zap } from 'lucide-react';
+import { Terminal, Filter, Zap, Loader2 } from 'lucide-react';
 import { useProducts } from '@/lib/products-context';
 import { useToast } from '@/hooks/use-toast';
 import { Label } from '@/components/ui/label';
@@ -41,6 +41,8 @@ export default function XmlImporterPage() {
   const [error, setError] = useState<string | null>(null);
   const [lastSyncCategories, setLastSyncCategories] = useState<Record<string, string[]>>({});
   const [selectedCategories, setSelectedCategories] = useState<Set<string>>(new Set());
+  const [isAdding, setIsAdding] = useState(false);
+
 
   const categoriesQuery = useMemoFirebase(() => {
     if (!firestore) return null;
@@ -139,10 +141,9 @@ export default function XmlImporterPage() {
     return markedUpPrice;
   };
   
-  const processAndAddProducts = (productsToProcess: XmlProduct[], supplier: (typeof suppliers)[0]) => {
+  const processAndAddProducts = async (productsToProcess: XmlProduct[], supplier: (typeof suppliers)[0]) => {
      const productsToAdd = productsToProcess.map(p => {
         const finalPrice = applyMarkup(p, supplier.markupRules);
-        const categoryId = categoryMap.get(p.category) || null;
 
         return {
             id: p.id,
@@ -154,23 +155,19 @@ export default function XmlImporterPage() {
             name: p.name,
             price: finalPrice,
             description: p.description,
-            categoryId: categoryId,
+            categoryId: p.categoryId,
             rawCategory: p.category, // Keep the raw category for reference
+            category: p.category,
             images: p.images,
             mainImage: p.mainImage,
             stock: p.stock,
         }
     });
     
-    addProducts(productsToAdd);
-    
-    toast({
-        title: "Products Added/Updated!",
-        description: `${productsToAdd.length} products have been synced to your store.`
-    });
+    await addProducts(productsToAdd);
   }
 
-  const handleAddToStore = () => {
+  const handleAddToStore = async () => {
     const activeSupplier = suppliers.find(s => s.id === activeSupplierId);
     if (!activeSupplier) {
         toast({
@@ -181,16 +178,31 @@ export default function XmlImporterPage() {
         return;
     }
     
+    setIsAdding(true);
+
     const categoriesToSave = Array.from(selectedCategories);
     localStorage.setItem(`lastSyncCategories_${activeSupplier.id}`, JSON.stringify(categoriesToSave));
     setLastSyncCategories(prev => ({...prev, [activeSupplier.id]: categoriesToSave}));
 
-
-    processAndAddProducts(filteredProducts, activeSupplier);
-
-    setSyncedProducts([]);
-    setSelectedCategories(new Set());
-    setActiveSupplierId(null);
+    try {
+        await processAndAddProducts(filteredProducts, activeSupplier);
+        toast({
+            title: "Products Added/Updated!",
+            description: `${filteredProducts.length} products have been synced to your store.`
+        });
+        setSyncedProducts([]);
+        setSelectedCategories(new Set());
+        setActiveSupplierId(null);
+    } catch(e: any) {
+        console.error("Failed to add products:", e);
+        toast({
+            variant: "destructive",
+            title: "Import Failed",
+            description: "Could not save products to the database. Check the console for details."
+        });
+    } finally {
+        setIsAdding(false);
+    }
   }
 
   const handleQuickSync = async (supplier: (typeof suppliers)[0]) => {
@@ -212,10 +224,15 @@ export default function XmlImporterPage() {
 
           if (productsToSync.length === 0) {
               toast({ title: 'Quick Sync Complete', description: 'No products found matching your last selected categories.'});
+              setQuickSyncingSupplier(null);
               return;
           }
           
-          processAndAddProducts(productsToSync, supplier);
+          await processAndAddProducts(productsToSync, supplier);
+          toast({
+            title: "Quick Sync Complete!",
+            description: `${productsToSync.length} products have been synced.`
+          });
 
       } catch(e: any) {
           setError(e.message);
@@ -397,7 +414,10 @@ export default function XmlImporterPage() {
                     </TableBody>
                     </Table>
                     <div className="flex justify-end mt-4">
-                        <Button onClick={handleAddToStore} disabled={filteredProducts.length === 0}>Add/Update {filteredProducts.length} Products</Button>
+                        <Button onClick={handleAddToStore} disabled={filteredProducts.length === 0 || isAdding}>
+                           {isAdding && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                           {isAdding ? "Adding..." : `Add/Update ${filteredProducts.length} Products`}
+                        </Button>
                     </div>
                 </CardContent>
                 </Card>
