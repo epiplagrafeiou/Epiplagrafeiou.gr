@@ -1,129 +1,102 @@
-
+// lib/xml-parsers/megapap-parser.ts
 'use server';
 
 import { XMLParser } from 'fast-xml-parser';
-import type { XmlProduct } from '../types/product';
-import { mapCategory } from '../category-mapper';
+import { mapCategory } from '@/lib/category-mapper';
 
-function getVariantGroupKey(sku: string): string {
-  if (!sku) return sku; // Return empty if SKU is empty
-  // Megapap uses a comma, like '012-000021,2'
-  return sku.includes(',') ? sku.split(',')[0] : sku;
-}
-
-function getColorFromFilters(filters: any): string | undefined {
-    if (typeof filters !== 'string' || !filters) {
-        return undefined;
-    }
-    const colorFilter = filters.split(';').find(f => f.startsWith('ΧΡΩΜΑ:'));
-    if (!colorFilter) return undefined;
-    return colorFilter.split(':')[1]?.trim();
+export interface XmlProduct {
+  id: string;
+  name: string;
+  retailPrice: string;
+  webOfferPrice: string;
+  description: string;
+  category: string;     // mapped path
+  rawCategory?: string; // supplier raw
+  mainImage: string | null;
+  images: string[];
+  stock: number;
 }
 
 export async function megapapParser(url: string): Promise<XmlProduct[]> {
-    console.log("▶ Running Megapap parser");
-    const response = await fetch(url, { cache: 'no-store' });
-    if (!response.ok) {
-      throw new Error(`Failed to fetch XML: ${response.statusText}`);
+  const response = await fetch(url, { cache: 'no-store' });
+  if (!response.ok) throw new Error(`Failed to fetch XML: ${response.statusText}`);
+
+  const xmlText = await response.text();
+
+  const parser = new XMLParser({
+    ignoreAttributes: false,
+    attributeNamePrefix: '',
+    isArray: (name, jpath) => jpath === 'megapap.products.product' || jpath.endsWith('.images.image'),
+    textNodeName: '_text',
+    trimValues: true,
+    cdataPropName: '__cdata',
+    parseNodeValue: true,
+    parseAttributeValue: true,
+    parseTrueNumberOnly: true,
+  });
+
+  const parsed = parser.parse(xmlText);
+
+  const productArray = parsed?.megapap?.products?.product;
+  if (!productArray || !Array.isArray(productArray)) {
+    console.error('megapap parsed product array invalid', productArray);
+    throw new Error('Megapap XML structure unexpected');
+  }
+
+  const products: XmlProduct[] = productArray.map((p: any) => {
+    // images
+    let allImages: string[] = [];
+    if (p.images && p.images.image) {
+      if (Array.isArray(p.images.image)) {
+        allImages = p.images.image.map((img: any) => {
+          if (typeof img === 'object') return img._text ?? img.__cdata ?? '';
+          return String(img);
+        }).filter(Boolean);
+      } else if (typeof p.images.image === 'object') {
+        allImages = [p.images.image._text ?? p.images.image.__cdata ?? ''].filter(Boolean);
+      } else if (typeof p.images.image === 'string') {
+        allImages = [p.images.image];
+      }
     }
 
-    const xmlText = await response.text();
+    const mainImage = p.main_image || allImages[0] || null;
+    if (mainImage && !allImages.includes(mainImage)) allImages.unshift(mainImage);
+    allImages = Array.from(new Set(allImages));
 
-    const simplifiedParser = new XMLParser({
-      ignoreAttributes: false,
-      attributeNamePrefix: '',
-      isArray: (name, jpath, isLeafNode, isAttribute) => {
-        return jpath === 'megapap.products.product' || jpath.endsWith('.images.image');
-      },
-      textNodeName: '_text',
-      trimValues: true,
-      cdataPropName: '__cdata',
-      parseNodeValue: true,
-      parseAttributeValue: true,
-      parseTrueNumberOnly: true,
-    });
+    const rawCategory = p.category ?? '';
+    const mappedCategory = mapCategory(rawCategory, p.name ?? '');
 
-    const deCdata = (obj: any): any => {
-      if (typeof obj !== 'object' || obj === null) return obj;
-      if (Array.isArray(obj)) return obj.map(deCdata);
-      if ('__cdata' in obj) return obj.__cdata;
-      if ('_text' in obj) return obj._text;
-      const newObj: Record<string, any> = {};
-      for (const key in obj) newObj[key] = deCdata(obj[key]);
-      return newObj;
+    const rawStock =
+      p.qty?.quantity ??
+      p.qty?._text ??
+      p.qty ??
+      p.stock ??
+      p.quantity ??
+      0;
+    const stock = Number(rawStock) || 0;
+
+    const retailPriceStr = p.retail_price_with_vat ?? '0';
+    let finalWebOfferPrice = parseFloat(p.weboffer_price_with_vat ?? retailPriceStr ?? '0') || 0;
+
+    // small price tweak logic (you had it earlier)
+    const productName = (p.name ?? '').toLowerCase();
+    if (productName.includes('καναπ') || productName.includes('sofa')) {
+      finalWebOfferPrice += 75;
+    }
+
+    return {
+      id: String(p.id ?? `megapap-${Math.random()}`),
+      name: p.name ?? 'No Name',
+      retailPrice: String(retailPriceStr),
+      webOfferPrice: finalWebOfferPrice.toString(),
+      description: p.description ?? '',
+      category: mappedCategory,
+      rawCategory: String(rawCategory ?? ''),
+      mainImage,
+      images: allImages,
+      stock,
     };
+  });
 
-    const parsed = simplifiedParser.parse(xmlText);
-    let productArray = deCdata(parsed).megapap?.products?.product;
-
-    if (!productArray) {
-        console.warn('Megapap Parser: No products found in the XML feed.');
-        return [];
-    }
-    
-    if (!Array.isArray(productArray)) {
-        productArray = [productArray];
-    }
-    
-    const products: XmlProduct[] = await Promise.all(productArray.map(async (p: any) => {
-      let allImages: string[] = [];
-      if (p.images && p.images.image) {
-        if (Array.isArray(p.images.image)) {
-          allImages = p.images.image
-            .map((img: any) =>
-              typeof img === 'object' && img._text ? img._text : img
-            )
-            .filter(Boolean);
-        } else if (typeof p.images.image === 'object' && p.images.image._text) {
-          allImages = [p.images.image._text];
-        } else if (typeof p.images.image === 'string') {
-          allImages = [p.images.image];
-        }
-      }
-
-      const mainImage = p.main_image || null;
-      if (mainImage && !allImages.includes(mainImage)) {
-        allImages.unshift(mainImage);
-      }
-
-      const rawStock =
-        p.qty?.quantity ??
-        p.qty?._text ??
-        p.qty ??
-        p.stock ??
-        p.quantity ??
-        0;
-      const stock = Number(rawStock) || 0;
-      
-      const rawCategory = [p.category, p.subcategory].filter(Boolean).map(c => typeof c === 'object' ? c._text || '' : c).join(' > ');
-      const productName = p.name || 'No Name';
-      const { category, categoryId } = await mapCategory(rawCategory, productName);
-      
-      const sku = p.id?.toString() || `megapap-id-${Math.random()}`;
-      
-      let finalWebOfferPrice = parseFloat(p.weboffer_price_with_vat || p.retail_price_with_vat || '0');
-      const productNameLower = productName.toLowerCase();
-      if (productNameLower.includes('καναπ') || productNameLower.includes('sofa')) {
-        finalWebOfferPrice += 75;
-      }
-
-      return {
-        id: sku,
-        sku: sku,
-        model: p.model,
-        variantGroupKey: getVariantGroupKey(sku),
-        color: getColorFromFilters(p.filters),
-        name: productName,
-        retailPrice: p.retail_price_with_vat || '0',
-        webOfferPrice: finalWebOfferPrice.toString(),
-        description: p.description || '',
-        category,
-        categoryId,
-        mainImage,
-        images: allImages,
-        stock,
-      };
-    }));
-
-    return products;
+  return products;
 }
