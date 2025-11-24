@@ -39,11 +39,14 @@ export async function b2bportalParser(xmlText: string): Promise<XmlProduct[]> {
 
   const parsed = parser.parse(xmlText);
 
-  // **THE CRITICAL FIX IS HERE**
-  // We now look directly for the correct path and handle all variations.
+  // **THE DEFINITIVE FIX: Robustly find the product array**
   const productData = parsed?.b2bportal?.products?.product;
 
   if (!productData) {
+    console.error('B2B Parser Error: Could not find product array. Parsed object keys:', Object.keys(parsed || {}));
+    if (parsed?.b2bportal?.products) {
+      console.error('Found "products" object, but no "product" key inside. Keys of products object:', Object.keys(parsed.b2bportal.products));
+    }
     throw new Error(
       'B2B Portal XML does not contain products at the expected path: b2bportal.products.product'
     );
