@@ -1,8 +1,9 @@
+
 'use server';
 import { mapCategory } from "@/lib/mappers/categoryMapper";
 import type { XmlProduct } from "../types/product";
 
-export async function megapapParser(xmlJson: any) {
+export async function megapapParser(xmlJson: any): Promise<XmlProduct[]> {
   const items = xmlJson?.root?.products?.product ?? [];
   const products: XmlProduct[] = [];
 
@@ -26,7 +27,7 @@ export async function megapapParser(xmlJson: any) {
       category,
       categoryId,
       webOfferPrice: item.price,
-      stock: parseInt(item.stock ?? 0),
+      stock: parseInt(item.stock ?? 0, 10),
       images: images,
       mainImage: mainImage,
       supplierName: "Megapap",

@@ -1,3 +1,4 @@
+
 // lib/products-context.tsx (updated)
 'use client';
 

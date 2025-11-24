@@ -23,21 +23,18 @@ export async function syncProductsFromXml(
 ): Promise<XmlProduct[]> {
   const normalizedSupplierName = supplierName.toLowerCase().trim();
 
-  let parserFn = parserMap[normalizedSupplierName];
+  // Find the correct parser, or use the fallback.
+  const parserFn = parserMap[normalizedSupplierName] || fallbackParser;
   
-  if (!parserFn) {
-      console.warn(`No specific parser found for "${supplierName}". Using fallback parser.`);
-      parserFn = fallbackParser;
-  }
-
   try {
-    console.log(`Fetching XML from: ${url}`);
+    console.log(`Fetching XML from: ${url} for supplier: "${supplierName}"`);
     const response = await fetch(url, { cache: 'no-store' });
     if (!response.ok) {
         throw new Error(`Failed to fetch XML: ${response.status} ${response.statusText}`);
     }
     const xmlText = await response.text();
 
+    // The initial parsing from XML to JSON happens here.
     const xmlParser = new XMLParser({
         ignoreAttributes: false,
         attributeNamePrefix: '',
@@ -50,13 +47,15 @@ export async function syncProductsFromXml(
     
     const parsedJson = xmlParser.parse(xmlText);
 
-    console.log(`Using parser: ${parserFn.name} for supplier: "${supplierName}"`);
+    // The supplier-specific parser function now receives the JSON object.
+    console.log(`Using parser: ${Object.keys(parserMap).find(key => parserMap[key] === parserFn) || 'fallback'} for supplier: "${supplierName}"`);
     return await parserFn(parsedJson);
 
   } catch (error: any) {
     console.error(`❌ XML sync failed for "${supplierName}":`, error);
+    // Re-throw a more user-friendly error to be caught by the UI.
     throw new Error(
-      `Could not parse XML for supplier "${supplierName}". Please check the URL and XML format. Details: ${error?.message || 'Unknown error.'}`
+      `Could not process XML for "${supplierName}". Details: ${error?.message || 'Unknown error.'}`
     );
   }
 }

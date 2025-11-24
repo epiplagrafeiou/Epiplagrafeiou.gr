@@ -1,8 +1,9 @@
+
 'use server';
 import { mapCategory } from "@/lib/mappers/categoryMapper";
 import type { XmlProduct } from "../types/product";
 
-export async function b2bportalParser(xmlJson: any) {
+export async function b2bportalParser(xmlJson: any): Promise<XmlProduct[]> {
   const items = xmlJson?.rss?.channel?.[0]?.item ?? [];
   const products: XmlProduct[] = [];
 
@@ -27,7 +28,7 @@ export async function b2bportalParser(xmlJson: any) {
       category,
       categoryId,
       webOfferPrice: i["g:price"]?.[0]?.replace(" EUR", "") || "0",
-      stock: parseInt(i["g:quantity"]?.[0] || 0),
+      stock: parseInt(i["g:quantity"]?.[0] || 0, 10),
       images,
       mainImage,
       supplierName: "B2B Portal",

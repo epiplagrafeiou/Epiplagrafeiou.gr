@@ -1,20 +1,8 @@
+
 'use server';
 
 import type { XmlProduct } from '../types/product';
 import { mapCategory } from '../mappers/categoryMapper';
-
-const getText = (node: any): string => {
-  if (node == null) return '';
-  if (typeof node === 'string' || typeof node === 'number') return String(node).trim();
-  if (typeof node === 'object') {
-    if (node['#text']) return String(node['#text']).trim();
-    for (const key in node) {
-        if (typeof node[key] === 'string') return node[key].trim();
-    }
-  }
-  return '';
-};
-
 
 export async function zougrisParser(xmlJson: any): Promise<XmlProduct[]> {
   const items = xmlJson?.Products?.Product ?? [];
