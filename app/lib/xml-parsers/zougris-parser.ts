@@ -1,1 +1,3 @@
-// This file has been removed to eliminate duplicates. The correct version now resides at src/lib/xml-parsers/zougris-parser.ts
+
+// This file is obsolete and has been removed to avoid conflicts.
+// The correct parser now resides at src/lib/xml-parsers/zougris-parser.ts

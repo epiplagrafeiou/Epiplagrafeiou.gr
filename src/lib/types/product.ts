@@ -32,4 +32,6 @@ export interface XmlProduct {
   manufacturer?: string;
   url?: string;                     // Supplier product page
   attributes?: Record<string, string>;
+  variantGroupKey?: string;
+  color?: string;
 }
