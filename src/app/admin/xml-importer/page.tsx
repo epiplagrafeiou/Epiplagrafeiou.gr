@@ -251,6 +251,7 @@ export default function XmlImporterPage() {
   const allCategories = useMemo(() => {
     const categories = new Set<string>();
     syncedProducts.forEach(p => {
+        // Ensure p.category is treated as a string, providing a fallback.
         const rawCat = typeof p.category === "string" ? p.category : "";
         const categoryPath = rawCat
           .split('>')
@@ -293,6 +294,7 @@ export default function XmlImporterPage() {
       return syncedProducts;
     }
     return syncedProducts.filter(p => {
+        // Ensure p.category is treated as a string, providing a fallback.
         const rawCat = typeof p.category === "string" ? p.category : "";
         const categoryPath = rawCat
             .split('>')
@@ -413,12 +415,13 @@ export default function XmlImporterPage() {
                         {filteredProducts.map((product) => {
                           const supplierPrice = parseFloat(product.webOfferPrice) || 0;
                           const finalPrice = activeSupplier ? applyMarkup(product, activeSupplier.markupRules) : supplierPrice;
+                          const categoryDisplay = typeof product.category === "string" ? product.category : 'N/A';
 
                           return (
                             <TableRow key={product.id}>
                                 <TableCell className="font-medium">{product.name}</TableCell>
                                 <TableCell>
-                                <Badge variant="outline">{typeof product.category === 'string' ? product.category : 'N/A'}</Badge>
+                                <Badge variant="outline">{categoryDisplay}</Badge>
                                 </TableCell>
                                 <TableCell>{product.stock}</TableCell>
                                 <TableCell className="text-right">{formatCurrency(supplierPrice)}</TableCell>
@@ -442,6 +445,4 @@ export default function XmlImporterPage() {
     </div>
   );
 }
-    
-
     
