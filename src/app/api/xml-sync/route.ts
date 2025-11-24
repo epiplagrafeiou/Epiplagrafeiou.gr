@@ -1,4 +1,3 @@
-
 // src/app/api/xml-sync/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { megapapParser } from '@/lib/xml-parsers/megapap-parser';
@@ -9,7 +8,7 @@ import type { XmlProduct } from '@/lib/types/product';
 export const runtime = 'nodejs'; // Use Node.js runtime for long-running tasks
 export const maxDuration = 300; // Set max duration to 5 minutes for Firebase App Hosting
 
-type ParserFn = (url: string) => Promise<XmlProduct[]>;
+type ParserFn = (xmlText: string) => Promise<XmlProduct[]>;
 
 const parserMap: Record<string, ParserFn> = {
   'megapap': megapapParser,
@@ -23,7 +22,7 @@ const parserMap: Record<string, ParserFn> = {
 
 const fallbackParser: ParserFn = megapapParser;
 
-async function fetchWithTimeout(url: string, timeoutMs: number): Promise<Response> {
+async function fetchWithTimeout(url: string, timeoutMs: number = 45000): Promise<Response> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
 
@@ -55,22 +54,38 @@ export async function POST(req: NextRequest) {
     const normalizedName = supplierName.toLowerCase().trim();
     const parserFn = parserMap[normalizedName] || fallbackParser;
 
-    // Fetch and parse the XML using the designated parser function
-    // The parser itself now handles the fetching logic.
-    const products = await parserFn(url);
+    const response = await fetchWithTimeout(url);
+    if (!response.ok) {
+      return NextResponse.json(
+        {
+          error: `Failed to fetch XML from supplier: ${response.status} ${response.statusText}`,
+        },
+        { status: 502 } // Bad Gateway
+      );
+    }
+
+    const xmlText = await response.text();
+    const products = await parserFn(xmlText);
 
     return NextResponse.json({ products });
   } catch (err: any) {
     if (err?.name === 'AbortError') {
       return NextResponse.json(
-        { error: 'XML request to supplier timed out. The supplier server is too slow.' },
-        { status: 504 }
+        {
+          error:
+            'XML request to supplier timed out (45s limit). The supplier server is too slow or the file is too large.',
+        },
+        { status: 504 } // Gateway Timeout
       );
     }
 
-    console.error('❌ XML sync API failed:', err);
+    console.error('❌ XML sync API route failed:', err);
     return NextResponse.json(
-      { error: err?.message || 'Unexpected server error while fetching/parsing XML.' },
+      {
+        error:
+          err?.message ||
+          'An unexpected error occurred while fetching or parsing the XML.',
+      },
       { status: 500 }
     );
   }

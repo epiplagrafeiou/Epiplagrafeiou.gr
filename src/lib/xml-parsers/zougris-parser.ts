@@ -1,47 +1,39 @@
-
+// src/lib/xml-parsers/zougris-parser.ts
 'use server';
 
 import { XMLParser } from 'fast-xml-parser';
 import type { XmlProduct } from '../types/product';
-import { mapCategory } from '@/lib/mappers/categoryMapper';
+import { mapCategory } from '../mappers/categoryMapper';
+
+const xmlParser = new XMLParser({
+  ignoreAttributes: true,
+  isArray: (name, jpath) => jpath === 'Products.Product',
+  trimValues: true,
+  parseNodeValue: true,
+  textNodeName: '_text',
+  tagValueProcessor: (tagName, tagValue) => {
+      if (typeof tagValue === 'string' && tagValue.startsWith('<![CDATA[')) {
+          return tagValue.substring(9, tagValue.length - 3);
+      }
+      return tagValue;
+  }
+});
+
 
 const getText = (node: any): string => {
   if (node == null) return '';
   if (typeof node === 'string' || typeof node === 'number') {
     return String(node).trim();
   }
-  if (typeof node === 'object') {
-    if ('__cdata' in node) return String((node as any).__cdata).trim();
-    if ('_text' in node) return String((node as any)._text).trim();
-    if ('#text' in node) return String((node as any)['#text']).trim();
+  if (typeof node === 'object' && '_text' in node) {
+    return String(node._text).trim();
   }
   return '';
 };
 
 
-export async function zougrisParser(url: string): Promise<XmlProduct[]> {
-  const response = await fetch(url, { cache: 'no-store' });
-  if (!response.ok) {
-    throw new Error(`Failed to fetch Zougris XML: ${response.status} ${response.statusText}`);
-  }
-
-  const xmlText = await response.text();
-  
-  const parser = new XMLParser({
-    ignoreAttributes: true,
-    isArray: (name, jpath) => jpath === 'Products.Product',
-    trimValues: true,
-    parseNodeValue: true,
-    textNodeName: '#text',
-    tagValueProcessor: (tagName, tagValue) => {
-        if (typeof tagValue === 'string' && tagValue.startsWith('<![CDATA[')) {
-            return tagValue.substring(9, tagValue.length - 3);
-        }
-        return tagValue;
-    }
-  });
-
-  const parsed = parser.parse(xmlText);
+export async function zougrisParser(xmlText: string): Promise<XmlProduct[]> {
+  const parsed = xmlParser.parse(xmlText);
   const productsNode = parsed?.Products?.Product;
 
   if (!productsNode) {

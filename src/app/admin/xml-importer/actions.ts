@@ -1,4 +1,3 @@
-
 // src/app/admin/xml-importer/actions.ts
 'use client';
 
@@ -17,15 +16,14 @@ export async function syncProductsFromXml(
   });
 
   if (!res.ok) {
-    let message = `Could not parse XML for ${supplierName}. Please check the URL and XML format.`;
+    let message = `Could not parse XML for ${supplierName}. The server returned an error.`;
     try {
       const data = await res.json();
       if (data?.error) {
-        message = `Could not parse XML for ${supplierName}. Details: ${data.error}`;
+        message = data.error;
       }
     } catch {
-      const text = await res.text().catch(() => '');
-      if (text) message = text;
+       message = `An unexpected error occurred: ${res.statusText}`;
     }
     throw new Error(message);
   }

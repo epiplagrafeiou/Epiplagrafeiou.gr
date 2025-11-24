@@ -1,4 +1,3 @@
-
 // src/lib/types/product.ts
 export interface XmlProduct {
   // Identification
