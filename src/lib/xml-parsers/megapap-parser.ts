@@ -5,121 +5,122 @@
 import type { XmlProduct } from '@/lib/types/product';
 import { mapCategory } from '@/lib/mappers/categoryMapper';
 
-// Safely extract text from nodes created by fast-xml-parser
+// Safe text extractor compatible with fast-xml-parser config in actions.ts
 function getText(node: any): string {
   if (node == null) return '';
   if (typeof node === 'string' || typeof node === 'number') {
     return String(node).trim();
   }
   if (typeof node === 'object') {
-    // When parsed with textNodeName: '#text'
-    if (typeof node['#text'] === 'string' || typeof node['#text'] === 'number') {
-      return String(node['#text']).trim();
-    }
-    // Other possible keys (fallbacks)
-    if (typeof node._text === 'string' || typeof node._text === 'number') {
-      return String(node._text).trim();
-    }
-    if (typeof node.__cdata === 'string' || typeof node.__cdata === 'number') {
-      return String(node.__cdata).trim();
-    }
+    if ('#text' in node) return String((node as any)['#text']).trim();
+    if ('__cdata' in node) return String((node as any)['__cdata']).trim();
+    if ('_text' in node) return String((node as any)['_text']).trim();
   }
   return '';
 }
 
-export async function megapapParser(parsedJson: any): Promise<XmlProduct[]> {
-  // Expect structure: { megapap: { products: { product: [...] } } }
-  let productArray: any = parsedJson?.megapap?.products?.product;
+export async function megapapParser(json: any): Promise<XmlProduct[]> {
+  // Support being called with the full parsed JSON
+  const root = json?.megapap ?? json;
 
-  if (!productArray) {
-    console.error('Megapap Parser: No products found at `megapap.products.product`', parsedJson);
-    throw new Error('Megapap XML does not contain products at megapap.products.product');
+  const rawProducts = root?.products?.product;
+
+  const productsArray = Array.isArray(rawProducts)
+    ? rawProducts
+    : rawProducts
+    ? [rawProducts]
+    : [];
+
+  if (!productsArray.length) {
+    throw new Error(
+      'Megapap XML does not contain products at megapap.products.product'
+    );
   }
 
-  if (!Array.isArray(productArray)) {
-    productArray = [productArray];
-  }
+  const products: XmlProduct[] = [];
 
-  const products: XmlProduct[] = await Promise.all(
-    productArray.map(async (p: any) => {
-      // ID: prefer product id attribute / id / model / sku
-      const idAttr = p['@_id'];
-      const id =
-        getText(p.id) ||
-        (idAttr != null ? String(idAttr).trim() : '') ||
-        getText(p.model) ||
-        getText(p.sku) ||
-        `megapap-${Math.random().toString(36).slice(2, 10)}`;
+  for (const p of productsArray) {
+    const id =
+      getText(p.id) ||
+      getText(p.sku) ||
+      getText(p.model) ||
+      `megapap-${Math.random().toString(36).slice(2)}`;
 
-      const name = getText(p.name) || 'No Name';
+    const name = getText(p.name) || 'No Name';
 
-      // Raw category from supplier (we combine category and subcategory just in case)
-      const rawCategoryStr = [getText(p.category), getText(p.subcategory)]
-        .filter(Boolean)
-        .join(' > ');
+    // Images
+    let images: string[] = [];
+    const mainImage = getText(p.main_image) || null;
 
-      // Map to your store category using Firestore categories
-      const { rawCategory, category, categoryId } = await mapCategory(rawCategoryStr);
-
-      // Images
-      const mainImage = getText(p.main_image) || null;
-
-      let extraImages: string[] = [];
-      const imagesNode = p.images?.image;
-      if (imagesNode) {
-        if (Array.isArray(imagesNode)) {
-          extraImages = imagesNode.map((img: any) => getText(img)).filter(Boolean);
-        } else {
-          const single = getText(imagesNode);
-          if (single) extraImages.push(single);
-        }
-      }
-
-      const allImages = Array.from(
-        new Set<string>([mainImage, ...extraImages].filter(Boolean) as string[])
+    const galleryNode = p.images?.image;
+    if (Array.isArray(galleryNode)) {
+      images.push(
+        ...galleryNode.map((img: any) => getText(img)).filter(Boolean)
       );
+    } else {
+      const singleGallery = getText(galleryNode);
+      if (singleGallery) images.push(singleGallery);
+    }
 
-      // Stock
-      const stockRaw =
-        getText(p.quantity) ||
-        getText(p.qty) ||
-        getText(p.stock) ||
-        getText(p.quantity_item) ||
-        '0';
-      const stock = Number(stockRaw) || 0;
+    if (mainImage) {
+      images.unshift(mainImage);
+    }
 
-      // Prices
-      const retailPriceStr = getText(p.retail_price_with_vat) || '0';
-      const webOfferStr = getText(p.weboffer_price_with_vat) || retailPriceStr;
+    // dedupe
+    images = Array.from(new Set(images));
 
-      const retailPrice = retailPriceStr.replace(',', '.');
-      const webOfferPrice = webOfferStr.replace(',', '.');
+    // Stock
+    const stockRaw =
+      getText(p.quantity) ||
+      getText(p.qty) ||
+      getText(p.stock) ||
+      getText(p.volume_item); // last fallback, usually 0
+    const stock = Number(stockRaw) || 0;
 
-      // Extra fields (used by your Product model)
-      const sku = getText(p.sku) || undefined;
-      const model = getText(p.model) || undefined;
+    // Category
+    const rawCategoryString = getText(p.category); // e.g. "Έπιπλα κήπου > Πανιά καρέκλας σκηνοθέτη"
+    const { category, categoryId, rawCategory } = await mapCategory(rawCategoryString);
 
-      const description = getText(p.description);
+    // Prices
+    const retailPriceStr =
+      getText(p.retail_price_with_vat) || getText(p.retail_price) || '0';
+    const webOfferStr =
+      getText(p.weboffer_price_with_vat) ||
+      getText(p.weboffer_price) ||
+      retailPriceStr ||
+      '0';
 
-      const product: XmlProduct = {
-        id,
-        name,
-        sku,
-        model,
-        retailPrice,
-        webOfferPrice,
-        description,
-        rawCategory,
-        category,
-        categoryId,
-        mainImage: allImages[0] || null,
-        images: allImages,
-        stock,
-      };
+    let webOfferPriceNum =
+      parseFloat(webOfferStr.replace(',', '.')) ||
+      parseFloat(retailPriceStr.replace(',', '.')) ||
+      0;
 
-      return product;
-    })
-  );
+    // Extra shipping cushion for sofas (your earlier rule)
+    const lowerName = name.toLowerCase();
+    if (lowerName.includes('καναπ') || lowerName.includes('sofa')) {
+      webOfferPriceNum += 75;
+    }
+
+    const webOfferPrice = webOfferPriceNum.toString();
+
+    products.push({
+      id,
+      name,
+      sku: getText(p.sku) || undefined,
+      model: getText(p.model) || undefined,
+      retailPrice: retailPriceStr,
+      webOfferPrice,
+      description: getText(p.description),
+      rawCategory: rawCategory || rawCategoryString,
+      category,
+      categoryId,
+      mainImage: images[0] || null,
+      images,
+      stock,
+      // megapap availability is descriptive text, treat any non-empty as available
+      isAvailable: Boolean(getText(p.availability)),
+    });
+  }
 
   return products;
 }
