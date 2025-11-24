@@ -43,6 +43,10 @@ export default function XmlImporterPage() {
   const [selectedCategories, setSelectedCategories] = useState<Set<string>>(new Set());
   const [isAdding, setIsAdding] = useState(false);
 
+  console.log('Suppliers:', suppliers);
+  console.log('Button state (loading/quick-syncing):', loadingSupplier, quickSyncingSupplier);
+  console.log('Last Sync Categories from state:', lastSyncCategories);
+
 
   const categoriesQuery = useMemoFirebase(() => {
     if (!firestore) return null;
@@ -75,13 +79,18 @@ export default function XmlImporterPage() {
     suppliers.forEach(s => {
       const saved = localStorage.getItem(`lastSyncCategories_${s.id}`);
       if (saved) {
-        loadedCategories[s.id] = JSON.parse(saved);
+        try {
+            loadedCategories[s.id] = JSON.parse(saved);
+        } catch (e) {
+            console.error("Failed to parse last sync categories from localStorage", e);
+        }
       }
     });
     setLastSyncCategories(loadedCategories);
   }, [suppliers]);
 
   const handleSync = async (supplierId: string, url: string, name: string) => {
+    console.log('handleSync called for:', supplierId, url, name);
     setLoadingSupplier(supplierId);
     setActiveSupplierId(supplierId);
     setError(null);
@@ -89,9 +98,11 @@ export default function XmlImporterPage() {
     setSelectedCategories(new Set()); // Clear selected categories
     try {
       const products = await syncProductsFromXml(url, name);
+      console.log(`Sync completed. Found ${products.length} products.`);
       setSyncedProducts(products);
       setSelectedCategories(new Set(['all'])); // Select all by default for the new sync
     } catch (e: any) {
+      console.error("Error in handleSync:", e);
       setError(e.message);
     } finally {
       setLoadingSupplier(null);
@@ -206,6 +217,7 @@ export default function XmlImporterPage() {
   }
 
   const handleQuickSync = async (supplier: (typeof suppliers)[0]) => {
+      console.log('handleQuickSync called for:', supplier.id);
       const savedCategories = lastSyncCategories[supplier.id];
       if (!savedCategories) {
           toast({ variant: 'destructive', title: 'No saved categories', description: 'Please perform a manual sync first to save category selections.'});
@@ -218,6 +230,7 @@ export default function XmlImporterPage() {
       try {
           const allProducts = await syncProductsFromXml(supplier.url, supplier.name);
           const productsToSync = allProducts.filter(p => {
+              // SAFE HANDLING of p.category
               const rawCat = typeof p.category === "string" ? p.category : "";
               const categoryPath = rawCat
                 .split('>')
@@ -240,6 +253,7 @@ export default function XmlImporterPage() {
           });
 
       } catch(e: any) {
+          console.error("Error in handleQuickSync:", e);
           setError(e.message);
           toast({ variant: 'destructive', title: 'Quick Sync Failed', description: e.message });
       } finally {
@@ -251,7 +265,7 @@ export default function XmlImporterPage() {
   const allCategories = useMemo(() => {
     const categories = new Set<string>();
     syncedProducts.forEach(p => {
-        // Ensure p.category is treated as a string, providing a fallback.
+        // SAFE HANDLING of p.category
         const rawCat = typeof p.category === "string" ? p.category : "";
         const categoryPath = rawCat
           .split('>')
@@ -289,12 +303,11 @@ export default function XmlImporterPage() {
   };
 
   const filteredProducts = useMemo(() => {
-    if (!syncedProducts.length) return [];
     if (selectedCategories.has('all') || selectedCategories.size === 0 || (allCategories.length > 0 && selectedCategories.size === allCategories.length)) {
       return syncedProducts;
     }
     return syncedProducts.filter(p => {
-        // Ensure p.category is treated as a string, providing a fallback.
+        // SAFE HANDLING of p.category
         const rawCat = typeof p.category === "string" ? p.category : "";
         const categoryPath = rawCat
             .split('>')
@@ -445,4 +458,6 @@ export default function XmlImporterPage() {
     </div>
   );
 }
+    
+
     
