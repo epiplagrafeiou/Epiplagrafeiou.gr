@@ -7,8 +7,7 @@ import { b2bportalParser } from '@/lib/xml-parsers/b2bportal-parser';
 import { zougrisParser } from '@/lib/xml-parsers/zougris-parser';
 import type { XmlProduct } from '@/lib/types/product';
 
-// This map will be adjusted once the correct parser signatures are confirmed.
-const parserMap: Record<string, (data: any) => Promise<XmlProduct[]>> = {
+const parserMap: Record<string, (json: any) => Promise<XmlProduct[]>> = {
   megapap: megapapParser,
   'nordic designs': megapapParser,
   'milano furnishings': megapapParser,
@@ -16,6 +15,7 @@ const parserMap: Record<string, (data: any) => Promise<XmlProduct[]>> = {
   zougris: zougrisParser,
   'b2b portal': b2bportalParser,
 };
+
 
 export async function syncProductsFromXml(
   url: string,
@@ -57,11 +57,9 @@ export async function syncProductsFromXml(
     });
 
     const parsedJson = xmlParser.parse(xmlText);
-
-    // --- DEBUGGING LOG ADDED AS REQUESTED ---
+    
     console.log('===== PARSED JSON STRUCTURE =====');
     console.dir(parsedJson, { depth: 10 });
-    // --- END DEBUGGING LOG ---
 
     console.log(`[ACTION] 🔍 Running parser for supplier: ${supplierName}`);
     const products = await parserFn(parsedJson);
