@@ -12,11 +12,18 @@ export async function megapapParser(xmlJson: any): Promise<XmlProduct[]> {
 
     const { category, categoryId, rawCategory } = await mapCategory(rawCat);
 
-    const images = Array.isArray(item.images?.image) ? item.images.image : item.images?.image ? [item.images.image] : [];
-    const mainImage = images.length ? images[0] : null;
+    const imagesNode = item.images?.image;
+    let images: string[] = [];
+    if (Array.isArray(imagesNode)) {
+        images = imagesNode.filter(Boolean);
+    } else if (typeof imagesNode === 'string') {
+        images = [imagesNode];
+    }
+    
+    const mainImage = item.main_image || images[0] || null;
 
     products.push({
-      id: item.code,
+      id: String(item.code || `megapap-${Math.random()}`),
       sku: item.code,
       model: item.model || "",
       variantGroupKey: item.groupId || null,
@@ -26,8 +33,9 @@ export async function megapapParser(xmlJson: any): Promise<XmlProduct[]> {
       rawCategory,
       category,
       categoryId,
-      webOfferPrice: item.price,
-      stock: parseInt(item.stock ?? 0, 10),
+      retailPrice: item.retail_price_with_vat || "0",
+      webOfferPrice: item.weboffer_price_with_vat || item.price || "0",
+      stock: parseInt(item.stock ?? '0', 10),
       images: images,
       mainImage: mainImage,
       supplierName: "Megapap",

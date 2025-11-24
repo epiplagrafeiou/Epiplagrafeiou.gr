@@ -83,7 +83,7 @@ export const ProductsProvider = ({ children }: { children: React.ReactNode }) =>
         const mainImageIndex = sortedImages.indexOf(p.mainImage);
         if (mainImageIndex > 0) {
           [sortedImages[0], sortedImages[mainImageIndex]] = [sortedImages[mainImageIndex], sortedImages[0]];
-        } else if (mainImageIndex === -1) {
+        } else if (mainImageIndex === -1 && p.mainImage) {
           sortedImages.unshift(p.mainImage);
         }
       }
@@ -153,13 +153,13 @@ export const ProductsProvider = ({ children }: { children: React.ReactNode }) =>
     });
 
     batch.commit().catch(error => {
-      productIds.forEach(productId => {
-        const permissionError = new FirestorePermissionError({
-          path: `products/${productId}`,
-          operation: 'delete',
+        productIds.forEach(productId => {
+            const permissionError = new FirestorePermissionError({
+                path: `products/${productId}`,
+                operation: 'delete',
+            });
+            errorEmitter.emit('permission-error', permissionError);
         });
-        errorEmitter.emit('permission-error', permissionError);
-      });
     });
   };
 

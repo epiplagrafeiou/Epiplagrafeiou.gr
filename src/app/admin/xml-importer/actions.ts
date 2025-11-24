@@ -12,10 +12,15 @@ const parserMap: Record<string, (json: any) => Promise<XmlProduct[]>> = {
   'zougris': zougrisParser,
   'b2b portal': b2bportalParser,
   'megapap': megapapParser,
+  // Add other specific suppliers here
+  'nordic designs': megapapParser,
+  'milano furnishings': megapapParser,
+  'office solutions inc.': megapapParser,
 };
 
 // A fallback parser for any supplier not in the specific map.
-const fallbackParser = b2bportalParser;
+// Using megapap or b2bportal as a generic fallback.
+const fallbackParser = megapapParser;
 
 export async function syncProductsFromXml(
   url: string,
@@ -48,7 +53,7 @@ export async function syncProductsFromXml(
     const parsedJson = xmlParser.parse(xmlText);
 
     // The supplier-specific parser function now receives the JSON object.
-    console.log(`Using parser: ${Object.keys(parserMap).find(key => parserMap[key] === parserFn) || 'fallback'} for supplier: "${supplierName}"`);
+    console.log(`Using parser for supplier: "${normalizedSupplierName}"`);
     return await parserFn(parsedJson);
 
   } catch (error: any) {

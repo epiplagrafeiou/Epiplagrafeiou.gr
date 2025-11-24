@@ -1,36 +1,55 @@
 // /lib/mappers/categoryMapper.ts
 'use server';
-import { collection, getDocs } from "firebase/firestore";
-import type { StoreCategory } from "@/components/admin/CategoryManager";
-import { firestore } from "@/firebase/client"; // Use client-side db for server components
 
-/**
- * Maps raw supplier category → your store category.
- */
-export async function mapCategory(rawCategory: string) {
-  const cleanRaw = (rawCategory || "").trim();
-  if (!cleanRaw) {
-    return {
-      rawCategory: "",
-      category: "Uncategorized",
-      categoryId: null,
-    };
+import { getDb } from '@/lib/firebase-admin';
+import type { StoreCategory } from '@/components/admin/CategoryManager';
+
+// Cache categories to avoid hitting Firestore on every single product mapping within a sync.
+let categoryCache: StoreCategory[] | null = null;
+let cacheTimestamp: number | null = null;
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+
+async function getCategories(): Promise<StoreCategory[]> {
+  const now = Date.now();
+  if (categoryCache && cacheTimestamp && now - cacheTimestamp < CACHE_DURATION) {
+    return categoryCache;
   }
 
-  // 1) Load categories from Firestore
-  const snap = await getDocs(collection(firestore, "categories"));
+  const db = getDb();
+  const snap = await db.collection('categories').get();
+
   const all: StoreCategory[] = snap.docs.map((d) => ({
     id: d.id,
     ...d.data(),
   })) as StoreCategory[];
 
+  categoryCache = all;
+  cacheTimestamp = now;
+
+  return all;
+}
+
+/**
+ * Maps raw supplier category → your store category.
+ */
+export async function mapCategory(rawCategory: string) {
+  const cleanRaw = (rawCategory || '').trim();
+  if (!cleanRaw) {
+    return {
+      rawCategory: '',
+      category: 'Uncategorized',
+      categoryId: null,
+    };
+  }
+
+  const all = await getCategories();
   const match = findCategoryByRaw(all, cleanRaw);
 
   if (!match) {
     // fallback
     return {
       rawCategory: cleanRaw,
-      category: "Uncategorized",
+      category: 'Uncategorized',
       categoryId: null,
     };
   }
@@ -60,23 +79,24 @@ function findCategoryByRaw(categories: StoreCategory[], raw: string): StoreCateg
 
 /** Builds readable category path: "Furniture > Chairs > Office Chairs" */
 function getCategoryPath(all: StoreCategory[], id: string): string {
-  const findById = (items: StoreCategory[], id: string): StoreCategory | null => {
+  const findById = (items: StoreCategory[], targetId: string): StoreCategory | null => {
     for (const c of items) {
-      if (c.id === id) return c;
+      if (c.id === targetId) return c;
       if (c.children?.length) {
-        const sub = findById(c.children, id);
+        const sub = findById(c.children, targetId);
         if (sub) return sub;
       }
     }
     return null;
   };
 
-  const recPath = (id: string, root: StoreCategory[]): string[] => {
-    const node = findById(root, id);
+  const recPath = (targetId: string, root: StoreCategory[]): string[] => {
+    const node = findById(root, targetId);
     if (!node) return [];
     if (!node.parentId) return [node.name];
-    return [...recPath(node.parentId, root), node.name];
+    const parentPath = recPath(node.parentId, root);
+    return [...parentPath, node.name];
   };
 
-  return recPath(id, all).join(" > ");
+  return recPath(id, all).join(' > ');
 }
