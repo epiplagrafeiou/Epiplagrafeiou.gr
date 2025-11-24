@@ -35,20 +35,25 @@ const getText = (node: any): string => {
 export async function b2bportalParser(xmlText: string): Promise<XmlProduct[]> {
   const parsed = xmlParser.parse(xmlText);
 
+  // ROBUST FIX: Check multiple possible paths for the product array.
   const productArray =
     parsed?.b2bportal?.products?.product ||
-    parsed?.mywebstore?.products?.product;
+    parsed?.mywebstore?.products?.product ||
+    parsed?.products?.product;
 
-  if (!Array.isArray(productArray)) {
+  if (!productArray || (Array.isArray(productArray) && productArray.length === 0)) {
     console.error('B2B XML root keys:', Object.keys(parsed || {}));
     throw new Error(
       'B2B Portal XML does not contain products at b2bportal.products.product or mywebstore.products.product'
     );
   }
+  
+  const productsRaw = Array.isArray(productArray) ? productArray : [productArray];
+
 
   const products: XmlProduct[] = [];
 
-  for (const p of productArray) {
+  for (const p of productsRaw) {
     // images
     let images: string[] = [];
     if (p.image) {
@@ -85,7 +90,8 @@ export async function b2bportalParser(xmlText: string): Promise<XmlProduct[]> {
     // prices
     const retailPriceNum = parseFloat(getText(p.retail_price).replace(',', '.') || '0');
     const wholesalePriceNum = parseFloat(getText(p.price).replace(',', '.') || '0');
-    const finalPrice = retailPriceNum > 0 ? retailPriceNum : wholesalePriceNum;
+    const finalPrice = wholesalePriceNum > 0 ? wholesalePriceNum : retailPriceNum;
+
 
     products.push({
       id: getText(p.code) || getText(p.sku) || `b2b-${products.length}`,
