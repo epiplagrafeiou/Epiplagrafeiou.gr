@@ -1,3 +1,4 @@
+
 // src/lib/xml-parsers/b2bportal-parser.ts
 'use server';
 
@@ -6,10 +7,10 @@ import type { XmlProduct } from '../types/product';
 import { mapCategory } from '../mappers/categoryMapper';
 
 const xmlParser = new XMLParser({
-  ignoreAttributes: false,
-  attributeNamePrefix: '',
-  // A safe isArray function that is not path-dependent.
+  ignoreAttributes: false, // Must be false to handle root attributes correctly
+  attributeNamePrefix: '@_',
   isArray: (name, jpath) => {
+    // A more robust check that is not path-dependent
     if (name === 'product') return true;
     if (name === 'image') return true;
     return false;
@@ -39,21 +40,41 @@ function getText(node: any): string {
   return '';
 }
 
-export async function b2bportalParser(xmlText: string): Promise<XmlProduct[]> {
-  const parsed = xmlParser.parse(xmlText);
+/**
+ * Finds the product array within a parsed XML object, regardless of the root element's name.
+ */
+function findProductArray(parsed: any): any[] | null {
+  if (!parsed || typeof parsed !== 'object') return null;
 
-  // Direct, hardcoded path based on known XML structure.
-  const productArraySource = parsed?.b2bportal?.products?.product;
+  // Get the first key of the object, which should be the root element (e.g., 'b2bportal')
+  const rootKey = Object.keys(parsed)[0];
+  if (!rootKey) return null;
 
-  if (!productArraySource) {
-    console.error('B2B Portal Parser Debug: Parsed XML object keys:', Object.keys(parsed || {}));
-    throw new Error(
-      'B2B Portal XML parsing failed: Could not locate the product array at the expected path: b2bportal.products.product'
-    );
+  const rootElement = parsed[rootKey];
+  
+  // Navigate to the products list
+  const products = rootElement?.products?.product;
+
+  if (!products) {
+    // Log for debugging if products are still not found
+    console.error("Debug: Products not found. Root keys:", Object.keys(parsed), "Root element keys:", Object.keys(rootElement || {}));
+    return null;
   }
   
-  // Ensure we are always working with an array.
-  const productArray = Array.isArray(productArraySource) ? productArraySource : [productArraySource];
+  // Ensure the result is always an array, even if there's only one product
+  return Array.isArray(products) ? products : [products];
+}
+
+
+export async function b2bportalParser(xmlText: string): Promise<XmlProduct[]> {
+  const parsed = xmlParser.parse(xmlText);
+  const productArray = findProductArray(parsed);
+  
+  if (!productArray) {
+    throw new Error(
+      'B2B Portal XML parsing failed: Could not locate the product array within the XML structure.'
+    );
+  }
   
   const products: XmlProduct[] = await Promise.all(
     productArray.map(async (p: any): Promise<XmlProduct> => {
