@@ -7,10 +7,16 @@ import { mapCategory } from '../mappers/categoryMapper';
 
 const xmlParser = new XMLParser({
   ignoreAttributes: true,
-  isArray: (name, jpath) => jpath === 'Products.Product',
+  // SAFE isArray function
+  isArray: (name, jpath) => {
+    if (name === 'Product') return true;
+    if (name === 'image') return true;
+    return false;
+  },
   trimValues: true,
   parseNodeValue: true,
   textNodeName: '_text',
+  cdataPropName: '__cdata',
   tagValueProcessor: (tagName, tagValue) => {
       if (typeof tagValue === 'string' && tagValue.startsWith('<![CDATA[')) {
           return tagValue.substring(9, tagValue.length - 3);
@@ -25,8 +31,8 @@ const getText = (node: any): string => {
   if (typeof node === 'string' || typeof node === 'number') {
     return String(node).trim();
   }
-  if (typeof node === 'object' && '_text' in node) {
-    return String(node._text).trim();
+  if (typeof node === 'object' && ('_text' in node || '__cdata' in node)) {
+    return String(node._text || node.__cdata).trim();
   }
   return '';
 };
@@ -34,16 +40,16 @@ const getText = (node: any): string => {
 
 export async function zougrisParser(xmlText: string): Promise<XmlProduct[]> {
   const parsed = xmlParser.parse(xmlText);
-  const productsNode = parsed?.Products?.Product;
+  // Zougris uses 'Product' with a capital P
+  const productArray = parsed?.Products?.Product;
 
-  if (!productsNode) {
-    throw new Error("Zougris XML does not contain <Products><Product> nodes.");
+  if (!productArray) {
+    console.error('Zougris Parser Debug: Parsed XML object keys:', Object.keys(parsed || {}));
+    throw new Error("Zougris XML does not contain products at Products.Product");
   }
 
-  const productArray = Array.isArray(productsNode) ? productsNode : [productsNode];
-
   const products: XmlProduct[] = await Promise.all(
-      productArray.map(async (p: any): Promise<XmlProduct> => {
+      (Array.isArray(productArray) ? productArray : [productArray]).map(async (p: any): Promise<XmlProduct> => {
         const rawCategoryString = [
           getText(p.Category1),
           getText(p.Category2),
