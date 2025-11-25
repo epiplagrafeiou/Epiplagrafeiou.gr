@@ -1,5 +1,4 @@
 
-// src/lib/xml-parsers/b2bportal-parser.ts
 'use server';
 
 import { XMLParser } from 'fast-xml-parser';
@@ -7,96 +6,67 @@ import type { XmlProduct } from '../types/product';
 import { mapCategory } from '../mappers/categoryMapper';
 
 const xmlParser = new XMLParser({
-  ignoreAttributes: false, // Must be false to handle root attributes correctly
+  ignoreAttributes: false,
   attributeNamePrefix: '@_',
-  isArray: (name, jpath) => {
-    // A more robust check that is not path-dependent
-    if (name === 'product') return true;
-    if (name === 'image') return true;
-    return false;
-  },
+  isArray: (name) => name === 'product' || name === 'image',
   textNodeName: '_text',
   trimValues: true,
   cdataPropName: '__cdata',
   parseAttributeValue: true,
   parseNodeValue: true,
-  parseTrueNumberOnly: true,
 });
 
-/**
- * A bulletproof, defensive function to extract text content from a parsed XML node.
- * It handles CDATA, regular text, and null/undefined values safely.
- */
 function getText(node: any): string {
   if (node == null) return '';
-  if (typeof node === 'string' || typeof node === 'number') {
-    return String(node).trim();
-  }
+  if (typeof node === 'string' || typeof node === 'number') return String(node).trim();
   if (typeof node === 'object') {
-    if ('__cdata' in node && node.__cdata != null) return String(node.__cdata).trim();
-    if ('_text' in node && node._text != null) return String(node._text).trim();
-    if ('#text' in node && node['#text'] != null) return String(node['#text']).trim();
+    if (node.__cdata != null) return String(node.__cdata).trim();
+    if (node._text != null) return String(node._text).trim();
+    if (node['#text'] != null) return String(node['#text']).trim();
   }
   return '';
 }
 
-/**
- * Finds the product array within a parsed XML object, regardless of the root element's name.
- */
-function findProductArray(parsed: any): any[] | null {
-  if (!parsed || typeof parsed !== 'object') return null;
+function findProductArray(node: any): any[] | null {
+  if (!node || typeof node !== 'object') return null;
 
-  // Get the first key of the object, which should be the root element (e.g., 'b2bportal')
-  const rootKey = Object.keys(parsed)[0];
-  if (!rootKey) return null;
-
-  const rootElement = parsed[rootKey];
-  
-  // Navigate to the products list
-  const products = rootElement?.products?.product;
-
-  if (!products) {
-    // Log for debugging if products are still not found
-    console.error("Debug: Products not found. Root keys:", Object.keys(parsed), "Root element keys:", Object.keys(rootElement || {}));
-    return null;
+  for (const key of Object.keys(node)) {
+    const value = node[key];
+    if (key === 'products' && value?.product) {
+      return Array.isArray(value.product) ? value.product : [value.product];
+    }
+    const deeper = findProductArray(value);
+    if (deeper) return deeper;
   }
-  
-  // Ensure the result is always an array, even if there's only one product
-  return Array.isArray(products) ? products : [products];
-}
 
+  return null;
+}
 
 export async function b2bportalParser(xmlText: string): Promise<XmlProduct[]> {
   const parsed = xmlParser.parse(xmlText);
   const productArray = findProductArray(parsed);
-  
+
   if (!productArray) {
-    throw new Error(
-      'B2B Portal XML parsing failed: Could not locate the product array within the XML structure.'
-    );
+    console.error("DEBUG XML ROOT:", Object.keys(parsed));
+    throw new Error('B2B Portal XML parsing failed: Could not locate the product array within the XML structure.');
   }
-  
+
   const products: XmlProduct[] = await Promise.all(
     productArray.map(async (p: any): Promise<XmlProduct> => {
       const id = p.id != null ? String(p.id) : (getText(p.code) || `b2b-${Math.random()}`);
-      
-      const rawCategoryOriginal = [getText(p.category), getText(p.subcategory)]
-        .filter(Boolean)
-        .join(' > ');
+      const rawCategoryOriginal = [getText(p.category), getText(p.subcategory)].filter(Boolean).join(' > ');
       const { rawCategory, category, categoryId } = await mapCategory(rawCategoryOriginal);
-
+      
       let images: string[] = [];
-      const mainImageCandidate = getText(p.image) || getText(p.thumb) || null;
+      const mainImageCandidate = getText(p.image) || getText(p.thumb);
       if (mainImageCandidate) images.push(mainImageCandidate);
 
       if (p.gallery?.image) {
-          const galleryImages = Array.isArray(p.gallery.image) ? p.gallery.image : [p.gallery.image];
-          const extraImages = galleryImages
-              .map((img: any) => getText(img))
-              .filter(Boolean);
-          images = Array.from(new Set([...images, ...extraImages]));
+        const galleryImages = Array.isArray(p.gallery.image) ? p.gallery.image : [p.gallery.image];
+        const extra = galleryImages.map((img: any) => getText(img)).filter(Boolean);
+        images = Array.from(new Set([...images, ...extra]));
       }
-      
+
       const availabilityText = getText(p.availability).toLowerCase();
       const isAvailable = availabilityText === '1' || availabilityText.includes('διαθέσιμο') || availabilityText.includes('ναι');
       const stock = Number(getText(p.quantity) || getText(p.qty)) || (isAvailable ? 1 : 0);
