@@ -697,5 +697,3 @@ export default function CategoryManager() {
         </DndContext>
     );
 }
-
-    
