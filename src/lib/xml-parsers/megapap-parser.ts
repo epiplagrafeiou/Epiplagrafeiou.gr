@@ -1,4 +1,3 @@
-
 'use server';
 
 import { XMLParser } from 'fast-xml-parser';
@@ -8,7 +7,10 @@ import { mapCategory } from '../mappers/categoryMapper';
 const xmlParser = new XMLParser({
   ignoreAttributes: false,
   attributeNamePrefix: '@_',
-  isArray: (name) => name === 'product' || name === 'image',
+  // SAFE universal array handling
+  isArray: (name) => {
+    return name === 'product' || name === 'image';
+  },
   textNodeName: '_text',
   trimValues: true,
   cdataPropName: '__cdata',
@@ -25,25 +27,19 @@ function getText(node: any): string {
   return '';
 }
 
-/**
- * A recursive, bulletproof function to locate the product array
- * anywhere in the XML, regardless of root name, array wrapping, or attributes.
- */
-function findProductsInParsedXML(node: any): any[] | null {
+function findProductArray(node: any): any[] | null {
   if (!node || typeof node !== 'object') return null;
 
-  // Check if the current node contains the products>product structure
-  if (node.products?.product) {
-    const products = node.products.product;
-    return Array.isArray(products) ? products : [products];
-  }
-
-  // If not found, iterate through the object keys and search deeper
   for (const key of Object.keys(node)) {
     const value = node[key];
-    const result = findProductsInParsedXML(value);
-    if (result) {
-      return result;
+
+    if (key === 'products' && value?.product) {
+      return Array.isArray(value.product) ? value.product : [value.product];
+    }
+    
+    if (typeof value === 'object') {
+      const result = findProductArray(value);
+      if (result) return result;
     }
   }
 
@@ -51,8 +47,9 @@ function findProductsInParsedXML(node: any): any[] | null {
 }
 
 export async function megapapParser(xmlText: string): Promise<XmlProduct[]> {
+  console.log("DEBUG: USING NEW MEGAPAP PARSER VERSION");
   const parsed = xmlParser.parse(xmlText);
-  const productArray = findProductsInParsedXML(parsed);
+  const productArray = findProductArray(parsed);
 
   if (!productArray) {
     console.error("MEGAPAP PARSER DEBUG: Could not find 'products.product' array. Top-level keys:", Object.keys(parsed));
@@ -66,7 +63,7 @@ export async function megapapParser(xmlText: string): Promise<XmlProduct[]> {
   for (const p of productArray) {
     const name = getText(p.name) || 'No Name';
     const rawCat = getText(p.category);
-    const { category, categoryId, rawCategory } = await mapCategory(rawCat);
+    const { category, categoryId, rawCategory } = await mapCategory(rawCat, name);
 
     const images: string[] = [];
     const mainImage = getText(p.main_image) || null;

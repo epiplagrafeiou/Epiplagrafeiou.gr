@@ -1,4 +1,3 @@
-
 'use server';
 
 import { XMLParser } from 'fast-xml-parser';
@@ -7,7 +6,10 @@ import { mapCategory } from '../mappers/categoryMapper';
 
 const xmlParser = new XMLParser({
   ignoreAttributes: true,
-  isArray: (name) => name === 'Product' || name === 'image',
+  // SAFE universal array handling
+  isArray: (name) => {
+    return name === 'Product' || name === 'image';
+  },
   trimValues: true,
   textNodeName: '_text',
   cdataPropName: '__cdata',
@@ -28,35 +30,29 @@ function getText(node: any): string {
   return '';
 };
 
-/**
- * A recursive, bulletproof function to locate the product array
- * anywhere in the XML, regardless of root name, array wrapping, or attributes.
- */
-function findProductsInParsedXML(node: any): any[] | null {
-  if (!node || typeof node !== 'object') return null;
+function findProductArray(node: any): any[] | null {
+    if (!node || typeof node !== 'object') return null;
 
-  // Check if the current node contains the products>product structure
-  // Note: Zougris uses "Products" and "Product" (capitalized)
-  if (node.Products?.Product) {
-    const products = node.Products.Product;
-    return Array.isArray(products) ? products : [products];
-  }
-
-  // If not found, iterate through the object keys and search deeper
-  for (const key of Object.keys(node)) {
-    const value = node[key];
-    const result = findProductsInParsedXML(value);
-    if (result) {
-      return result;
+    // Note: Zougris uses "Products" and "Product" (capitalized)
+    if (node.Products?.Product) {
+        return Array.isArray(node.Products.Product) ? node.Products.Product : [node.Products.Product];
     }
-  }
+    
+    for (const key of Object.keys(node)) {
+        const value = node[key];
+        if (typeof value === 'object') {
+            const result = findProductArray(value);
+            if (result) return result;
+        }
+    }
 
-  return null;
+    return null;
 }
 
 export async function zougrisParser(xmlText: string): Promise<XmlProduct[]> {
+  console.log("DEBUG: USING NEW ZOUGRIS PARSER VERSION");
   const parsed = xmlParser.parse(xmlText);
-  const productArray = findProductsInParsedXML(parsed);
+  const productArray = findProductArray(parsed);
 
   if (!productArray) {
     console.error("ZOUGRIS PARSER DEBUG: Could not find 'Products.Product' array. Top-level keys:", Object.keys(parsed));

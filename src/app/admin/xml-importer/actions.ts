@@ -7,6 +7,8 @@ export async function syncProductsFromXml(
   url: string,
   supplierName: string
 ): Promise<XmlProduct[]> {
+  // This is now a client-side function that calls our dedicated API route.
+  // This prevents short server action timeouts from killing the process.
   const res = await fetch('/api/xml-sync', {
     method: 'POST',
     headers: {
@@ -23,6 +25,7 @@ export async function syncProductsFromXml(
         message = data.error;
       }
     } catch {
+       // The response might not be JSON, use the status text.
        message = `An unexpected error occurred: ${res.statusText}`;
     }
     throw new Error(message);

@@ -1,4 +1,3 @@
-
 'use server';
 
 import { XMLParser } from 'fast-xml-parser';
@@ -8,12 +7,16 @@ import { mapCategory } from '../mappers/categoryMapper';
 const xmlParser = new XMLParser({
   ignoreAttributes: false,
   attributeNamePrefix: '@_',
-  isArray: (name) => name === 'product' || name === 'image',
+  // SAFE universal array handling based on your correct suggestion
+  isArray: (name) => {
+    return name === 'product' || name === 'image';
+  },
   textNodeName: '_text',
   trimValues: true,
   cdataPropName: '__cdata',
 });
 
+/* ---------------------- TEXT EXTRACTOR ---------------------- */
 function getText(node: any): string {
   if (node == null) return '';
   if (typeof node === 'string' || typeof node === 'number') return String(node).trim();
@@ -25,34 +28,37 @@ function getText(node: any): string {
   return '';
 }
 
+/* ---------------------- PRODUCT FINDER ---------------------- */
 /**
- * A recursive, bulletproof function to locate the product array
+ * A recursive, bulletproof function to locate the <products><product> array
  * anywhere in the XML, regardless of root name, array wrapping, or attributes.
  */
-function findProductsInParsedXML(node: any): any[] | null {
+function findProductArray(node: any): any[] | null {
   if (!node || typeof node !== 'object') return null;
 
-  // Check if the current node contains the products>product structure
-  if (node.products?.product) {
-    const products = node.products.product;
-    return Array.isArray(products) ? products : [products];
-  }
-
-  // If not found, iterate through the object keys and search deeper
   for (const key of Object.keys(node)) {
     const value = node[key];
-    const result = findProductsInParsedXML(value);
-    if (result) {
-      return result;
+
+    if (key === 'products' && value?.product) {
+      return Array.isArray(value.product) ? value.product : [value.product];
+    }
+    
+    // Recurse into nested objects and arrays
+    if (typeof value === 'object') {
+      const result = findProductArray(value);
+      if (result) return result;
     }
   }
 
   return null;
 }
 
+/* ---------------------- MAIN PARSER ------------------------- */
 export async function b2bportalParser(xmlText: string): Promise<XmlProduct[]> {
+  console.log("DEBUG: USING NEW B2B PORTAL PARSER VERSION"); // Your suggested canary test
   const parsed = xmlParser.parse(xmlText);
-  const productArray = findProductsInParsedXML(parsed);
+
+  const productArray = findProductArray(parsed);
 
   if (!productArray) {
     console.error("B2B PARSER DEBUG: Could not find 'products.product' array. Top-level keys:", Object.keys(parsed));

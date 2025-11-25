@@ -5,6 +5,7 @@ import { b2bportalParser } from '@/lib/xml-parsers/b2bportal-parser';
 import { zougrisParser } from '@/lib/xml-parsers/zougris-parser';
 import type { XmlProduct } from '@/lib/types/product';
 
+// This is our new "patient worker" endpoint with a long timeout.
 export const runtime = 'nodejs'; // Use Node.js runtime for long-running tasks
 export const maxDuration = 300;  // Set max duration to 5 minutes for Firebase App Hosting
 
@@ -52,6 +53,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Determine the correct parser, with a fallback
     const normalizedName = supplierName.toLowerCase().trim();
     const parserFn = parserMap[normalizedName] || fallbackParser;
 
