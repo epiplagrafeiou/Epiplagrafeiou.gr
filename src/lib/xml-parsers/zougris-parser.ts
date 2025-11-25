@@ -7,9 +7,11 @@ import { mapCategory } from '../mappers/categoryMapper';
 
 const xmlParser = new XMLParser({
   ignoreAttributes: true,
-  isArray: (name) => name === 'Product' || name === 'image',
+  // SAFE universal array handling based on user feedback
+  isArray: (name) => {
+    return name === 'Product' || name === 'image' || name === 'item';
+  },
   trimValues: true,
-  parseNodeValue: true,
   textNodeName: '_text',
   cdataPropName: '__cdata',
   tagValueProcessor: (tagName, tagValue) => {
@@ -37,8 +39,10 @@ function findProductArray(node: any): any[] | null {
     if (key === 'Products' && value?.Product) {
       return Array.isArray(value.Product) ? value.Product : [value.Product];
     }
-    const deeper = findProductArray(value);
-    if (deeper) return deeper;
+    if (typeof value === 'object') {
+      const result = findProductArray(value);
+      if (result) return result;
+    }
   }
 
   return null;

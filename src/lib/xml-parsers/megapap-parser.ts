@@ -8,12 +8,13 @@ import { mapCategory } from '../mappers/categoryMapper';
 const xmlParser = new XMLParser({
   ignoreAttributes: false,
   attributeNamePrefix: '',
-  isArray: (name) => name === 'product' || name === 'image',
+  // SAFE universal array handling based on user feedback
+  isArray: (name) => {
+    return name === 'product' || name === 'image' || name === 'item';
+  },
   textNodeName: '_text',
   trimValues: true,
   cdataPropName: '__cdata',
-  parseAttributeValue: true,
-  parseNodeValue: true,
 });
 
 function getText(node: any): string {
@@ -35,10 +36,11 @@ function findProductArray(node: any): any[] | null {
     if (key === 'products' && value?.product) {
       return Array.isArray(value.product) ? value.product : [value.product];
     }
-    const deeper = findProductArray(value);
-    if (deeper) return deeper;
+    if (typeof value === 'object') {
+      const result = findProductArray(value);
+      if (result) return result;
+    }
   }
-
   return null;
 }
 
