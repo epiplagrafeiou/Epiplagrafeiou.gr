@@ -1,4 +1,3 @@
-
 'use server';
 
 import { megapapParser } from '@/lib/xml-parsers/megapap-parser';
@@ -6,8 +5,6 @@ import { b2bportalParser } from '@/lib/xml-parsers/b2bportal-parser';
 import { zougrisParser } from '@/lib/xml-parsers/zougris-parser';
 import { mapProductsCategories } from '@/lib/category-mapper';
 import type { XmlProduct } from '@/lib/types/product';
-
-export const runtime = 'nodejs';
 
 type ParserFn = (xml: string) => Promise<Omit<XmlProduct, 'category' | 'categoryId'>[]>;
 

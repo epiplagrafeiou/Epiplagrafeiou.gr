@@ -25,6 +25,8 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import type { XmlProduct } from '@/lib/types/product';
 import type { StoreCategory } from '@/components/admin/CategoryManager';
 
+export const runtime = 'nodejs';
+
 export default function XmlImporterPage() {
   const { suppliers } = useSuppliers();
   const { addProducts } = useProducts();
