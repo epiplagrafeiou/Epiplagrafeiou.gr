@@ -2,9 +2,6 @@
 import { XMLParser } from 'fast-xml-parser';
 import type { XmlProduct } from '../types/product';
 
-// This parser is now synchronous and only responsible for converting XML text to a raw product array.
-// All category mapping is handled separately for performance and reliability.
-
 const xmlParser = new XMLParser({
   ignoreAttributes: false,
   attributeNamePrefix: '@_',
@@ -25,27 +22,39 @@ function getText(node: any): string {
     return '';
 }
 
-function findProductArray(parsedXml: any): any[] {
-  const rootKey = Object.keys(parsedXml)[0];
-  if (!rootKey) {
-    throw new Error('B2B Portal XML parsing failed: Could not find root element.');
-  }
-  const rootElement = parsedXml[rootKey];
-  
-  const productsNode = rootElement?.products?.product;
+/**
+ * A true recursive function to locate the product array, regardless of root element name or nesting.
+ * This is the definitive, robust solution.
+ */
+function findProductArray(node: any): any[] | null {
+  if (!node || typeof node !== 'object') return null;
 
-  if (productsNode) {
-    return Array.isArray(productsNode) ? productsNode : [productsNode];
+  // Base case: We found the 'products' object containing a 'product' key.
+  if (node.products && node.products.product) {
+    // Ensure the result is always an array, even if there's only one product.
+    return Array.isArray(node.products.product) ? node.products.product : [node.products.product];
   }
 
-  throw new Error(`B2B Portal XML parsing failed: Could not locate the product array at the expected path: ${rootKey}.products.product`);
+  // Recursive step: Search in all values of the current object.
+  for (const key in node) {
+    const result = findProductArray(node[key]);
+    if (result) {
+      return result; // Found it in a nested object.
+    }
+  }
+
+  return null; // Not found in this branch.
 }
 
-
 export function b2bportalParser(xmlText: string): Omit<XmlProduct, 'category' | 'categoryId'>[] {
-  console.log("DEBUG: RUNNING B2B PORTAL PARSER (SIMPLE SYNC VERSION)");
+  console.log("DEBUG: RUNNING B2B PORTAL PARSER (RECURSIVE FINDER)");
   const parsed = xmlParser.parse(xmlText);
   const productArray = findProductArray(parsed);
+
+  if (!productArray) {
+    console.error("B2B PARSER DEBUG: Parsed object keys:", Object.keys(parsed));
+    throw new Error('B2B Portal XML parsing failed: Could not locate the product array within the XML structure.');
+  }
 
   const products = productArray.map((p: any): Omit<XmlProduct, 'category' | 'categoryId'> => {
     const images: string[] = [];
