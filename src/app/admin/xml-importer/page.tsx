@@ -11,7 +11,6 @@ import {
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useSuppliers, type MarkupRule } from '@/lib/suppliers-context';
-import { syncProductsFromXml } from './actions';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { formatCurrency } from '@/lib/utils';
@@ -24,6 +23,24 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import type { XmlProduct } from '@/lib/types/product';
 import type { StoreCategory } from '@/components/admin/CategoryManager';
+
+// This function now directly calls the API route.
+async function syncProductsFromApi(url: string, supplierName: string): Promise<XmlProduct[]> {
+    const response = await fetch('/api/xml-sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url, supplierName }),
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || `API Error: ${response.statusText}`);
+    }
+    
+    const data = await response.json();
+    return data;
+}
+
 
 export default function XmlImporterPage() {
   const { suppliers } = useSuppliers();
@@ -67,10 +84,11 @@ export default function XmlImporterPage() {
     
     startSyncTransition(async () => {
       try {
-        const products = await syncProductsFromXml(url, name);
+        const products = await syncProductsFromApi(url, name);
         setSyncedProducts(products);
         if (products.length > 0) {
-            setSelectedCategories(new Set(['all', ...allCategories]));
+            const allCats = new Set(products.map(p => p.rawCategory).filter(Boolean));
+            setSelectedCategories(new Set(['all', ...allCats]));
         }
       } catch (e: any) {
         setError(e.message);
@@ -172,7 +190,7 @@ export default function XmlImporterPage() {
         }
         
         try {
-            const allProducts = await syncProductsFromXml(supplier.url, supplier.name);
+            const allProducts = await syncProductsFromApi(supplier.url, supplier.name);
             const productsToSync = allProducts.filter(p => {
                 const categoryPath = p.rawCategory || '';
                 return savedCategories.includes(categoryPath) || savedCategories.includes('all');
@@ -380,3 +398,5 @@ export default function XmlImporterPage() {
     </div>
   );
 }
+
+    
