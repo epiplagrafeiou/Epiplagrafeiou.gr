@@ -21,7 +21,7 @@ const parserMap: Record<string, ParserFn> = {
   'zougris': zougrisParser,
 };
 
-const fallbackParser = b2bportalParser;
+const fallbackParser = megapapParser;
 
 async function fetchWithTimeout(url: string, timeoutMs = 60000): Promise<Response> {
   const controller = new AbortController();
@@ -67,7 +67,7 @@ export async function POST(req: NextRequest) {
 
     console.log(`[API] Mapped categories for ${productsWithCategories.length} products.`);
 
-    return NextResponse.json({ products: productsWithCategories });
+    return NextResponse.json(productsWithCategories);
 
   } catch (err: any) {
     let status = 500;

@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useMemo, useEffect, useTransition } from 'react';
@@ -69,7 +68,9 @@ export default function XmlImporterPage() {
       try {
         const products = await syncProductsFromXml(url, name);
         setSyncedProducts(products);
-        setSelectedCategories(new Set(['all']));
+        if (products.length > 0) {
+            setSelectedCategories(new Set(['all', ...allCategories]));
+        }
       } catch (e: any) {
         setError(e.message);
       } finally {
@@ -104,7 +105,7 @@ export default function XmlImporterPage() {
       markedUpPrice += 1.70;
     }
     
-    const productNameLower = product.name.toLowerCase();
+    const productNameLower = (product.name || '').toLowerCase();
     if (productNameLower.includes('μπουφέδες')) {
       markedUpPrice += 6;
     } else if (productNameLower.includes('ντουλάπες')) {
