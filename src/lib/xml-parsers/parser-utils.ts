@@ -8,11 +8,11 @@
  * @returns The extracted string, or an empty string if not found.
  */
 export function getText(node: any): string {
-  if (!node) {
+  if (node === undefined || node === null) {
     return "";
   }
   if (typeof node === "string" || typeof node === "number") {
-    return String(node);
+    return String(node).trim();
   }
   if (Array.isArray(node)) {
     // If it's an array, recursively call getText on the first element.
@@ -20,26 +20,31 @@ export function getText(node: any): string {
   }
   if (typeof node === 'object') {
     // Handle common text property names used by various XML parsers.
-    return node["#text"] || node.__cdata || node["_"] || "";
+    return String(node["#text"] || node.__cdata || node["_text"] || "").trim();
   }
   return "";
 }
 
 /**
  * Recursively searches for a product array within a parsed XML object.
- * This is resilient to varying root element names.
+ * This is resilient to varying root element names (e.g., 'product', 'Product').
  * @param node The current node of the parsed XML object.
  * @returns An array of product nodes, or an empty array if not found.
  */
 export function findProductArray(node: any): any[] {
     for (const key in node) {
-        if (key === 'product' && Array.isArray(node[key])) {
-            return node[key];
+        // Case-insensitive check for 'product'
+        if (key.toLowerCase() === 'product') {
+            const productNode = node[key];
+            if (Array.isArray(productNode)) {
+                return productNode;
+            }
+            if (typeof productNode === 'object' && productNode !== null) {
+                // If a single product is not in an array, wrap it in one.
+                return [productNode];
+            }
         }
-        // Handle cases where a single product is not in an array
-        if (key === 'product' && typeof node[key] === 'object' && node[key] !== null) {
-            return [node[key]]; 
-        }
+        // Recurse into child objects
         if (typeof node[key] === 'object' && node[key] !== null) {
             const result = findProductArray(node[key]);
             if (result.length > 0) {

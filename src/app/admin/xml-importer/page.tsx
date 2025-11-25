@@ -25,6 +25,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import type { XmlProduct } from '@/lib/types/product';
 import type { StoreCategory } from '@/components/admin/CategoryManager';
 
+export const runtime = 'nodejs';
 
 export default function XmlImporterPage() {
   const { suppliers } = useSuppliers();
@@ -71,7 +72,7 @@ export default function XmlImporterPage() {
         const products = await syncProductsFromXml(url, name);
         setSyncedProducts(products);
         if (products.length > 0) {
-            const allCats = new Set(products.map(p => p.rawCategory).filter(Boolean));
+            const allCats = new Set(products.map(p => p.rawCategory).filter(Boolean) as string[]);
             setSelectedCategories(new Set(['all', ...allCats]));
         }
       } catch (e: any) {

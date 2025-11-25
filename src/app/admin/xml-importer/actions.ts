@@ -7,8 +7,6 @@ import { zougrisParser } from '@/lib/xml-parsers/zougris-parser';
 import { mapProductsCategories } from '@/lib/category-mapper';
 import type { XmlProduct } from '@/lib/types/product';
 
-export const runtime = 'nodejs';
-
 type ParserFn = (xml: string) => Promise<Omit<XmlProduct, 'category' | 'categoryId'>[]>;
 
 const parserMap: Record<string, ParserFn> = {
@@ -43,11 +41,12 @@ export async function syncProductsFromXml(
   url: string,
   supplierName: string
 ): Promise<XmlProduct[]> {
-  console.log(`🔥 Server Action started for supplier: ${supplierName}`);
+  console.log(`🔥 Server Action: syncProductsFromXml started for supplier: ${supplierName}`);
   try {
     const normalizedName = supplierName.toLowerCase().trim();
     const parserFn = parserMap[normalizedName] || fallbackParser;
 
+    console.log(`[Server Action] Fetching XML from: ${url}`);
     const response = await fetchWithTimeout(url);
     if (!response.ok) {
       throw new Error(`Fetch failed with status ${response.status}: ${response.statusText}`);
@@ -57,6 +56,7 @@ export async function syncProductsFromXml(
     if (!xmlText) {
       throw new Error('Fetched XML content is empty.');
     }
+    console.log(`[Server Action] XML content fetched successfully.`);
     
     // Await the async parser function
     const rawProducts = await parserFn(xmlText);
@@ -65,10 +65,11 @@ export async function syncProductsFromXml(
     const productsWithCategories = await mapProductsCategories(rawProducts);
     console.log(`[Server Action] Mapped categories for ${productsWithCategories.length} products.`);
 
+    console.log(`✅ Server Action: syncProductsFromXml finished successfully for ${supplierName}.`);
     return productsWithCategories;
 
   } catch (error: any) {
-     console.error(`❌ Server Action failed for ${supplierName}:`, error);
+     console.error(`❌ Server Action: syncProductsFromXml failed for ${supplierName}:`, error);
      if (error.name === 'AbortError') {
        throw new Error("The XML feed took too long to download and the request timed out.");
      }

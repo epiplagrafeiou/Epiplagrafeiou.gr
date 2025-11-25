@@ -3,8 +3,6 @@ import type { XmlProduct } from '@/lib/types/product';
 import { getText, findProductArray } from './parser-utils';
 
 export async function b2bportalParser(xmlText: string): Promise<Omit<XmlProduct, 'category' | 'categoryId'>[]> {
-  console.log("🔥 B2BPORTAL PARSER LOADED — VERSION X2");
-  
   const parser = new XMLParser({
     ignoreAttributes: false,
     attributeNamePrefix: "@_",
@@ -18,7 +16,6 @@ export async function b2bportalParser(xmlText: string): Promise<Omit<XmlProduct,
   });
 
   const parsed = parser.parse(xmlText);
-  console.log("🧩 findProductArray CALLED");
   const productArray = findProductArray(parsed);
 
   if (!productArray || productArray.length === 0) {

@@ -69,7 +69,10 @@ export default function XmlImporterPage() {
       try {
         const products = await syncProductsFromXml(url, name);
         setSyncedProducts(products);
-        setSelectedCategories(new Set(['all']));
+        if (products.length > 0) {
+            const allCats = new Set(products.map(p => p.rawCategory).filter(Boolean) as string[]);
+            setSelectedCategories(new Set(['all', ...allCats]));
+        }
       } catch (e: any) {
         setError(e.message);
       } finally {
@@ -104,7 +107,7 @@ export default function XmlImporterPage() {
       markedUpPrice += 1.70;
     }
     
-    const productNameLower = product.name.toLowerCase();
+    const productNameLower = (product.name || '').toLowerCase();
     if (productNameLower.includes('μπουφέδες')) {
       markedUpPrice += 6;
     } else if (productNameLower.includes('ντουλάπες')) {
@@ -265,15 +268,15 @@ export default function XmlImporterPage() {
                         disabled={!lastSyncCategories[supplier.id] || isAnySyncRunning}
                         variant="outline"
                     >
-                       {quickSyncingSupplier === supplier.id ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Zap className="mr-2 h-4 w-4" />}
-                       {quickSyncingSupplier === supplier.id ? 'Syncing...' : 'Quick Sync'}
+                       {isQuickSyncing && quickSyncingSupplier === supplier.id ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Zap className="mr-2 h-4 w-4" />}
+                       {isQuickSyncing && quickSyncingSupplier === supplier.id ? 'Syncing...' : 'Quick Sync'}
                     </Button>
                     <Button
                       onClick={() => handleSync(supplier.id, supplier.url, supplier.name)}
                       disabled={isAnySyncRunning}
                     >
-                      {loadingSupplier === supplier.id ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                      {loadingSupplier === supplier.id ? 'Syncing...' : 'Sync Products'}
+                      {isSyncing && loadingSupplier === supplier.id ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                      {isSyncing && loadingSupplier === supplier.id ? 'Syncing...' : 'Sync Products'}
                     </Button>
                 </div>
               </div>
