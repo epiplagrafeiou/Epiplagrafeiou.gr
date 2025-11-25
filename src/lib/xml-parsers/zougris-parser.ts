@@ -7,7 +7,7 @@ import { mapCategory } from '../mappers/categoryMapper';
 
 const xmlParser = new XMLParser({
   ignoreAttributes: true,
-  // SAFE universal array handling based on user feedback
+  // A safe, universal array handling configuration
   isArray: (name) => {
     return name === 'Product' || name === 'image' || name === 'item';
   },
@@ -31,31 +31,19 @@ function getText(node: any): string {
   return '';
 };
 
-function findProductArray(node: any): any[] | null {
-  if (!node || typeof node !== 'object') return null;
-
-  for (const key of Object.keys(node)) {
-    const value = node[key];
-    if (key === 'Products' && value?.Product) {
-      return Array.isArray(value.Product) ? value.Product : [value.Product];
-    }
-    if (typeof value === 'object') {
-      const result = findProductArray(value);
-      if (result) return result;
-    }
-  }
-
-  return null;
-}
-
 export async function zougrisParser(xmlText: string): Promise<XmlProduct[]> {
   const parsed = xmlParser.parse(xmlText);
-  const productArray = findProductArray(parsed);
+  
+  // Direct and simple product array retrieval
+  const productsNode = parsed?.Products?.Product;
 
-  if (!productArray) {
+  if (!productsNode) {
     console.error('Zougris Parser Debug: Parsed XML object keys:', Object.keys(parsed || {}));
-    throw new Error("Zougris XML parsing failed: Could not locate the product array within the XML structure.");
+    throw new Error("Zougris XML parsing failed: Could not locate the product array at the expected path: Products.Product");
   }
+
+  // Guaranteed to be an array for safe iteration
+  const productArray = Array.isArray(productsNode) ? productsNode : [productsNode];
   
   const products: XmlProduct[] = await Promise.all(
     productArray.map(async (p: any): Promise<XmlProduct> => {

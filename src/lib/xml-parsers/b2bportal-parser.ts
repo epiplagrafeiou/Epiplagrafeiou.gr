@@ -8,7 +8,7 @@ import { mapCategory } from '../mappers/categoryMapper';
 const xmlParser = new XMLParser({
   ignoreAttributes: false,
   attributeNamePrefix: '@_',
-  // SAFE universal array handling based on user feedback
+  // A safe, universal array handling configuration
   isArray: (name) => {
     return name === 'product' || name === 'image' || name === 'item';
   },
@@ -17,14 +17,9 @@ const xmlParser = new XMLParser({
   cdataPropName: '__cdata',
 });
 
-/* ---------------------- TEXT EXTRACTOR ---------------------- */
 function getText(node: any): string {
   if (node == null) return '';
-
-  if (typeof node === 'string' || typeof node === 'number') {
-    return String(node).trim();
-  }
-
+  if (typeof node === 'string' || typeof node === 'number') return String(node).trim();
   if (typeof node === 'object') {
     if (node.__cdata != null) return String(node.__cdata).trim();
     if (node._text != null) return String(node._text).trim();
@@ -33,43 +28,19 @@ function getText(node: any): string {
   return '';
 }
 
-/* ---------------------- PRODUCT FINDER ---------------------- */
-/**
- * A recursive, bulletproof function to locate the <products><product> array
- * anywhere in the XML, regardless of root name, array wrapping, or attributes.
- */
-function findProductArray(node: any): any[] | null {
-  if (!node || typeof node !== 'object') return null;
-
-  for (const key of Object.keys(node)) {
-    const value = node[key];
-
-    // Match: <products><product>...</product></products>
-    if (key === 'products' && value?.product) {
-      return Array.isArray(value.product) ? value.product : [value.product];
-    }
-
-    // Check deeper if value is an object or array
-    if (typeof value === 'object') {
-      const result = findProductArray(value);
-      if (result) return result;
-    }
-  }
-
-  return null;
-}
-
-/* ---------------------- MAIN PARSER ------------------------- */
 export async function b2bportalParser(xmlText: string): Promise<XmlProduct[]> {
   const parsed = xmlParser.parse(xmlText);
-  const productArray = findProductArray(parsed);
+  
+  // Direct and simple product array retrieval
+  const productsNode = parsed?.b2bportal?.products?.product;
 
-  if (!productArray) {
-    console.error("DEBUG XML ROOT:", Object.keys(parsed));
-    throw new Error(
-      'B2B Portal XML parsing failed: Could not locate the product array within the XML structure.'
-    );
+  if (!productsNode) {
+     console.error('B2B Portal Parser Debug: Parsed XML object keys:', Object.keys(parsed?.b2bportal || {}));
+     throw new Error('B2B Portal XML parsing failed: Could not locate the product array at the expected path: b2bportal.products.product');
   }
+
+  // Guaranteed to be an array for safe iteration
+  const productArray = Array.isArray(productsNode) ? productsNode : [productsNode];
 
   const products: XmlProduct[] = await Promise.all(
     productArray.map(async (p: any): Promise<XmlProduct> => {
@@ -81,10 +52,8 @@ export async function b2bportalParser(xmlText: string): Promise<XmlProduct[]> {
 
       const { rawCategory, category, categoryId } = await mapCategory(rawCategoryOriginal);
 
-      /* ----- IMAGES ----- */
       let images: string[] = [];
       const mainImageCandidate = getText(p.image) || getText(p.thumb);
-
       if (mainImageCandidate) images.push(mainImageCandidate);
 
       if (p.gallery?.image) {
@@ -96,7 +65,6 @@ export async function b2bportalParser(xmlText: string): Promise<XmlProduct[]> {
         images = Array.from(new Set([...images, ...extra]));
       }
 
-      /* ----- STOCK ----- */
       const availabilityText = getText(p.availability).toLowerCase();
       const isAvailable =
         availabilityText === '1' ||
@@ -106,7 +74,6 @@ export async function b2bportalParser(xmlText: string): Promise<XmlProduct[]> {
       const stock =
         Number(getText(p.quantity) || getText(p.qty)) || (isAvailable ? 1 : 0);
 
-      /* ----- PRICES ----- */
       const retailPriceNum = parseFloat(getText(p.retail_price).replace(',', '.') || '0');
       const wholesalePriceNum = parseFloat(getText(p.price).replace(',', '.') || '0');
       const finalPrice = retailPriceNum > 0 ? retailPriceNum : wholesalePriceNum;

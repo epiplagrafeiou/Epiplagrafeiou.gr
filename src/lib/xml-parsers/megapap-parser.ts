@@ -7,8 +7,8 @@ import { mapCategory } from '../mappers/categoryMapper';
 
 const xmlParser = new XMLParser({
   ignoreAttributes: false,
-  attributeNamePrefix: '',
-  // SAFE universal array handling based on user feedback
+  attributeNamePrefix: '@_',
+  // A safe, universal array handling configuration
   isArray: (name) => {
     return name === 'product' || name === 'image' || name === 'item';
   },
@@ -28,30 +28,18 @@ function getText(node: any): string {
   return '';
 }
 
-function findProductArray(node: any): any[] | null {
-  if (!node || typeof node !== 'object') return null;
-
-  for (const key of Object.keys(node)) {
-    const value = node[key];
-    if (key === 'products' && value?.product) {
-      return Array.isArray(value.product) ? value.product : [value.product];
-    }
-    if (typeof value === 'object') {
-      const result = findProductArray(value);
-      if (result) return result;
-    }
-  }
-  return null;
-}
-
 export async function megapapParser(xmlText: string): Promise<XmlProduct[]> {
   const parsed = xmlParser.parse(xmlText);
-  const productArray = findProductArray(parsed);
+  
+  // Direct and simple product array retrieval
+  const productsNode = parsed?.megapap?.products?.product;
 
-  if (!productArray) {
-    console.error('Megapap Parser Debug: Parsed XML object keys:', Object.keys(parsed || {}));
-    throw new Error('Megapap XML parsing failed: Could not locate the product array within the XML structure.');
+  if (!productsNode) {
+     console.error('Megapap Parser Debug: Parsed XML object keys:', Object.keys(parsed?.megapap || {}));
+     throw new Error('Megapap XML parsing failed: Could not locate the product array at the expected path: megapap.products.product');
   }
+  
+  const productArray = Array.isArray(productsNode) ? productsNode : [productsNode];
 
   const products: XmlProduct[] = [];
 
