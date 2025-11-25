@@ -1,28 +1,10 @@
-// src/lib/xml-parsers/b2bportal-parser.ts
 import { XMLParser } from 'fast-xml-parser';
 import type { XmlProduct } from '@/lib/types/product';
-import { mapProductsCategories } from '@/lib/mappers/categoryMapper';
-
-function findProductArray(node: any): any[] {
-  for (const key in node) {
-    if (key === 'product' && Array.isArray(node[key])) {
-      return node[key];
-    }
-    if (key === 'product' && typeof node[key] === 'object' && node[key] !== null) {
-      return [node[key]]; // Handle single product case
-    }
-    if (typeof node[key] === 'object' && node[key] !== null) {
-      const result = findProductArray(node[key]);
-      if (result.length > 0) {
-        return result;
-      }
-    }
-  }
-  return [];
-}
+import { getText, findProductArray } from './parser-utils';
 
 export async function b2bportalParser(xmlText: string): Promise<Omit<XmlProduct, 'category' | 'categoryId'>[]> {
-  console.log("🔥 B2BPORTAL PARSER LOADED — VERSION X1");
+  console.log("🔥 B2BPORTAL PARSER LOADED — VERSION X2");
+  
   const parser = new XMLParser({
     ignoreAttributes: false,
     attributeNamePrefix: "@_",
@@ -31,7 +13,6 @@ export async function b2bportalParser(xmlText: string): Promise<Omit<XmlProduct,
     trimValues: true,
     cdataPropName: "__cdata",
     isArray: (name, jpath) => {
-        // Defines which tags should always be treated as arrays
         return jpath.endsWith('.product') || jpath.endsWith('.image');
     }
   });
@@ -45,24 +26,25 @@ export async function b2bportalParser(xmlText: string): Promise<Omit<XmlProduct,
   }
 
   const products: Omit<XmlProduct, 'category' | 'categoryId'>[] = productArray.map((p: any) => {
-    const images = (p.gallery?.image || []).map((img: any) => img?.['#text'] || img).filter(Boolean);
-    if (p.image && !images.includes(p.image)) {
-        images.unshift(p.image);
+    const images = (Array.isArray(p.gallery?.image) ? p.gallery.image : [p.gallery?.image]).map(getText).filter(Boolean);
+    const mainImage = getText(p.image);
+    if (mainImage && !images.includes(mainImage)) {
+        images.unshift(mainImage);
     }
     
     return {
-      id: p.code,
-      name: p.name,
-      description: p.descr,
-      rawCategory: p.category,
-      stock: parseInt(p.availability, 10) || 0,
-      retailPrice: p.retail_price,
-      webOfferPrice: p.price,
+      id: getText(p.code),
+      name: getText(p.name),
+      description: getText(p.descr),
+      rawCategory: getText(p.category),
+      stock: parseInt(getText(p.availability), 10) || 0,
+      retailPrice: getText(p.retail_price),
+      webOfferPrice: getText(p.price),
       mainImage: images[0] || null,
       images: images,
-      sku: p.sku,
-      model: p.model,
-      ean: p.barcode,
+      sku: getText(p.sku),
+      model: getText(p.model),
+      ean: getText(p.barcode),
     };
   });
 
