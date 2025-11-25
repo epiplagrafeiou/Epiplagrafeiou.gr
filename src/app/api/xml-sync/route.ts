@@ -1,4 +1,3 @@
-
 // src/app/api/xml-sync/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { megapapParser } from '@/lib/xml-parsers/megapap-parser';
