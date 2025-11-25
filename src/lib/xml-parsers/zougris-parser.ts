@@ -2,21 +2,12 @@
 import { XMLParser } from 'fast-xml-parser';
 import type { XmlProduct } from '../types/product';
 
-// This parser is now synchronous and only responsible for converting XML text to a raw product array.
-// All category mapping is handled separately for performance and reliability.
-
 const xmlParser = new XMLParser({
   ignoreAttributes: true,
   isArray: (name) => name === 'Product',
-  trimValues: true,
   textNodeName: '_text',
+  trimValues: true,
   cdataPropName: '__cdata',
-  tagValueProcessor: (tagName, tagValue) => {
-    if (typeof tagValue === 'string' && tagValue.startsWith('<![CDATA[')) {
-      return tagValue.substring(9, tagValue.length - 3);
-    }
-    return tagValue;
-  }
 });
 
 function getText(node: any): string {
@@ -28,17 +19,21 @@ function getText(node: any): string {
     return '';
 };
 
-function findProductArray(parsedXml: any): any[] {
+function findProductArray(parsedXml: any): any[] | null {
     if (parsedXml?.Products?.Product) {
         return Array.isArray(parsedXml.Products.Product) ? parsedXml.Products.Product : [parsedXml.Products.Product];
     }
-    throw new Error("Zougris XML parsing failed: Could not locate the product array at `Products.Product`.");
+    return null;
 }
 
-export function zougrisParser(xmlText: string): Omit<XmlProduct, 'category' | 'categoryId'>[] {
-  console.log("DEBUG: RUNNING ZOUGRIS PARSER (SIMPLE SYNC VERSION)");
+export async function zougrisParser(xmlText: string): Promise<Omit<XmlProduct, 'category' | 'categoryId'>[]> {
+  console.log("DEBUG: RUNNING ZOUGRIS PARSER (PROMISE VERSION)");
   const parsed = xmlParser.parse(xmlText);
   const productArray = findProductArray(parsed);
+
+  if (!productArray) {
+    throw new Error("Zougris XML parsing failed: Could not locate the product array at `Products.Product`.");
+  }
   
   const products = productArray.map((p: any): Omit<XmlProduct, 'category' | 'categoryId'> => {
       const images = [

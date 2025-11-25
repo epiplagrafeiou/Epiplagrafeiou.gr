@@ -3,9 +3,8 @@ import { XMLParser } from 'fast-xml-parser';
 import type { XmlProduct } from '../types/product';
 
 const xmlParser = new XMLParser({
-  ignoreAttributes: false,
-  attributeNamePrefix: '@_',
-  isArray: (name) => name === 'product' || name === 'image' || name === 'item' || name === 'gallery',
+  ignoreAttributes: true,
+  isArray: (name) => name === 'product' || name === 'image',
   textNodeName: '_text',
   trimValues: true,
   cdataPropName: '__cdata',
@@ -22,32 +21,21 @@ function getText(node: any): string {
     return '';
 }
 
-/**
- * A true recursive function to locate the product array, regardless of root element name or nesting.
- * This is the definitive, robust solution.
- */
 function findProductArray(node: any): any[] | null {
   if (!node || typeof node !== 'object') return null;
-
-  // Base case: We found an object that has a 'product' key, which holds our products.
-  if (node.product) {
-      // Ensure the result is always an array, even if there's only one product.
-      return Array.isArray(node.product) ? node.product : [node.product];
-  }
-
-  // Recursive step: Search in all values of the current object.
-  for (const key in node) {
-    const result = findProductArray(node[key]);
-    if (result) {
-      return result; // Found it in a nested object.
+  for (const key of Object.keys(node)) {
+    const value = node[key];
+    if (key === 'products' && value?.product) {
+      return Array.isArray(value.product) ? value.product : [value.product];
     }
+    const deeper = findProductArray(value);
+    if (deeper) return deeper;
   }
-
-  return null; // Not found in this branch.
+  return null;
 }
 
-export function megapapParser(xmlText: string): Omit<XmlProduct, 'category' | 'categoryId'>[] {
-  console.log("DEBUG: RUNNING MEGAPAP PARSER (RECURSIVE FINDER V2)");
+export async function megapapParser(xmlText: string): Promise<Omit<XmlProduct, 'category' | 'categoryId'>[]> {
+  console.log("DEBUG: RUNNING MEGAPAP PARSER (PROMISE VERSION)");
   const parsed = xmlParser.parse(xmlText);
   const productArray = findProductArray(parsed);
 

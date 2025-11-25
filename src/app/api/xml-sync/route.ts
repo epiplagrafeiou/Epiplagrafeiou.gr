@@ -9,9 +9,10 @@ import type { XmlProduct } from '@/lib/types/product';
 export const runtime = 'nodejs';
 export const maxDuration = 300; // 5 minutes
 
-type ParserFn = (xml: string) => Omit<XmlProduct, 'category' | 'categoryId'>[];
+// IMPORTANT: Parser functions are now correctly typed as returning a Promise.
+type ParserFn = (xml: string) => Promise<Omit<XmlProduct, 'category' | 'categoryId'>[]>;
 
-// The parser map now points to the simple, synchronous parser functions.
+// Correct parser map
 const parserMap: Record<string, ParserFn> = {
   'megapap': megapapParser,
   'nordic designs': megapapParser,
@@ -47,23 +48,25 @@ export async function POST(req: NextRequest) {
     if (!url || !supplierName) {
       return NextResponse.json({ error: 'Missing url or supplierName.' }, { status: 400 });
     }
-    
+
     console.log(`[API] Starting sync for supplier: ${supplierName}`);
     const normalizedName = supplierName.toLowerCase().trim();
+
     const parserFn = parserMap[normalizedName] || fallbackParser;
-    
+
     const response = await fetchWithTimeout(url);
     if (!response.ok) throw new Error(`Fetch failed: ${response.statusText}`);
-    
+
     const xmlText = await response.text();
     if (!xmlText) throw new Error('Fetched XML content is empty.');
 
-    // Step 1: Parse the XML into raw product data (fast and synchronous)
-    const rawProducts = parserFn(xmlText);
+    // ❗❗ THE CRITICAL FIX: The parser function is now correctly awaited.
+    const rawProducts = await parserFn(xmlText);
+
     console.log(`[API] Parsed ${rawProducts.length} raw products from ${supplierName}.`);
 
-    // Step 2: Map categories for all products in one efficient batch.
     const productsWithCategories = await mapProductsCategories(rawProducts);
+
     console.log(`[API] Mapped categories for ${productsWithCategories.length} products.`);
 
     return NextResponse.json({ products: productsWithCategories });
@@ -71,8 +74,8 @@ export async function POST(req: NextRequest) {
   } catch (err: any) {
     let status = 500;
     if (err.name === 'AbortError') status = 504; // Gateway Timeout
-    
-    console.error(`❌ API sync failed: ${err.message}`);
+
+    console.error(`❌ API sync failed for supplier: ${req.json().then(b=>b.supplierName).catch(()=>'Unknown')}. Reason: ${err.message}`);
     return NextResponse.json({ error: err.message || 'An unexpected error occurred.' }, { status });
   }
 }
