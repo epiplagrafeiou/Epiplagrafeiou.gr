@@ -1,15 +1,13 @@
-'use server';
-
+// src/lib/xml-parsers/zougris-parser.ts
 import { XMLParser } from 'fast-xml-parser';
 import type { XmlProduct } from '../types/product';
-import { mapCategory } from '../mappers/categoryMapper';
+
+// This parser is now synchronous and only responsible for converting XML text to a raw product array.
+// All category mapping is handled separately for performance and reliability.
 
 const xmlParser = new XMLParser({
   ignoreAttributes: true,
-  // SAFE universal array handling
-  isArray: (name) => {
-    return name === 'Product' || name === 'image';
-  },
+  isArray: (name) => name === 'Product',
   trimValues: true,
   textNodeName: '_text',
   cdataPropName: '__cdata',
@@ -22,53 +20,27 @@ const xmlParser = new XMLParser({
 });
 
 function getText(node: any): string {
-  if (node == null) return '';
-  if (typeof node === 'string' || typeof node === 'number') return String(node).trim();
-  if (typeof node === 'object' && ('_text' in node || '__cdata' in node)) {
-    return String(node._text || node.__cdata).trim();
-  }
-  return '';
+    if (node == null) return '';
+    if (typeof node === 'string' || typeof node === 'number') return String(node).trim();
+    if (typeof node === 'object' && ('_text' in node || '__cdata' in node)) {
+        return String(node._text || node.__cdata).trim();
+    }
+    return '';
 };
 
-function findProductArray(node: any): any[] | null {
-    if (!node || typeof node !== 'object') return null;
-
-    // Note: Zougris uses "Products" and "Product" (capitalized)
-    if (node.Products?.Product) {
-        return Array.isArray(node.Products.Product) ? node.Products.Product : [node.Products.Product];
+function findProductArray(parsedXml: any): any[] {
+    if (parsedXml?.Products?.Product) {
+        return Array.isArray(parsedXml.Products.Product) ? parsedXml.Products.Product : [parsedXml.Products.Product];
     }
-    
-    for (const key of Object.keys(node)) {
-        const value = node[key];
-        if (typeof value === 'object') {
-            const result = findProductArray(value);
-            if (result) return result;
-        }
-    }
-
-    return null;
+    throw new Error("Zougris XML parsing failed: Could not locate the product array at `Products.Product`.");
 }
 
-export async function zougrisParser(xmlText: string): Promise<XmlProduct[]> {
-  console.log("DEBUG: USING NEW ZOUGRIS PARSER VERSION");
+export function zougrisParser(xmlText: string): Omit<XmlProduct, 'category' | 'categoryId'>[] {
+  console.log("DEBUG: RUNNING ZOUGRIS PARSER (SIMPLE SYNC VERSION)");
   const parsed = xmlParser.parse(xmlText);
   const productArray = findProductArray(parsed);
-
-  if (!productArray) {
-    console.error("ZOUGRIS PARSER DEBUG: Could not find 'Products.Product' array. Top-level keys:", Object.keys(parsed));
-    throw new Error("Zougris XML parsing failed: Could not locate the product array within the XML structure.");
-  }
   
-  const products: XmlProduct[] = await Promise.all(
-    productArray.map(async (p: any): Promise<XmlProduct> => {
-      const rawCategoryString = [
-        getText(p.Category1),
-        getText(p.Category2),
-        getText(p.Category3),
-      ].filter(Boolean).join(' > ');
-      
-      const { rawCategory, category, categoryId } = await mapCategory(rawCategoryString);
-
+  const products = productArray.map((p: any): Omit<XmlProduct, 'category' | 'categoryId'> => {
       const images = [
         getText(p.B2BImage),
         getText(p.B2BImage2),
@@ -89,9 +61,11 @@ export async function zougrisParser(xmlText: string): Promise<XmlProduct[]> {
           description: getText(p.Description) || '',
           retailPrice: retailPrice.toString(),
           webOfferPrice: webOfferPrice.toString(),
-          category,
-          categoryId,
-          rawCategory,
+          rawCategory: [
+            getText(p.Category1),
+            getText(p.Category2),
+            getText(p.Category3),
+          ].filter(Boolean).join(' > '),
           mainImage: images[0] || null,
           images,
           stock,
@@ -99,7 +73,7 @@ export async function zougrisParser(xmlText: string): Promise<XmlProduct[]> {
           sku: getText(p.Code) || undefined,
           model: getText(p.Model) || undefined,
       };
-    })
-  );
+    });
+
   return products;
 }

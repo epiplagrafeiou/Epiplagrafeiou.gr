@@ -1,110 +1,97 @@
-
-// /src/lib/mappers/categoryMapper.ts
+// src/lib/mappers/categoryMapper.ts
 'use server';
 
 import { getDb } from '@/lib/firebase-admin';
 import type { StoreCategory } from '@/components/admin/CategoryManager';
+import type { XmlProduct } from '@/lib/types/product';
 
-// Cache categories to avoid hitting Firestore on every single product mapping within a sync.
-let categoryCache: StoreCategory[] | null = null;
+// Cache to store the category mapping rules.
+let categoryMapCache: Map<string, { categoryId: string; path: string }> | null = null;
 let cacheTimestamp: number | null = null;
-const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+const CACHE_DURATION_MS = 5 * 60 * 1000; // 5 minutes
 
-async function getCategories(): Promise<StoreCategory[]> {
+/**
+ * Fetches all store categories from Firestore and builds an efficient lookup map.
+ * The map uses the lowercase raw category string as a key.
+ * Caches the result to avoid unnecessary Firestore reads during a large sync operation.
+ */
+async function getCategoryLookupMap(): Promise<Map<string, { categoryId: string; path: string }>> {
   const now = Date.now();
-  if (categoryCache && cacheTimestamp && now - cacheTimestamp < CACHE_DURATION) {
-    return categoryCache;
+  if (categoryMapCache && cacheTimestamp && now - cacheTimestamp < CACHE_DURATION_MS) {
+    return categoryMapCache;
   }
 
-  console.log('[CategoryMapper] Fetching categories from Firestore...');
+  console.log('[CategoryMapper] Fetching and building category map from Firestore...');
   const db = getDb();
-  const snap = await db.collection('categories').get();
+  const categoriesSnap = await db.collection('categories').get();
+  
+  if (categoriesSnap.empty) {
+    console.warn('[CategoryMapper] No categories found in Firestore. All products will be "Uncategorized".');
+    return new Map();
+  }
 
-  const all: StoreCategory[] = snap.docs.map((d) => ({
-    id: d.id,
-    ...d.data(),
-  })) as StoreCategory[];
+  const allCategories: StoreCategory[] = categoriesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as StoreCategory));
+  
+  const categoriesById = new Map<string, StoreCategory>(allCategories.map(c => [c.id, c]));
+  const pathMap = new Map<string, string>();
 
-  // This function builds the tree structure, which we don't need for mapping,
-  // but it's good practice if you were to use it elsewhere.
-  const categoriesById: Record<string, StoreCategory> = {};
-  const rootCategories: StoreCategory[] = [];
+  function getPath(catId: string): string {
+    if (pathMap.has(catId)) return pathMap.get(catId)!;
 
-  all.forEach(cat => {
-      categoriesById[cat.id] = { ...cat, children: [] };
+    const cat = categoriesById.get(catId);
+    if (!cat) return '';
+
+    const parentPath = cat.parentId ? getPath(cat.parentId) : '';
+    const fullPath = parentPath ? `${parentPath} > ${cat.name}` : cat.name;
+    
+    pathMap.set(catId, fullPath);
+    return fullPath;
+  }
+  
+  const newCache = new Map<string, { categoryId: string; path: string }>();
+  allCategories.forEach(cat => {
+    if (cat.rawCategories) {
+      cat.rawCategories.forEach(raw => {
+        const fullPath = getPath(cat.id);
+        if (fullPath) {
+          // Key is lowercase for case-insensitive matching
+          newCache.set(raw.toLowerCase(), { categoryId: cat.id, path: fullPath });
+        }
+      });
+    }
   });
 
-  all.forEach(cat => {
-      if (cat.parentId && categoriesById[cat.parentId]) {
-          categoriesById[cat.parentId].children.push(categoriesById[cat.id]);
-      } else {
-          rootCategories.push(categoriesById[cat.id]);
-      }
-  });
-
-
-  categoryCache = all; // We cache the flat list for easier searching
+  categoryMapCache = newCache;
   cacheTimestamp = now;
-  console.log(`[CategoryMapper] Cached ${all.length} categories.`);
-
-  return categoryCache;
+  console.log(`[CategoryMapper] Cached ${newCache.size} raw-to-store category mappings.`);
+  return categoryMapCache;
 }
 
 /**
- * Maps raw supplier category → your store category.
+ * Efficiently maps an array of raw products to products with final category information.
+ * @param rawProducts An array of products parsed from XML, lacking final category info.
+ * @returns A promise that resolves to the array of fully mapped products.
  */
-export async function mapCategory(rawCategory: string) {
-  const cleanRaw = (rawCategory || '').trim();
-  if (!cleanRaw) {
-    return {
-      rawCategory: '',
-      category: 'Uncategorized',
-      categoryId: null,
-    };
-  }
-
-  const allCategories = await getCategories();
-  let match: StoreCategory | null = null;
-
-  // Find a category where our raw string is listed
-  for (const cat of allCategories) {
-    if (cat.rawCategories?.some((r) => r.toLowerCase() === cleanRaw.toLowerCase())) {
-      match = cat;
-      break;
-    }
-  }
-
-  if (!match) {
-    return {
-      rawCategory: cleanRaw,
-      category: 'Uncategorized',
-      categoryId: null,
-    };
-  }
-
-  // If we have a match, construct its full path for display
-  const path = getCategoryPath(allCategories, match.id);
-
-  return {
-    rawCategory: cleanRaw,
-    category: path,
-    categoryId: match.id,
-  };
-}
-
-/** Builds readable category path: "Furniture > Chairs > Office Chairs" */
-function getCategoryPath(all: StoreCategory[], leafId: string): string {
-  const path: string[] = [];
-  let currentId: string | null = leafId;
-
-  while (currentId) {
-    const currentCat = all.find(c => c.id === currentId);
-    if (!currentCat) {
-      break; 
-    }
-    path.unshift(currentCat.name);
-    currentId = currentCat.parentId;
-  }
+export async function mapProductsCategories(rawProducts: Omit<XmlProduct, 'category' | 'categoryId'>[]): Promise<XmlProduct[]> {
+  const categoryMap = await getCategoryLookupMap();
   
-  return path.join(' > ');
+  return rawProducts.map(product => {
+    const cleanRawCategory = (product.rawCategory || '').trim().toLowerCase();
+    const mapping = categoryMap.get(cleanRawCategory);
+
+    if (mapping) {
+      return {
+        ...product,
+        category: mapping.path,
+        categoryId: mapping.categoryId,
+      };
+    }
+
+    // Fallback for uncategorized items
+    return {
+      ...product,
+      category: 'Uncategorized',
+      categoryId: null,
+    };
+  });
 }

@@ -1,70 +1,59 @@
-'use server';
-
+// src/lib/xml-parsers/megapap-parser.ts
 import { XMLParser } from 'fast-xml-parser';
 import type { XmlProduct } from '../types/product';
-import { mapCategory } from '../mappers/categoryMapper';
+
+// This parser is now synchronous and only responsible for converting XML text to a raw product array.
+// All category mapping is handled separately for performance and reliability.
 
 const xmlParser = new XMLParser({
   ignoreAttributes: false,
   attributeNamePrefix: '@_',
-  // SAFE universal array handling
-  isArray: (name) => {
-    return name === 'product' || name === 'image';
-  },
+  isArray: (name) => name === 'product' || name === 'image',
   textNodeName: '_text',
   trimValues: true,
   cdataPropName: '__cdata',
 });
 
 function getText(node: any): string {
-  if (node == null) return '';
-  if (typeof node === 'string' || typeof node === 'number') return String(node).trim();
-  if (typeof node === 'object') {
-    if (node.__cdata != null) return String(node.__cdata).trim();
-    if (node._text != null) return String(node._text).trim();
-    if (node['#text'] != null) return String(node['#text']).trim();
-  }
-  return '';
+    if (node == null) return '';
+    if (typeof node === 'string' || typeof node === 'number') return String(node).trim();
+    if (typeof node === 'object') {
+        if (node.__cdata != null) return String(node.__cdata).trim();
+        if (node._text != null) return String(node._text).trim();
+        if (node['#text'] != null) return String(node['#text']).trim();
+    }
+    return '';
 }
 
-function findProductArray(node: any): any[] | null {
-  if (!node || typeof node !== 'object') return null;
+function findProductArray(parsedXml: any): any[] {
+    // Look for a `products` key at any level.
+    const findProducts = (node: any): any | null => {
+        if (!node || typeof node !== 'object') return null;
+        if (node.products?.product) return node.products;
+        for (const key in node) {
+            const result = findProducts(node[key]);
+            if (result) return result;
+        }
+        return null;
+    };
 
-  for (const key of Object.keys(node)) {
-    const value = node[key];
+    const productsNode = findProducts(parsedXml);
 
-    if (key === 'products' && value?.product) {
-      return Array.isArray(value.product) ? value.product : [value.product];
+    if (productsNode && productsNode.product) {
+        return Array.isArray(productsNode.product) ? productsNode.product : [productsNode.product];
     }
-    
-    if (typeof value === 'object') {
-      const result = findProductArray(value);
-      if (result) return result;
-    }
-  }
 
-  return null;
+    throw new Error('Megapap XML parsing failed: Could not locate a `products` object with a `product` array.');
 }
 
-export async function megapapParser(xmlText: string): Promise<XmlProduct[]> {
-  console.log("DEBUG: USING NEW MEGAPAP PARSER VERSION");
+export function megapapParser(xmlText: string): Omit<XmlProduct, 'category' | 'categoryId'>[] {
+  console.log("DEBUG: RUNNING MEGAPAP PARSER (SIMPLE SYNC VERSION)");
   const parsed = xmlParser.parse(xmlText);
   const productArray = findProductArray(parsed);
 
-  if (!productArray) {
-    console.error("MEGAPAP PARSER DEBUG: Could not find 'products.product' array. Top-level keys:", Object.keys(parsed));
-    throw new Error(
-      'Megapap XML parsing failed: Could not locate the product array within the XML structure.'
-    );
-  }
-
-  const products: XmlProduct[] = [];
-
-  for (const p of productArray) {
+  const products = productArray.map((p: any): Omit<XmlProduct, 'category' | 'categoryId'> => {
     const name = getText(p.name) || 'No Name';
-    const rawCat = getText(p.category);
-    const { category, categoryId, rawCategory } = await mapCategory(rawCat, name);
-
+    
     const images: string[] = [];
     const mainImage = getText(p.main_image) || null;
     if (mainImage) images.push(mainImage);
@@ -88,23 +77,21 @@ export async function megapapParser(xmlText: string): Promise<XmlProduct[]> {
       finalWebOfferPrice += 75;
     }
 
-    products.push({
-      id: (p.id != null ? String(p.id) : getText(p.sku)) || `megapap-${products.length}`,
+    return {
+      id: (p.id != null ? String(p.id) : getText(p.sku)) || `megapap-${Math.random()}`,
       name,
       description: getText(p.description),
       retailPrice: retail.toString(),
       webOfferPrice: finalWebOfferPrice.toString(),
-      category,
-      categoryId,
-      rawCategory,
+      rawCategory: [getText(p.category), getText(p.subcategory)].filter(Boolean).join(' > '),
       mainImage: images[0] || null,
       images,
       stock,
       isAvailable: stock > 0,
       sku: getText(p.sku) || undefined,
       model: getText(p.model) || undefined,
-    });
-  }
+    };
+  });
 
   return products;
 }
