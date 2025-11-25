@@ -52,8 +52,16 @@ async function getCategoryLookupMap(): Promise<Map<string, { categoryId: string;
   }
 
   console.log('[CategoryMapper] Fetching and building category map from Firestore...');
-  const db = getDb();
-  const categoriesSnap = await db.collection('categories').get();
+  let categoriesSnap;
+  try {
+    const db = getDb();
+    categoriesSnap = await db.collection('categories').get();
+  } catch (err: any) {
+    console.error('[CategoryMapper] Failed to load categories from Firestore:', err?.message || err);
+    // If Firestore is unavailable (e.g., missing credentials in a preview environment),
+    // continue the import with uncategorized products instead of failing the sync.
+    return new Map();
+  }
   
   if (categoriesSnap.empty) {
     console.warn('[CategoryMapper] No categories found in Firestore. All products will be "Uncategorized".');
