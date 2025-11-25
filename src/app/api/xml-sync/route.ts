@@ -11,8 +11,8 @@ export const maxDuration = 300; // 5 minutes
 // --- UNIVERSAL PARSER LOGIC ---
 
 const xmlParser = new XMLParser({
-    ignoreAttributes: true, // Simplified to ignore attributes for robustness
-    isArray: (name) => name === 'product' || name === 'image', // Universal rule
+    ignoreAttributes: true,
+    isArray: (name) => name === 'product' || name === 'image',
     textNodeName: '_text',
     trimValues: true,
     cdataPropName: '__cdata',
@@ -32,20 +32,17 @@ function getText(node: any): string {
 function findProductArray(node: any): any[] | null {
     if (!node || typeof node !== 'object') return null;
 
-    // Direct match for common structures like <products><product> or <mywebstore><products><product>
     if (node.products?.product) {
         return Array.isArray(node.products.product) ? node.products.product : [node.products.product];
     }
     
-    // Direct match for Zougris-style <Products><Product>
     if (node.Product && Array.isArray(node.Product)) {
         return node.Product;
     }
 
-    // Recursive search for deeper nesting
     for (const key of Object.keys(node)) {
         const value = node[key];
-        if (typeof value === 'object') {
+        if (typeof value === 'object' && value !== null) {
             const result = findProductArray(value);
             if (result) return result;
         }
@@ -55,7 +52,7 @@ function findProductArray(node: any): any[] | null {
 }
 
 async function universalParser(xmlText: string): Promise<Omit<XmlProduct, 'category' | 'categoryId'>[]> {
-    console.log("🔥 UNIVERSAL PARSER EXECUTING - FINAL VERSION");
+    console.log("🔥 UNIVERSAL PARSER EXECUTING");
     const parsed = xmlParser.parse(xmlText);
     const productArray = findProductArray(parsed);
 
@@ -83,16 +80,16 @@ async function universalParser(xmlText: string): Promise<Omit<XmlProduct, 'categ
         const isAvailable = availabilityText === '1' || availabilityText.includes('διαθέσιμο') || availabilityText.includes('ναι');
         const stock = Number(getText(p.quantity) || getText(p.qty) || getText(p.stock) || '0') || (isAvailable ? 1 : 0);
 
-        const retailPriceNum = parseFloat(getText(p.retail_price_with_vat) || getText(p.retail_price) || '0');
-        let wholesalePriceNum = parseFloat(getText(p.weboffer_price_with_vat) || getText(p.price) || '0');
-        // Specific price logic for Megapap (sofa)
-        if( (p.name?.toLowerCase() || '').includes('καναπ') ) {
-            wholesalePriceNum += 75;
-        }
-        const finalPrice = wholesalePriceNum > 0 ? wholesalePriceNum : retailPriceNum;
+        const retailPriceNum = parseFloat(String(p.retail_price_with_vat || p.retail_price || '0').replace(',', '.'));
+        let wholesalePriceNum = parseFloat(String(p.weboffer_price_with_vat || p.price || '0').replace(',', '.'));
         
         const name = getText(p.name) || getText(p.Title) || 'No Name';
-
+        if(name.toLowerCase().includes('καναπ')) {
+            wholesalePriceNum += 75;
+        }
+        
+        const finalPrice = wholesalePriceNum > 0 ? wholesalePriceNum : retailPriceNum;
+        
         return {
             id: String(p.id ?? getText(p.code) ?? getText(p.sku) ?? `prod-${Math.random()}`),
             sku: getText(p.sku) || getText(p.code),
@@ -109,15 +106,11 @@ async function universalParser(xmlText: string): Promise<Omit<XmlProduct, 'categ
             isAvailable,
             manufacturer: getText(p.manufacturer),
             url: getText(p.url),
-            variantGroupKey: p.variantGroupKey || undefined,
-            color: p.color || undefined,
         };
     });
 
   return products;
 }
-
-// --- API ROUTE HANDLER ---
 
 async function fetchWithTimeout(url: string, timeoutMs = 120000): Promise<Response> {
   const controller = new AbortController();
