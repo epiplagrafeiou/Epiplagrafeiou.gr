@@ -7,10 +7,7 @@ import { mapCategory } from '../mappers/categoryMapper';
 
 const xmlParser = new XMLParser({
   ignoreAttributes: true,
-  // A safe, universal array handling configuration
-  isArray: (name) => {
-    return name === 'Product' || name === 'image' || name === 'item';
-  },
+  isArray: (name) => name === 'Product' || name === 'image',
   trimValues: true,
   textNodeName: '_text',
   cdataPropName: '__cdata',
@@ -31,19 +28,40 @@ function getText(node: any): string {
   return '';
 };
 
-export async function zougrisParser(xmlText: string): Promise<XmlProduct[]> {
-  const parsed = xmlParser.parse(xmlText);
-  
-  // Direct and simple product array retrieval
-  const productsNode = parsed?.Products?.Product;
+/**
+ * A recursive, bulletproof function to locate the product array
+ * anywhere in the XML, regardless of root name, array wrapping, or attributes.
+ */
+function findProductsInParsedXML(node: any): any[] | null {
+  if (!node || typeof node !== 'object') return null;
 
-  if (!productsNode) {
-    console.error('Zougris Parser Debug: Parsed XML object keys:', Object.keys(parsed || {}));
-    throw new Error("Zougris XML parsing failed: Could not locate the product array at the expected path: Products.Product");
+  // Check if the current node contains the products>product structure
+  // Note: Zougris uses "Products" and "Product" (capitalized)
+  if (node.Products?.Product) {
+    const products = node.Products.Product;
+    return Array.isArray(products) ? products : [products];
   }
 
-  // Guaranteed to be an array for safe iteration
-  const productArray = Array.isArray(productsNode) ? productsNode : [productsNode];
+  // If not found, iterate through the object keys and search deeper
+  for (const key of Object.keys(node)) {
+    const value = node[key];
+    const result = findProductsInParsedXML(value);
+    if (result) {
+      return result;
+    }
+  }
+
+  return null;
+}
+
+export async function zougrisParser(xmlText: string): Promise<XmlProduct[]> {
+  const parsed = xmlParser.parse(xmlText);
+  const productArray = findProductsInParsedXML(parsed);
+
+  if (!productArray) {
+    console.error("ZOUGRIS PARSER DEBUG: Could not find 'Products.Product' array. Top-level keys:", Object.keys(parsed));
+    throw new Error("Zougris XML parsing failed: Could not locate the product array within the XML structure.");
+  }
   
   const products: XmlProduct[] = await Promise.all(
     productArray.map(async (p: any): Promise<XmlProduct> => {

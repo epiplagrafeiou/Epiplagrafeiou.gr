@@ -8,10 +8,7 @@ import { mapCategory } from '../mappers/categoryMapper';
 const xmlParser = new XMLParser({
   ignoreAttributes: false,
   attributeNamePrefix: '@_',
-  // A safe, universal array handling configuration
-  isArray: (name) => {
-    return name === 'product' || name === 'image' || name === 'item';
-  },
+  isArray: (name) => name === 'product' || name === 'image',
   textNodeName: '_text',
   trimValues: true,
   cdataPropName: '__cdata',
@@ -28,18 +25,41 @@ function getText(node: any): string {
   return '';
 }
 
+/**
+ * A recursive, bulletproof function to locate the product array
+ * anywhere in the XML, regardless of root name, array wrapping, or attributes.
+ */
+function findProductsInParsedXML(node: any): any[] | null {
+  if (!node || typeof node !== 'object') return null;
+
+  // Check if the current node contains the products>product structure
+  if (node.products?.product) {
+    const products = node.products.product;
+    return Array.isArray(products) ? products : [products];
+  }
+
+  // If not found, iterate through the object keys and search deeper
+  for (const key of Object.keys(node)) {
+    const value = node[key];
+    const result = findProductsInParsedXML(value);
+    if (result) {
+      return result;
+    }
+  }
+
+  return null;
+}
+
 export async function megapapParser(xmlText: string): Promise<XmlProduct[]> {
   const parsed = xmlParser.parse(xmlText);
-  
-  // Direct and simple product array retrieval
-  const productsNode = parsed?.megapap?.products?.product;
+  const productArray = findProductsInParsedXML(parsed);
 
-  if (!productsNode) {
-     console.error('Megapap Parser Debug: Parsed XML object keys:', Object.keys(parsed?.megapap || {}));
-     throw new Error('Megapap XML parsing failed: Could not locate the product array at the expected path: megapap.products.product');
+  if (!productArray) {
+    console.error("MEGAPAP PARSER DEBUG: Could not find 'products.product' array. Top-level keys:", Object.keys(parsed));
+    throw new Error(
+      'Megapap XML parsing failed: Could not locate the product array within the XML structure.'
+    );
   }
-  
-  const productArray = Array.isArray(productsNode) ? productsNode : [productsNode];
 
   const products: XmlProduct[] = [];
 
