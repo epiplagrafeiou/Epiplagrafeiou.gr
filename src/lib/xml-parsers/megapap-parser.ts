@@ -5,7 +5,7 @@ import type { XmlProduct } from '../types/product';
 const xmlParser = new XMLParser({
   ignoreAttributes: false,
   attributeNamePrefix: '@_',
-  isArray: (name) => name === 'product' || name === 'image',
+  isArray: (name) => name === 'product' || name === 'image' || name === 'item' || name === 'gallery',
   textNodeName: '_text',
   trimValues: true,
   cdataPropName: '__cdata',
@@ -29,10 +29,10 @@ function getText(node: any): string {
 function findProductArray(node: any): any[] | null {
   if (!node || typeof node !== 'object') return null;
 
-  // Base case: We found the 'products' object containing a 'product' key.
-  if (node.products && node.products.product) {
-    // Ensure the result is always an array, even if there's only one product.
-    return Array.isArray(node.products.product) ? node.products.product : [node.products.product];
+  // Base case: We found an object that has a 'product' key, which holds our products.
+  if (node.product) {
+      // Ensure the result is always an array, even if there's only one product.
+      return Array.isArray(node.product) ? node.product : [node.product];
   }
 
   // Recursive step: Search in all values of the current object.
@@ -47,7 +47,7 @@ function findProductArray(node: any): any[] | null {
 }
 
 export function megapapParser(xmlText: string): Omit<XmlProduct, 'category' | 'categoryId'>[] {
-  console.log("DEBUG: RUNNING MEGAPAP PARSER (RECURSIVE FINDER)");
+  console.log("DEBUG: RUNNING MEGAPAP PARSER (RECURSIVE FINDER V2)");
   const parsed = xmlParser.parse(xmlText);
   const productArray = findProductArray(parsed);
 
