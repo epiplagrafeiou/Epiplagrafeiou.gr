@@ -8,12 +8,10 @@ import { mapCategory } from '../mappers/categoryMapper';
 const xmlParser = new XMLParser({
   ignoreAttributes: false,
   attributeNamePrefix: '',
-  // SAFE isArray function
+  // A safe isArray function that is not path-dependent.
   isArray: (name, jpath) => {
     if (name === 'product') return true;
     if (name === 'image') return true;
-    if (name === 'item') return true;
-    if (name === 'gallery') return true;
     return false;
   },
   textNodeName: '_text',
@@ -40,45 +38,26 @@ function getText(node: any): string {
   return '';
 }
 
-/**
- * A robust, recursive function to find the product array, regardless of the root element or nesting.
- */
-function findProductArray(node: any): any[] | null {
-  if (!node || typeof node !== 'object') return null;
-
-  for (const key of Object.keys(node)) {
-    const value = node[key];
-    if (!value) continue;
-
-    // Direct match: <products><product>...</product></products>
-    if (key === 'products' && value.product) {
-      return Array.isArray(value.product) ? value.product : [value.product];
-    }
-    
-    // Recursive search in case of deeper nesting
-    const deeper = findProductArray(value);
-    if (deeper) return deeper;
-  }
-
-  return null;
-}
-
 export async function megapapParser(xmlText: string): Promise<XmlProduct[]> {
   const parsed = xmlParser.parse(xmlText);
 
-  const productArray = findProductArray(parsed);
-  if (!productArray) {
+  // Direct, hardcoded path based on known XML structure.
+  const productArraySource = parsed?.megapap?.products?.product;
+
+  if (!productArraySource) {
     console.error('Megapap Parser Debug: Parsed XML object keys:', Object.keys(parsed || {}));
     throw new Error(
       'Megapap XML parsing failed: Could not locate the product array within the XML structure.'
     );
   }
+  
+  // Ensure we are always working with an array.
+  const productArray = Array.isArray(productArraySource) ? productArraySource : [productArraySource];
 
   const products: XmlProduct[] = [];
 
   for (const p of productArray) {
     const name = getText(p.name) || 'No Name';
-
     const rawCat = getText(p.category);
     const { category, categoryId, rawCategory } = await mapCategory(rawCat);
 
@@ -86,10 +65,9 @@ export async function megapapParser(xmlText: string): Promise<XmlProduct[]> {
     const mainImage = getText(p.main_image) || null;
     if (mainImage) images.push(mainImage);
 
-    // New safe way to parse images
-    if (p.images && p.images.length > 0 && p.images[0].image) {
-      const galleryImages = p.images[0].image;
-      const extraImages = (Array.isArray(galleryImages) ? galleryImages : [galleryImages])
+    if (p.images?.image) {
+      const galleryImages = Array.isArray(p.images.image) ? p.images.image : [p.images.image];
+      const extraImages = galleryImages
           .map((img: any) => getText(img))
           .filter(Boolean);
       images.push(...extraImages.filter(img => !images.includes(img)));

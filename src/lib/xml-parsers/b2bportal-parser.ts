@@ -8,12 +8,10 @@ import { mapCategory } from '../mappers/categoryMapper';
 const xmlParser = new XMLParser({
   ignoreAttributes: false,
   attributeNamePrefix: '',
-  // SAFE isArray function as recommended
+  // A safe isArray function that is not path-dependent.
   isArray: (name, jpath) => {
     if (name === 'product') return true;
     if (name === 'image') return true;
-    if (name === 'item') return true;
-    if (name === 'gallery') return true;
     return false;
   },
   textNodeName: '_text',
@@ -41,44 +39,24 @@ function getText(node: any): string {
   return '';
 }
 
-/**
- * A robust, recursive function to find the product array, regardless of the root element or nesting.
- */
-function findProductArray(node: any): any[] | null {
-  if (!node || typeof node !== 'object') return null;
-
-  for (const key of Object.keys(node)) {
-    const value = node[key];
-    if (!value) continue;
-
-    // Direct match: <products><product>...</product></products>
-    if (key === 'products' && value.product) {
-      return Array.isArray(value.product) ? value.product : [value.product];
-    }
-    
-    // Recursive search in case of deeper nesting
-    const deeper = findProductArray(value);
-    if (deeper) return deeper;
-  }
-
-  return null;
-}
-
-
 export async function b2bportalParser(xmlText: string): Promise<XmlProduct[]> {
   const parsed = xmlParser.parse(xmlText);
-  const productArray = findProductArray(parsed);
 
-  if (!productArray) {
+  // Direct, hardcoded path based on known XML structure.
+  const productArraySource = parsed?.b2bportal?.products?.product;
+
+  if (!productArraySource) {
     console.error('B2B Portal Parser Debug: Parsed XML object keys:', Object.keys(parsed || {}));
     throw new Error(
-      'B2B Portal XML parsing failed: Could not locate the product array within the XML structure.'
+      'B2B Portal XML parsing failed: Could not locate the product array at the expected path: b2bportal.products.product'
     );
   }
   
+  // Ensure we are always working with an array.
+  const productArray = Array.isArray(productArraySource) ? productArraySource : [productArraySource];
+  
   const products: XmlProduct[] = await Promise.all(
     productArray.map(async (p: any): Promise<XmlProduct> => {
-      // The product ID can be an attribute
       const id = p.id != null ? String(p.id) : (getText(p.code) || `b2b-${Math.random()}`);
       
       const rawCategoryOriginal = [getText(p.category), getText(p.subcategory)]
@@ -90,9 +68,9 @@ export async function b2bportalParser(xmlText: string): Promise<XmlProduct[]> {
       const mainImageCandidate = getText(p.image) || getText(p.thumb) || null;
       if (mainImageCandidate) images.push(mainImageCandidate);
 
-      if (p.gallery && p.gallery.length > 0 && p.gallery[0].image) {
-          const galleryImages = p.gallery[0].image;
-          const extraImages = (Array.isArray(galleryImages) ? galleryImages : [galleryImages])
+      if (p.gallery?.image) {
+          const galleryImages = Array.isArray(p.gallery.image) ? p.gallery.image : [p.gallery.image];
+          const extraImages = galleryImages
               .map((img: any) => getText(img))
               .filter(Boolean);
           images = Array.from(new Set([...images, ...extraImages]));

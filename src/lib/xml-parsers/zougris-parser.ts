@@ -9,7 +9,7 @@ const xmlParser = new XMLParser({
   ignoreAttributes: true,
   // SAFE isArray function
   isArray: (name, jpath) => {
-    if (name === 'Product') return true;
+    if (name === 'Product') return true; // Note the capitalization
     if (name === 'image') return true;
     return false;
   },
@@ -40,16 +40,20 @@ const getText = (node: any): string => {
 
 export async function zougrisParser(xmlText: string): Promise<XmlProduct[]> {
   const parsed = xmlParser.parse(xmlText);
-  // Zougris uses 'Product' with a capital P
-  const productArray = parsed?.Products?.Product;
+  
+  // Direct, hardcoded path based on known XML structure.
+  const productArraySource = parsed?.Products?.Product;
 
-  if (!productArray) {
+  if (!productArraySource) {
     console.error('Zougris Parser Debug: Parsed XML object keys:', Object.keys(parsed || {}));
-    throw new Error("Zougris XML does not contain products at Products.Product");
+    throw new Error("Zougris XML parsing failed: Could not locate the product array at the expected path: Products.Product");
   }
 
+  // Ensure we are always working with an array.
+  const productArray = Array.isArray(productArraySource) ? productArraySource : [productArraySource];
+
   const products: XmlProduct[] = await Promise.all(
-      (Array.isArray(productArray) ? productArray : [productArray]).map(async (p: any): Promise<XmlProduct> => {
+      productArray.map(async (p: any): Promise<XmlProduct> => {
         const rawCategoryString = [
           getText(p.Category1),
           getText(p.Category2),
